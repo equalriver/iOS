@@ -1,0 +1,99 @@
+//
+//  WLKTConfirmOrderCourseMsgCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/28.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTConfirmOrderCourseMsgCell.h"
+
+@interface WLKTConfirmOrderCourseMsgCell ()
+@property (strong, nonatomic) UILabel *titleLabel;
+@property (strong, nonatomic) UILabel *detailLabel;
+@property (strong, nonatomic) UIView *separatorView;
+@property (strong, nonatomic) UILabel *locationLabel;
+
+@end
+
+@implementation WLKTConfirmOrderCourseMsgCell
+
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [self.contentView addSubview:self.titleLabel];
+        [self.contentView addSubview:self.detailLabel];
+        [self.contentView addSubview:self.separatorView];
+        [self.contentView addSubview:self.locationLabel];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)setCellData:(NSArray *)titles detail:(NSArray *)details location:(WLKTAddress *)location indexPath:(NSIndexPath *)indexPath{
+    self.titleLabel.text = titles[indexPath.row];
+    self.detailLabel.text = details[indexPath.row];
+    self.locationLabel.text = location.address;
+    if (indexPath.row != 2) {
+        self.locationLabel.hidden = YES;
+    }
+}
+
+#pragma mark - make constraints
+- (void)makeConstraints{
+    [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(15 * ScreenRatio_6);
+        make.top.mas_equalTo(self.contentView).offset(13);
+    }];
+    [self.detailLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-15 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.titleLabel);
+    }];
+    [self.locationLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth - 30 * ScreenRatio_6, 15));
+        make.top.mas_equalTo(self.detailLabel.mas_bottom).offset(4);
+        make.centerX.mas_equalTo(self.contentView);
+    }];
+    [self.separatorView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0.5));
+        make.top.mas_equalTo(self.contentView);
+        make.left.mas_equalTo(self.contentView);
+    }];
+}
+
+#pragma mark - get
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [UILabel new];
+        _titleLabel.font = [UIFont systemFontOfSize:14];
+        _titleLabel.textColor = KMainTextColor_3;
+    }
+    return _titleLabel;
+}
+- (UILabel *)detailLabel{
+    if (!_detailLabel) {
+        _detailLabel = [UILabel new];
+        _detailLabel.font = [UIFont systemFontOfSize:12];
+        _detailLabel.textColor = KMainTextColor_3;
+        _detailLabel.textAlignment = NSTextAlignmentRight;
+    }
+    return _detailLabel;
+}
+- (UIView *)separatorView{
+    if (!_separatorView) {
+        _separatorView = [UIView new];
+        _separatorView.backgroundColor = separatorView_color;
+    }
+    return _separatorView;
+}
+- (UILabel *)locationLabel{
+    if (!_locationLabel) {
+        _locationLabel = [UILabel new];
+        _locationLabel.font = [UIFont systemFontOfSize:11];
+        _locationLabel.textColor = KMainTextColor_9;
+        _locationLabel.textAlignment = NSTextAlignmentRight;
+    }
+    return _locationLabel;
+}
+@end

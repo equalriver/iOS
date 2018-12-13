@@ -1,0 +1,17 @@
+//
+//  WLKTCDPhoneAlert.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/3/19.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@protocol CDPhoneAlertDelegate<NSObject>
+- (void)didClickCall:(NSString *)number;
+@end
+
+@interface WLKTCDPhoneAlert : UIView
+@property (weak, nonatomic) id <CDPhoneAlertDelegate> delegate;
+@end

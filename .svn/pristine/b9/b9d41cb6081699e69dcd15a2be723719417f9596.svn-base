@@ -1,0 +1,17 @@
+//
+//  WLKTCourseDetailVRPhotoCell.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/1.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@protocol WLKTCourseDetailVRPhotoDelegate <NSObject>
+- (void)didSelectedVRPhotoWithIndex:(NSIndexPath *)indexPath;
+@end
+
+@interface WLKTCourseDetailVRPhotoCell : UITableViewCell
+@property (weak, nonatomic) id<WLKTCourseDetailVRPhotoDelegate> delegate;
+@end

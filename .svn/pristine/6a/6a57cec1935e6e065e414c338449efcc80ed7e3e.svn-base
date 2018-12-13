@@ -1,0 +1,145 @@
+//
+//  WLKTUserNameChangeVC.m
+//  wlkt
+//
+//  Created by 尹平江 on 17/3/21.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTUserNameChangeVC.h"
+#import "WLKTUserinfoChangeApi.h"
+#import "WLKTLogin.h"
+
+@interface WLKTUserNameChangeVC ()
+@property (copy, nonatomic)NSString *userNameTemp;
+@property (strong, nonatomic) UIView *separatorView_one;
+@property (strong, nonatomic) UIView *separatorView_two;
+@property (strong, nonatomic) UIView *nameBgView;
+@end
+
+@implementation WLKTUserNameChangeVC
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    [self.userName becomeFirstResponder];
+    
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    self.view.backgroundColor = userinfoBgColor;
+    [self.view addSubview:self.nameBgView];
+    [self.nameBgView addSubview:self.userName];
+    [self.nameBgView addSubview:self.separatorView_one];
+    [self.nameBgView addSubview:self.separatorView_two];
+
+
+    UIBarButtonItem *barButtonItem = [[UIBarButtonItem alloc]initWithTitle:@"保存" style:UIBarButtonItemStylePlain target:self action:@selector(saveChangedAct:)];
+    [barButtonItem setTitleTextAttributes:@{
+                                            NSFontAttributeName:[UIFont systemFontOfSize:16 *ScreenRatio_6],
+                                            NSForegroundColorAttributeName:KMainTextColor_3} forState:UIControlStateNormal];
+    self.navigationItem.rightBarButtonItem = barButtonItem;
+    self.navigationItem.title = @"姓名";
+    
+    [self.userName addTarget:self action:@selector(userNameTFAct:) forControlEvents:UIControlEventEditingChanged];
+    
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]initWithImage:[UIImage imageNamed:@"箭头左"] style:UIBarButtonItemStylePlain target:self action:@selector(backButtonAct)];
+}
+
+- (void)backButtonAct{
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (void)userNameTFAct:(UITextField *)userNameTF{
+    self.userNameTemp = userNameTF.text;
+}
+
+- (void)saveChangedAct:(UIBarButtonItem *)barButtonItem{
+    if (self.userNameTemp.length == 0) {
+        [SVProgressHUD showErrorWithStatus:@"姓名不能为空"];
+    
+    }
+    else if (self.userNameTemp.length == 1){
+        [SVProgressHUD showErrorWithStatus:@"姓名太短"];
+    }
+    else if (self.userNameTemp.length > 4){
+        [SVProgressHUD showErrorWithStatus:@"姓名格式不对"];
+    }
+    else if ([self.userNameTemp isEqualToString:TheCurUser.truename]){
+        [SVProgressHUD showInfoWithStatus:@"请输入新姓名"];
+    }
+    else{
+        if (![SVProgressHUD isVisible]) {
+            [SVProgressHUD showInfoWithStatus:@"正在保存..."];
+        }
+        WLKTUserinfoChangeApi *api = [[WLKTUserinfoChangeApi alloc]initWithUsername:self.userNameTemp sex:TheCurUser.sex phone:TheCurUser.phone hobby:nil];
+        [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+            [SVProgressHUD dismiss];
+            //保存更改
+            TheCurUser.truename = self.userNameTemp;
+            [WLKTLogin saveUserData:TheCurUser];
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                !self.usernameChangeBlock ? : self.usernameChangeBlock(self.userNameTemp);
+                [self.navigationController popViewControllerAnimated:YES];
+            });
+        } failure:^(__kindof YTKBaseRequest *request) {
+            ShowApiError;
+        }];
+    
+    }
+    
+    
+}
+
+#pragma mark - get
+
+- (UIView *)separatorView_one{
+    if (!_separatorView_one) {
+        _separatorView_one = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 1)];
+        _separatorView_one.backgroundColor = separatorView_color;
+    }
+    return _separatorView_one;
+}
+
+- (UIView *)separatorView_two{
+    if (!_separatorView_two) {
+        _separatorView_two = [[UIView alloc]initWithFrame:CGRectMake(0, 43 * ScreenRatio_6, ScreenWidth, 1)];
+        _separatorView_two.backgroundColor = separatorView_color;
+    }
+    return _separatorView_two;
+}
+- (UIView *)nameBgView{
+    if (!_nameBgView) {
+        _nameBgView = [[UIView alloc]initWithFrame:CGRectMake(0, 15 * ScreenRatio_6, ScreenWidth, 44 * ScreenRatio_6)];
+        _nameBgView.backgroundColor = [UIColor whiteColor];
+    }
+    return _nameBgView;
+}
+
+- (UITextField *)userName{
+    if (!_userName) {
+        _userName = [[UITextField alloc]initWithFrame:CGRectMake(10 * ScreenRatio_6, 0, ScreenWidth - 10 * ScreenRatio_6, 44 * ScreenRatio_6)];
+        _userName.placeholder = @"请输入新名字";
+        _userName.backgroundColor = [UIColor whiteColor];
+        _userName.clearButtonMode = UITextFieldViewModeWhileEditing;
+    }
+    return _userName;
+}
+
+- (NSString *)userNameTemp{
+    if (!_userNameTemp) {
+        _userNameTemp = self.userName.text;
+    }
+    return _userNameTemp;
+}
+
+#pragma mark - 
+
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event{
+    [self.userName resignFirstResponder];
+}
+
+
+@end

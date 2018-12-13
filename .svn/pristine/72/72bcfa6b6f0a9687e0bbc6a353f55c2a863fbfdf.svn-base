@@ -1,0 +1,290 @@
+//
+//  WLKTClassroomCooperationVC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/2/6.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTClassroomCooperationVC.h"
+#import "PlaceholderTextView.h"
+#import "WLKTClassroomCooprationApi.h"
+#import "WLKTClassroomCooperationSuccessVC.h"
+
+@interface WLKTClassroomCooperationVC ()
+@property (strong, nonatomic) UITextField *usenameTF;
+@property (strong, nonatomic) UITextField *phoneTF;
+@property (strong, nonatomic) PlaceholderTextView *otherTV;
+@property (strong, nonatomic) UIButton *confirmBtn;
+@end
+
+@implementation WLKTClassroomCooperationVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor = separatorView_color;
+    [self setupViews];
+    UIBarButtonItem *left = [[UIBarButtonItem alloc]initWithImage:[UIImage imageNamed:@"箭头左b"] style:UIBarButtonItemStylePlain target:self action:@selector(backButtonAct)];
+    self.navigationItem.leftBarButtonItem = left;
+    
+    //keyboard
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardFrameChange:) name:UIKeyboardWillChangeFrameNotification object:nil];
+}
+
+- (void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    [UIApplication sharedApplication].statusBarStyle = UIStatusBarStyleDefault;
+}
+
+- (void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+    [UIApplication sharedApplication].statusBarStyle = UIStatusBarStyleLightContent;
+}
+
+- (void)dealloc{
+    [[NSNotificationCenter defaultCenter]removeObserver:self];
+}
+
+#pragma mark -
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event{
+    [self.view endEditing:YES];
+}
+
+- (void)backButtonAct{
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (void)confirmBtnAct{
+    if (self.usenameTF.text.length < 2) {
+        [SVProgressHUD showInfoWithStatus:@"请输入你的姓名"];
+        return;
+    }
+    if (![self.phoneTF.text isValidPhoneNumber]) {
+        [SVProgressHUD showInfoWithStatus:@"请输入正确的手机号码"];
+        return;
+    }
+   
+    [self request];
+}
+
+- (void)request{
+    [SVProgressHUD showProgress:-1 status:@"正在提交..."];
+    WLKTClassroomCooprationApi *api = [[WLKTClassroomCooprationApi alloc]initWithDescribe:self.otherTV.text phone:self.phoneTF.text name:self.usenameTF.text];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        [SVProgressHUD dismiss];
+        NSString *code = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"errorCode"]];
+        if ([code isEqualToString:@"0"]) {
+            WLKTClassroomCooperationSuccessVC *vc = [[WLKTClassroomCooperationSuccessVC alloc]init];
+            [self.navigationController pushViewController:vc animated:YES];
+        }
+        else{
+            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"信息提示" message:@"表单提交失败，请重新提交" preferredStyle:UIAlertControllerStyleAlert];
+            [alert addAction:[UIAlertAction actionWithTitle:@"提交" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+                [self request];
+            }]];
+            [alert addAction:[UIAlertAction actionWithTitle:@"编辑" style:UIAlertActionStyleCancel handler:nil]];
+            [self presentViewController:alert animated:YES completion:nil];
+        }
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [SVProgressHUD dismiss];
+    }];
+}
+
+#pragma mark - keyboard
+- (void)keyboardFrameChange:(NSNotification *)noti{
+    if (self.otherTV.isFirstResponder) {
+        CGRect keyboardFrame = [noti.userInfo[UIKeyboardFrameEndUserInfoKey] CGRectValue];
+        self.view.transform = CGAffineTransformMakeTranslation(0, keyboardFrame.origin.y - self.view.frame.size.height - NavigationBarAndStatusHeight);
+    }
+    
+}
+
+#pragma mark -
+- (void)setupViews{
+    UIView *bg = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 420 *ScreenRatio_6)];
+    bg.backgroundColor = UIColorHex(ffffff);
+    [self.view addSubview:bg];
+    
+    UILabel *course_1 = [UILabel new];
+    course_1.font = [UIFont systemFontOfSize:20 *ScreenRatio_6 weight:UIFontWeightBold];
+    course_1.textColor = UIColorHex(333333);
+    course_1.text = @"课程合作";
+    [bg addSubview:course_1];
+    [course_1 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(bg).offset(10 *ScreenRatio_6);
+        make.top.mas_equalTo(bg).offset(20 *ScreenRatio_6);
+    }];
+    
+    UILabel *course_2 = [UILabel new];
+    course_2.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+    course_2.textColor = UIColorHex(999999);
+    course_2.text = @"优质课程资源，获得更好的展示机会";
+    [bg addSubview:course_2];
+    [course_2 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(bg).offset(10 *ScreenRatio_6);
+        make.top.mas_equalTo(course_1.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    
+    UIView *sep_1 = [UIView new];
+    sep_1.backgroundColor = separatorView_color;
+    [bg addSubview:sep_1];
+    [sep_1 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 5 *ScreenRatio_6));
+        make.left.mas_equalTo(bg);
+        make.top.mas_equalTo(course_2.mas_bottom).offset(15 *ScreenRatio_6);
+    }];
+    
+    UILabel *user = [UILabel new];
+    user.font = [UIFont systemFontOfSize:16 *ScreenRatio_6 weight:UIFontWeightSemibold];
+    user.textColor = UIColorHex(333333);
+    user.text = @"联系人";
+    [bg addSubview:user];
+    [user mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(bg).offset(10 *ScreenRatio_6);
+        make.top.mas_equalTo(sep_1.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    
+    UIView *sep_2 = [UIView new];
+    sep_2.backgroundColor = separatorView_color;
+    [bg addSubview:sep_2];
+    [sep_2 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0.5));
+        make.left.mas_equalTo(bg);
+        make.top.mas_equalTo(user.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    
+    [bg addSubview:self.usenameTF];
+    [self.usenameTF mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.right.mas_equalTo(bg).offset(-10 *ScreenRatio_6);
+        make.left.mas_equalTo(bg).offset(10 *ScreenRatio_6);
+        make.top.mas_equalTo(sep_2.mas_bottom).offset(10 *ScreenRatio_6);
+        make.height.mas_equalTo(20 *ScreenRatio_6);
+    }];
+    
+    UIView *sep_3 = [UIView new];
+    sep_3.backgroundColor = separatorView_color;
+    [bg addSubview:sep_3];
+    [sep_3 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 5 *ScreenRatio_6));
+        make.left.mas_equalTo(bg);
+        make.top.mas_equalTo(self.usenameTF.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    
+    UILabel *phone = [UILabel new];
+    phone.font = [UIFont systemFontOfSize:16 *ScreenRatio_6 weight:UIFontWeightSemibold];
+    phone.textColor = UIColorHex(333333);
+    phone.text = @"联系电话";
+    [bg addSubview:phone];
+    [phone mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(bg).offset(10 *ScreenRatio_6);
+        make.top.mas_equalTo(sep_3.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    
+    UIView *sep_4 = [UIView new];
+    sep_4.backgroundColor = separatorView_color;
+    [bg addSubview:sep_4];
+    [sep_4 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0.5));
+        make.left.mas_equalTo(bg);
+        make.top.mas_equalTo(phone.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    
+    [bg addSubview:self.phoneTF];
+    [self.phoneTF mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.right.mas_equalTo(bg).offset(-10 *ScreenRatio_6);
+        make.left.mas_equalTo(bg).offset(10 *ScreenRatio_6);
+        make.top.mas_equalTo(sep_4.mas_bottom).offset(10 *ScreenRatio_6);
+        make.height.mas_equalTo(20 *ScreenRatio_6);
+    }];
+    
+    UIView *sep_5 = [UIView new];
+    sep_5.backgroundColor = separatorView_color;
+    [bg addSubview:sep_5];
+    [sep_5 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 5 *ScreenRatio_6));
+        make.left.mas_equalTo(bg);
+        make.top.mas_equalTo(self.phoneTF.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    
+    UILabel *other = [UILabel new];
+    other.font = [UIFont systemFontOfSize:16 *ScreenRatio_6 weight:UIFontWeightSemibold];
+    other.textColor = UIColorHex(333333);
+    other.text = @"备注";
+    [bg addSubview:other];
+    [other mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(bg).offset(10 *ScreenRatio_6);
+        make.top.mas_equalTo(sep_5.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    
+    UIView *sep_6 = [UIView new];
+    sep_6.backgroundColor = separatorView_color;
+    [bg addSubview:sep_6];
+    [sep_6 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0.5));
+        make.left.mas_equalTo(bg);
+        make.top.mas_equalTo(other.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    
+    [bg addSubview:self.otherTV];
+    [self.otherTV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.bottom.right.mas_equalTo(bg).offset(-10 *ScreenRatio_6);
+        make.left.mas_equalTo(bg).offset(10 *ScreenRatio_6);
+        make.top.mas_equalTo(sep_6.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    
+    
+    [self.view addSubview:self.confirmBtn];
+    [self.confirmBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth -20 *ScreenRatio_6, 40 *ScreenRatio_6));
+        make.centerX.mas_equalTo(self.view);
+        make.top.mas_equalTo(bg.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    
+}
+
+#pragma mark - get
+- (UITextField *)usenameTF{
+    if (!_usenameTF) {
+        _usenameTF = [UITextField new];
+        _usenameTF.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        _usenameTF.textColor = UIColorHex(333333);
+        _usenameTF.placeholder = @"请填写你的真实姓名，方便我们与你联系";
+    }
+    return _usenameTF;
+}
+- (UITextField *)phoneTF{
+    if (!_phoneTF) {
+        _phoneTF = [UITextField new];
+        _phoneTF.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        _phoneTF.textColor = UIColorHex(333333);
+        _phoneTF.placeholder = @"请填写你的常用电话";
+        _phoneTF.keyboardType = UIKeyboardTypeNumberPad;
+    }
+    return _phoneTF;
+}
+- (PlaceholderTextView *)otherTV{
+    if (!_otherTV) {
+        _otherTV = [[PlaceholderTextView alloc]initWithPlaceholderColor:UIColorHex(999999) font:12 * ScreenRatio_6];
+        _otherTV.myPlaceholder = @"你想说的话...";
+//        _otherTV.layer.borderColor = UIColorHex(999999).CGColor;
+//        _otherTV.layer.borderWidth = 0.5;
+        _otherTV.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+        _otherTV.textColor = UIColorHex(333333);
+    }
+    return _otherTV;
+}
+- (UIButton *)confirmBtn{
+    if (!_confirmBtn) {
+        _confirmBtn = [UIButton new];
+        _confirmBtn.backgroundColor = UIColorHex(33c4da);
+        _confirmBtn.titleLabel.font = [UIFont systemFontOfSize:16 *ScreenRatio_6];
+        [_confirmBtn setTitle:@"提交" forState:UIControlStateNormal];
+        [_confirmBtn setTitleColor:UIColorHex(ffffff) forState:UIControlStateNormal];
+        _confirmBtn.layer.masksToBounds = YES;
+        _confirmBtn.layer.cornerRadius = 5 *ScreenRatio_6;
+        [_confirmBtn addTarget:self action:@selector(confirmBtnAct) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _confirmBtn;
+}
+@end

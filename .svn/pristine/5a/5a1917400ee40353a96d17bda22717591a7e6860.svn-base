@@ -1,0 +1,279 @@
+//
+//  WLKTNewsCommentReplyVC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/27.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTNewsCommentReplyVC.h"
+#import "WLKTNewsDetailCommentReply.h"
+#import "WLKTNewsDetailCommentCell.h"
+#import "WLKTNewsDetailCommentReplyListApi.h"
+#import "WLKTTableviewRefresh.h"
+#import "WLKTNewsCommentReplyHeadView.h"
+#import "WLKTSchoolCommentLikeApi.h"
+#import "WLKTSchoolCommentGoReportVC.h"
+#import "WLKTCommentReplyApi.h"
+
+@interface WLKTNewsCommentReplyVC ()<UITableViewDelegate, UITableViewDataSource, NewsDetailCommentCellDelegate, NewsDetailCommentInfoCellDelegate>
+@property (strong, nonatomic) UITableView *tableview;
+@property (strong, nonatomic) UIButton *replyBtn;
+
+@property (strong, nonatomic) NSMutableArray<WLKTNewsDetailReplyList *> *dataArr;
+@property (strong, nonatomic) WLKTNewsDetailReplyList *info;
+@property (copy, nonatomic) NSString *cid;
+@property (nonatomic) NSInteger page;
+@end
+
+@implementation WLKTNewsCommentReplyVC
+- (instancetype)initWithCommentId:(NSString *)cid
+{
+    self = [super init];
+    if (self) {
+        _cid = cid;
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self.view addSubview:self.tableview];
+    [self.view addSubview:self.replyBtn];
+    
+    self.page = 1;
+    
+    [self setRefresh];
+}
+
+#pragma mark - network
+- (void)loadData{
+    WLKTNewsDetailCommentReplyListApi *api = [[WLKTNewsDetailCommentReplyListApi alloc]initWithNewsId:self.cid page:self.page];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        if (self.page == 1) {
+            [self.dataArr removeAllObjects];
+            [self.tableview.mj_footer resetNoMoreData];
+        }
+        self.info = [WLKTNewsDetailReplyList modelWithJSON:request.responseJSONObject[@"result"][@"info"]];
+        NSArray *arr = [NSArray modelArrayWithClass:[WLKTNewsDetailReplyList class] json:request.responseJSONObject[@"result"][@"list"]];
+        [self.tableview.mj_header endRefreshing];
+        if (self.page == 1) {
+            [self.tableview.mj_footer endRefreshing];
+        }
+        else{
+            if (arr.count == 0) {
+                [self.tableview.mj_footer endRefreshingWithNoMoreData];
+            }
+            else{
+                [self.tableview.mj_footer endRefreshing];
+            }
+        }
+        [self.dataArr addObjectsFromArray:arr];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (self.info.replycount) {
+                self.title = [NSString stringWithFormat:@"%@条回复", self.info.replycount];
+            }
+            WLKTNewsCommentReplyHeadView *v = [[WLKTNewsCommentReplyHeadView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, [UILabel getSizeWithStr:self.info.content Width:ScreenWidth -20 Font:14].height + 100)];
+            v.delegate = self;
+            v.replyButton.hidden = YES;
+            [v setCellData:self.info indexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
+            self.tableview.tableHeaderView = v;
+            [self.tableview reloadData];
+        });
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableview.mj_header endRefreshing];
+        [self.tableview.mj_footer endRefreshing];
+    }];
+}
+
+- (void)setRefresh{
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableview request:^{
+        weakSelf.page = 1;
+        [weakSelf loadData];
+    }];
+    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableview block:^{
+        weakSelf.page++;
+        [weakSelf loadData];
+    }];
+    [self.tableview.mj_header beginRefreshing];
+}
+
+#pragma mark - action
+- (void)replyBtnAct{
+    WLKTNewsDetailCommentReply *r = [[WLKTNewsDetailCommentReply alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight - NavigationBarAndStatusHeight) placeholder:[NSString stringWithFormat:@"回复@%@", self.info.username] index:0 isPushVC:YES];
+//    r.delegate = self;
+    [self.view addSubview:r];
+}
+
+#pragma mark - head view delegate
+- (void)didSelectedNewsDetailCommentInfoButtonByType:(NewsDetailCommentInfoType)type button:(UIButton *)button indexPath:(NSIndexPath *)indexPath{
+    if (type == NewsDetailCommentInfoLike) {//点赞
+        [SVProgressHUD show];
+        WLKTSchoolCommentLikeApi *api = [[WLKTSchoolCommentLikeApi alloc]initWithCommentId:self.info.cid];
+        [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+            [SVProgressHUD dismiss];
+            NSString *message = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"message"]];
+            if ([message containsString:@"已经赞"]) {
+                [SVProgressHUD showInfoWithStatus:message];
+            }
+            else{
+                [button setSelected:YES];
+                NSString *zan_num = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"zan_num"]];
+                [button setTitle:[NSString stringWithFormat:@" 赞 %@", zan_num] forState:UIControlStateNormal];
+            }
+            
+        } failure:^(__kindof YTKBaseRequest *request) {
+            ShowApiError
+        }];
+    }
+    if (type == NewsDetailCommentInfoReport) {//举报
+        WLKTSchoolCommentGoReportVC *vc = [[WLKTSchoolCommentGoReportVC alloc]initWithNewsComment:self.info success:^{
+            [button setTitle:@" 已举报" forState:UIControlStateNormal];
+        }];
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+//    if (type == NewsDetailCommentReply) {//回复
+//        WLKTNewsDetailCommentReply *r = [[WLKTNewsDetailCommentReply alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight - NavigationBarAndStatusHeight - 50) placeholder:[NSString stringWithFormat:@"回复@%@", self.dataArr[indexPath.row].username]];
+//        r.delegate = self;
+//        [self.view addSubview:r];
+//    }
+}
+
+#pragma mark - Comment Cell Delegate
+- (void)didSelectedNewsDetailCommentButtonByType:(NewsDetailCommentType)type button:(UIButton *)button indexPath:(NSIndexPath *)indexPath{
+    if (type == NewsDetailCommentLike) {//点赞
+        [SVProgressHUD show];
+        WLKTSchoolCommentLikeApi *api = [[WLKTSchoolCommentLikeApi alloc]initWithCommentId:self.dataArr[indexPath.row].cid];
+        [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+            [SVProgressHUD dismiss];
+            NSString *message = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"message"]];
+            if ([message containsString:@"已经赞"]) {
+                [SVProgressHUD showInfoWithStatus:message];
+            }
+            else{
+                [button setSelected:YES];
+                NSString *zan_num = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"zan_num"]];
+                [button setTitle:[NSString stringWithFormat:@" 赞 %@", zan_num] forState:UIControlStateNormal];
+            }
+            
+        } failure:^(__kindof YTKBaseRequest *request) {
+            ShowApiError
+        }];
+    }
+    if (type == NewsDetailCommentReport) {//举报
+        WLKTSchoolCommentGoReportVC *vc = [[WLKTSchoolCommentGoReportVC alloc]initWithNewsComment:self.dataArr[indexPath.row] success:^{
+            [button setTitle:@" 已举报" forState:UIControlStateNormal];
+        }];
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+    if (type == NewsDetailCommentReply) {//回复
+        if ([button.titleLabel.text isEqualToString:@"回复"]) {
+            WLKTNewsDetailCommentReply *r = [[WLKTNewsDetailCommentReply alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight) placeholder:[NSString stringWithFormat:@"回复@%@", self.dataArr[indexPath.row].username] index:0 isPushVC:YES];
+//            r.delegate = self;
+            [self.view addSubview:r];
+        }
+        else{
+            WLKTNewsCommentReplyVC *vc = [[WLKTNewsCommentReplyVC alloc]initWithCommentId:self.dataArr[indexPath.row].cid];
+            [self.navigationController pushViewController:vc animated:YES];
+        }
+    }
+}
+
+#pragma mark - Comment Reply Delegate
+- (void)didFinishWithReply:(NSString *)reply completion:(void (^)(BOOL))completion{
+    WLKTCommentReplyApi *api = [[WLKTCommentReplyApi alloc]initWithCommentId:self.info.cid content:reply];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        [SVProgressHUD showInfoWithStatus:request.responseJSONObject[@"message"]];
+        [self.tableview.mj_header beginRefreshing];
+        completion(YES);
+    } failure:^(__kindof YTKBaseRequest *request) {
+        
+    }];
+}
+
+#pragma mark - table view
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return self.dataArr.count;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    CGFloat h = 85;
+    h += [UILabel getSizeWithStr:self.dataArr[indexPath.row].content Width:ScreenWidth -20 Font:14].height;
+    return h;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 40;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTNewsDetailCommentCell *cell = [tableView dequeueReusableCellWithIdentifier:@"WLKTNewsDetailCommentCell"];
+    if (cell == nil) {
+        cell = [[WLKTNewsDetailCommentCell alloc]initWithSingleState:YES];
+    }
+    cell.delegate = self;
+    cell.backgroundColor = fillViewColor;
+    cell.replyButton.hidden = YES;
+    [cell setCellData:self.dataArr[indexPath.row] indexPath:indexPath];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 40)];
+    v.backgroundColor = fillViewColor;
+    UIView *line = [UIView new];
+    line.backgroundColor = UIColorHex(33c4da);
+    [v addSubview:line];
+    [line mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(2, 20));
+        make.left.mas_equalTo(v).offset(10);
+        make.centerY.mas_equalTo(v);
+    }];
+    UILabel *replyLabel = [UILabel new];
+    replyLabel.font = [UIFont systemFontOfSize:15 * ScreenRatio_6 weight:UIFontWeightSemibold];
+    replyLabel.textColor = KMainTextColor_3;
+    replyLabel.text = @"回复";
+    [v addSubview:replyLabel];
+    [replyLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(line.mas_right).offset(5);
+        make.centerY.mas_equalTo(v);
+    }];
+    
+    return v;
+}
+
+#pragma mark - get
+- (UITableView *)tableview{
+    if (!_tableview) {
+        _tableview = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight - NavigationBarAndStatusHeight - 50) style:UITableViewStylePlain];
+        _tableview.separatorStyle = UITableViewCellSeparatorStyleNone;
+        _tableview.delegate = self;
+        _tableview.dataSource = self;
+        _tableview.backgroundColor = [UIColor whiteColor];
+    }
+    return _tableview;
+}
+- (UIButton *)replyBtn{
+    if (!_replyBtn) {
+        _replyBtn = [[UIButton alloc]initWithFrame:CGRectMake(10, ScreenHeight - NavigationBarAndStatusHeight - 40, ScreenWidth - 20, 40)];
+        _replyBtn.backgroundColor = separatorView_color;
+        [_replyBtn setTitle:@" 回复评论" forState:UIControlStateNormal];
+        [_replyBtn setTitleColor:KMainTextColor_9 forState:UIControlStateNormal];
+        _replyBtn.titleLabel.font = [UIFont systemFontOfSize:15 * ScreenRatio_6];
+        _replyBtn.layer.cornerRadius = 5;
+        _replyBtn.layer.masksToBounds = YES;
+        _replyBtn.contentHorizontalAlignment = UIControlContentHorizontalAlignmentLeft;
+        [_replyBtn addTarget:self action:@selector(replyBtnAct) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _replyBtn;
+}
+- (NSMutableArray<WLKTNewsDetailReplyList *> *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray arrayWithCapacity:10];
+    }
+    return _dataArr;
+}
+@end

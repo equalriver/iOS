@@ -1,0 +1,271 @@
+//
+//  WLKTUserinfoController.m
+//  wlkt
+//
+//  Created by 尹平江 on 17/3/21.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTUserinfoController.h"
+#import "WLKTUserNameChangeVC.h"
+#import "WLKTUserGenderVC.h"
+#import "WLKTPhoneChangeVC.h"
+#import "WLKTLogin.h"
+#import "WLKTEmailChangeVC.h"
+
+@interface WLKTUserinfoController ()
+@property (strong, nonatomic)WLKTUserNameChangeVC *usernameChangeVC;
+@property (strong, nonatomic)WLKTUserGenderVC *userGenderVC;
+@property (strong, nonatomic)WLKTPhoneChangeVC *phoneChangeVC;
+@property (strong, nonatomic)WLKTEmailChangeVC *emailChangeVC;
+@end
+
+@implementation WLKTUserinfoController
+
+- (void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    [self.tableView reloadData];
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    self.navigationItem.title = @"个人信息";
+
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]initWithImage:[UIImage imageNamed:@"箭头左"] style:UIBarButtonItemStylePlain target:self action:@selector(backButtonAct)];
+    
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.tableView.scrollEnabled = NO;
+    self.tableView.backgroundColor = userinfoBgColor;
+}
+
+- (void)backButtonAct{
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+#pragma mark - Table view data source
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return 4;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return 1;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"cell"];
+    if (!cell) {
+        cell = [[UITableViewCell alloc]initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:@"cell"];
+    }
+    cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    
+    switch (indexPath.section) {
+        case 0:
+            //姓名
+            cell.textLabel.text = @"姓名";
+            cell.detailTextLabel.text = self.userName ? self.userName : @"无";
+            break;
+        case 1:
+            //性别
+            cell.textLabel.text = @"性别";
+            cell.detailTextLabel.text = self.gender ? self.gender : @"无";
+            break;
+        case 2:
+            //手机号
+            cell.textLabel.text = @"手机号";
+            cell.detailTextLabel.text = self.phoneNumber ? self.phoneNumber : @"无";
+            break;
+        case 3:
+            //email
+            cell.textLabel.text = @"邮箱";
+            cell.detailTextLabel.text = self.email ? self.email : @"无";
+            break;
+
+        default:
+            break;
+    }
+    cell.textLabel.textColor = userLabelColor;
+    cell.textLabel.font = [UIFont systemFontOfSize:16 * ScreenRatio_6];
+    cell.backgroundColor = [UIColor whiteColor];
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [self setHidesBottomBarWhenPushed:YES];
+    WS(weakSelf);
+    if(indexPath.section == 0){
+            //姓名
+            self.usernameChangeVC.userName.text = self.userName;
+            self.usernameChangeVC.usernameChangeBlock = ^(NSString *changedName){
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    SS(strongSelf);
+                    strongSelf.userName = changedName;
+                    [strongSelf.tableView reloadData];
+                });
+            };
+            [self.navigationController pushViewController:self.usernameChangeVC animated:YES];
+        }
+    if(indexPath.section == 1){
+            //性别
+            self.userGenderVC.userGenderTemp = self.gender;
+            self.userGenderVC.userGenderBlock = ^(NSString *changedGender){
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    SS(strongSelf);
+                    strongSelf.gender = changedGender;
+                    [strongSelf.tableView reloadData];
+            });
+        };
+
+        [self.navigationController pushViewController:self.userGenderVC animated:YES];
+        }
+    /*
+    if(indexPath.section == 2){
+            //手机号
+            self.phoneChangeVC.userPhoneTF.text = self.phoneNumber;
+            self.phoneChangeVC.userPhoneBlock = ^(NSString *phone) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    weakSelf.phoneNumber = phone;
+                    [weakSelf.tableView reloadData];
+                });
+            };
+        [self.navigationController pushViewController:self.phoneChangeVC animated:YES];
+        }
+    if(indexPath.section == 3){
+        //email
+        self.emailChangeVC.emailChangeTF.text = self.email;
+        self.emailChangeVC.emailChangeBlock = ^(NSString *email) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                weakSelf.email = email;
+                [weakSelf.tableView reloadData];
+            });
+        };
+        [self.navigationController pushViewController:self.emailChangeVC animated:YES];
+    }
+    */
+
+    
+}
+
+-(void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if ([cell respondsToSelector:@selector(setSeparatorInset:)]) {
+        [cell setSeparatorInset:UIEdgeInsetsZero];
+    }
+    
+    if ([cell respondsToSelector:@selector(setLayoutMargins:)]) {
+        [cell setLayoutMargins:UIEdgeInsetsZero];
+    }
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    if (section == 0) {
+        return 15 * ScreenRatio_6;
+    }
+    else{
+        return 1;
+    }
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    
+    
+    if (section == 0) {
+        UIView *headerView_one = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 15 * ScreenRatio_6)];
+        headerView_one.backgroundColor = userinfoBgColor;
+        UIView *separatorView_one = [[UIView alloc]initWithFrame:CGRectMake(0, 14 * ScreenRatio_6, ScreenWidth, 1)];
+        separatorView_one.backgroundColor = separatorView_color;
+        [headerView_one addSubview:separatorView_one];
+        return headerView_one;
+    }
+    else{
+        UIView *separatorView_two = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 1)];
+        separatorView_two.backgroundColor = separatorView_color;
+        return separatorView_two;
+    }
+    
+    
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    if (section == 3) {
+        return 1;
+    }
+    else{
+        return 0;
+    }
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section{
+    if (section == 3) {
+        UIView *separatorView_one = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 1)];
+        separatorView_one.backgroundColor = separatorView_color;
+        return separatorView_one;
+    }
+    else{
+        return nil;
+    }
+}
+
+#pragma mark - get
+
+- (NSString *)userName{
+    if (!_userName) {
+        _userName = TheCurUser.truename;
+        
+    }
+    return _userName;
+}
+
+- (NSString *)gender{
+    if (!_gender) {
+        _gender = TheCurUser.sex;
+        
+    }
+    return _gender;
+}
+
+- (NSString *)phoneNumber{
+    if (!_phoneNumber) {
+        _phoneNumber = TheCurUser.phone;
+        
+    }
+    return _phoneNumber;
+}
+-(NSString *)email{
+    if (!_email) {
+        _email = TheCurUser.email;
+    }
+    return _email;
+}
+
+- (WLKTUserNameChangeVC *)usernameChangeVC{
+    if (!_usernameChangeVC) {
+        _usernameChangeVC = [[WLKTUserNameChangeVC alloc]init];
+    }
+    return _usernameChangeVC;
+}
+
+- (WLKTUserGenderVC *)userGenderVC{
+    if (!_userGenderVC) {
+        _userGenderVC = [[WLKTUserGenderVC alloc]init];
+    }
+    return _userGenderVC;
+}
+
+- (WLKTPhoneChangeVC *)phoneChangeVC{
+    if (!_phoneChangeVC) {
+        _phoneChangeVC = [[WLKTPhoneChangeVC alloc]init];
+        
+    }
+    return _phoneChangeVC;
+}
+- (WLKTEmailChangeVC *)emailChangeVC{
+    if (!_emailChangeVC) {
+        _emailChangeVC = [[WLKTEmailChangeVC alloc]init];
+    }
+    return _emailChangeVC;
+}
+
+@end

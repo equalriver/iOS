@@ -1,0 +1,80 @@
+//
+//  WLKTActivity.h
+//  wlkt
+//
+//  Created by slovelys on 2017/7/18.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+@interface WLKTActivity : NSObject
+///收藏数
+@property (copy, nonatomic) NSString *shoucangnum;
+///总分
+@property (copy, nonatomic) NSString *score;
+///效果分
+@property (copy, nonatomic) NSString *effect;
+///师资分
+@property (copy, nonatomic) NSString *teach_score;
+///环境分
+@property (copy, nonatomic) NSString *environment;
+///评论数
+@property (copy, nonatomic) NSString *comment_num;
+///活动id
+@property (copy, nonatomic) NSString *aid;
+///活动所属学校id
+@property (copy, nonatomic) NSString *suid;
+///活动标题
+@property (copy, nonatomic) NSString *title;
+///活动副标题
+@property (copy, nonatomic) NSString *subtitle;
+///收费性质(1收费,0免费)
+@property (copy, nonatomic) NSString *feesxz;
+///价格
+@property (copy, nonatomic) NSString *price;
+///活动状态
+@property (copy, nonatomic) NSString *actstatus;
+///地址简写
+@property (copy, nonatomic) NSString *shortaddress;
+
+@property (copy, nonatomic) NSString *img;
+///点击浏览量
+@property (copy, nonatomic) NSString *hits;
+///纬度
+@property (copy, nonatomic) NSString *lat;
+///经度
+@property (copy, nonatomic) NSString *lng;
+///学校名称
+@property (copy, nonatomic) NSString *schoolname;
+///活动时间拼接
+@property (copy, nonatomic) NSString *asctime;
+///价格的单位
+@property (copy, nonatomic) NSString *coin;
+///距离
+@property (copy, nonatomic) NSString *distance;
+///1能报名，0不能报名
+@property (copy, nonatomic) NSString *issign;
+// 活动详情
+
+///开始时间
+@property (copy, nonatomic) NSString *stime;
+///结束时间
+@property (copy, nonatomic) NSString *etime;
+///联系电话
+@property (copy, nonatomic) NSString *phone;
+///地址拼接
+@property (copy, nonatomic) NSString *address;
+///banner图片数组
+@property (copy, nonatomic) NSArray *imgs;
+///介绍
+@property (copy, nonatomic) NSString *introduce;
+///注意事项
+@property (copy, nonatomic) NSArray<NSString *> *note;
+///1是已收藏 0是未收藏
+@property (copy, nonatomic) NSString *shoucang;
+///分享
+@property (copy, nonatomic) NSString *shareappurl;
+///客服url
+@property (copy, nonatomic) NSString *kftokenjs;
+@property (copy, nonatomic) NSString *xiaoqu;
+@end
+

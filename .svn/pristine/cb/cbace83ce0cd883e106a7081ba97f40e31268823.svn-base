@@ -1,0 +1,97 @@
+//
+//  WLKTTeachLocationView.m
+//  wlkt
+//
+//  Created by 尹平江 on 2017/8/10.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTTeachLocationView.h"
+#import "WLKTTeachLocationCell.h"
+#import "WLKTAddress.h"
+
+@interface WLKTTeachLocationView ()<UICollectionViewDataSource,UICollectionViewDelegate>
+@property (copy, nonatomic) NSArray *teachLocationArr;
+@property (assign, nonatomic) NSInteger selectedIndex;
+
+@end
+
+@implementation WLKTTeachLocationView
+
+- (instancetype)initWithFrame:(CGRect)frame collectionViewLayout:(UICollectionViewLayout *)layout data:(NSArray *)data {
+    self = [super initWithFrame:frame collectionViewLayout:layout];
+    if (self) {
+        _teachLocationArr = [NSArray arrayWithArray:data];
+        [self registerClass:[WLKTTeachLocationCell class] forCellWithReuseIdentifier:@"WLKTTeachLocationCell"];
+        self.dataSource = self;
+        self.delegate = self;
+    }
+    return self;
+}
+
+#pragma mark - collectionView
+
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    return self.teachLocationArr.count;
+    
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTTeachLocationCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"WLKTTeachLocationCell" forIndexPath:indexPath];
+    WLKTAddress *address = [[WLKTAddress alloc]init];
+    address = self.teachLocationArr[indexPath.item];
+    if (indexPath.item != 0) {
+        cell.tuijianIcon.hidden = YES;
+        cell.recommendIcon.hidden = YES;
+        cell.recommendLabel.hidden = YES;
+    }
+    if (indexPath.item == 0) {
+        cell.schoolAddress = address.address;
+        cell.locationTitle.text = address.name;
+        cell.tuijianIcon.hidden = NO;
+        cell.recommendIcon.hidden = NO;
+        cell.recommendLabel.hidden = NO;
+    }
+    
+    if (address.name.length > 7) {
+        NSUInteger len = address.name.length;
+        NSUInteger row = len % 5 == 0 ? len / 5 : len / 5 + 1;
+        cell.size = CGSizeMake(ScreenWidth /3 - 20 * ScreenRatio_6, (20 * (row - 1) + 40) * ScreenRatio_6);
+        cell.contentView.size = cell.size;
+        cell.locationTitle.size = CGSizeMake(cell.contentView.size.width, cell.contentView.size.height - 20 * ScreenRatio_6);
+    }
+    else{
+        cell.size = CGSizeMake(ScreenWidth /3 - 20 * ScreenRatio_6, 55 * ScreenRatio_6);
+        
+    }
+    cell.schoolAddress = address.address;
+    if (indexPath.item == self.selectedIndex) {
+        !self.locationSelectedBlock ? : self.locationSelectedBlock(cell.locationTitle.text, cell.schoolAddress);
+        cell.locationTitle.textColor = wordBlueColor;
+        cell.locationTitle.layer.borderColor = wordBlueColor.CGColor;
+    }
+    cell.locationTitle.text = [NSString stringWithFormat:@"  %@", address.name];
+    return cell;
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    self.selectedIndex = indexPath.item;
+    [collectionView reloadData];
+    WLKTTeachLocationCell *cell = (WLKTTeachLocationCell *)[collectionView cellForItemAtIndexPath:indexPath];
+    cell.locationTitle.textColor = wordBlueColor;
+    cell.locationTitle.layer.borderColor = wordBlueColor.CGColor;
+    !self.locationSelectedBlock ? : self.locationSelectedBlock(cell.locationTitle.text, cell.schoolAddress);
+  
+}
+
+- (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout minimumLineSpacingForSectionAtIndex:(NSInteger)section{
+    return 5 * ScreenRatio_6;
+}
+
+- (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout minimumInteritemSpacingForSectionAtIndex:(NSInteger)section{
+    return 5 * ScreenRatio_6;
+}
+
+
+
+@end

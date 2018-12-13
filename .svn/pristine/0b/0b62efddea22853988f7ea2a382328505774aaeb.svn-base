@@ -1,0 +1,177 @@
+//
+//  WLKTCDMore_QA_VC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/3/20.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTCDMore_QA_VC.h"
+
+@interface WLKTCDMore_QA_VC ()<UITableViewDelegate, UITableViewDataSource>
+@property (strong, nonatomic) UITableView *tableView;
+@property (strong, nonatomic) UIView *headerView;
+@property (strong, nonatomic) UIButton *askButton;
+@end
+
+@implementation WLKTCDMore_QA_VC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+}
+
+
+
+#pragma mark - table view
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return 0;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return 0;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return 0;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 0;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return nil;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    /////////
+    UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 0)];
+    v.backgroundColor = [UIColor whiteColor];
+    
+    UIView *sep = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 10 *ScreenRatio_6)];
+    sep.backgroundColor = kMainBackgroundColor;
+    [v addSubview:sep];
+    
+    UILabel *tagLabel = [UILabel new];
+    tagLabel.font = [UIFont systemFontOfSize:14 *ScreenRatio_6];
+    tagLabel.textColor = [UIColor whiteColor];
+    tagLabel.textAlignment = NSTextAlignmentCenter;
+    tagLabel.backgroundColor = kMainTextColor_red;
+    tagLabel.layer.cornerRadius = 2;
+    tagLabel.layer.masksToBounds = YES;
+    tagLabel.text = @"问";
+    [v addSubview:tagLabel];
+    [tagLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(20 *ScreenRatio_6, 20 *ScreenRatio_6));
+        make.left.mas_equalTo(v).offset(10 *ScreenRatio_6);
+        make.top.mas_equalTo(v).offset(30 *ScreenRatio_6);
+    }];
+    
+    UILabel *titleLabel = [UILabel new];
+    titleLabel.font = [UIFont systemFontOfSize:16 *ScreenRatio_6];
+    titleLabel.textColor = KMainTextColor_3;
+    [v addSubview:titleLabel];
+    [titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(tagLabel.mas_right).offset(10 *ScreenRatio_6);
+        make.right.mas_equalTo(v).offset(-10 *ScreenRatio_6);
+        make.top.mas_equalTo(tagLabel);
+    }];
+    
+    
+    return v;
+}
+
+
+
+#pragma mark - action
+- (void)askButtonAct{}
+
+
+- (void)buyButtonAct{}
+
+
+#pragma mark - get
+- (UIView *)makeHeaderViewWithData{
+    UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 90 *ScreenRatio_6)];
+    v.backgroundColor = [UIColor whiteColor];
+    
+    UIImageView *iv = [UIImageView new];
+    [iv setImageURL:[NSURL URLWithString:@""]];
+    [v addSubview:iv];
+    [iv mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(90 *ScreenRatio_6, 68 *ScreenRatio_6));
+        make.left.top.mas_equalTo(v).offset(10 *ScreenRatio_6);
+    }];
+    
+    UILabel *titleLabel = [UILabel new];
+    titleLabel.font = [UIFont systemFontOfSize:16 *ScreenRatio_6];
+    titleLabel.textColor = KMainTextColor_3;
+    [v addSubview:titleLabel];
+    [titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(iv.mas_right).offset(10 *ScreenRatio_6);
+        make.top.mas_equalTo(iv);
+        make.width.mas_equalTo(200 *ScreenRatio_6);
+    }];
+    
+    UILabel *price = [UILabel new];
+    price.font = [UIFont systemFontOfSize:22 *ScreenRatio_6];
+    price.textColor = kMainTextColor_red;
+    [v addSubview:price];
+    [price mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.right.mas_equalTo(titleLabel);
+        make.bottom.mas_equalTo(v).offset(-10 *ScreenRatio_6);
+    }];
+    
+    UIButton *buyBtn = [UIButton new];
+    buyBtn.titleLabel.font = [UIFont systemFontOfSize:14 *ScreenRatio_6];
+    buyBtn.backgroundColor = UIColorHex(ffbfbf);
+    [buyBtn setTitle:@"购买" forState:UIControlStateNormal];
+    [buyBtn setTitleColor:kMainTextColor_red forState:UIControlStateNormal];
+    buyBtn.layer.masksToBounds = YES;
+    buyBtn.layer.cornerRadius = 20 *ScreenRatio_6;
+    [buyBtn addTarget:self action:@selector(buyButtonAct) forControlEvents:UIControlEventTouchUpInside];
+    [v addSubview:buyBtn];
+    [buyBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(40 *ScreenRatio_6, 40 *ScreenRatio_6));
+        make.right.mas_equalTo(v).offset(-15 *ScreenRatio_6);
+        make.top.mas_equalTo(v).offset(15 *ScreenRatio_6);
+    }];
+    
+    UILabel *buyTag = [UILabel new];
+    buyTag.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+    buyTag.textColor = kMainTextColor_red;
+    buyTag.textAlignment = NSTextAlignmentCenter;
+    buyTag.text = @"立即购买";
+    [v addSubview:buyTag];
+    [buyTag mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(60 *ScreenRatio_6, 20 *ScreenRatio_6));
+        make.top.mas_equalTo(buyBtn.mas_bottom).offset(5);
+        make.centerX.mas_equalTo(buyBtn);
+    }];
+    
+    return v;
+}
+- (UITableView *)tableView{
+    if (!_tableView) {
+        _tableView = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight - 120) style:UITableViewStyleGrouped];
+        _tableView.backgroundColor = kMainBackgroundColor;
+        _tableView.dataSource = self;
+        _tableView.delegate = self;
+    }
+    return _tableView;
+}
+- (UIButton *)askButton{
+    if (!_askButton) {
+        _askButton = [[UIButton alloc]initWithFrame:CGRectMake((ScreenWidth -80) /2, ScreenHeight -70, 80, 35)];
+        _askButton.backgroundColor = kMainTextColor_red;
+        _askButton.titleLabel.font = [UIFont systemFontOfSize:14];
+        [_askButton setTitle:@"提问" forState:UIControlStateNormal];
+        [_askButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        _askButton.layer.masksToBounds = YES;
+        _askButton.layer.cornerRadius = 17.5;
+        [_askButton addTarget:self action:@selector(askButtonAct) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _askButton;
+}
+@end

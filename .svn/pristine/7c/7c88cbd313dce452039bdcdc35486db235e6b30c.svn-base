@@ -1,0 +1,106 @@
+//
+//  WLKTCourseDetailCouponCell_2.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/22.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTCourseDetailCouponCell_2.h"
+
+@interface WLKTCourseDetailCouponCell_2 ()
+@property (strong, nonatomic) UIView *separatorView;
+@property (strong, nonatomic) UILabel *titleLabel;
+@property (strong, nonatomic) UIImageView *rightArrowIV;
+@property (strong, nonatomic) UIImageView *priceIV;
+@property (strong, nonatomic) UILabel *priceLabel;
+@property (strong, nonatomic) UIButton *ss2;
+@end
+
+@implementation WLKTCourseDetailCouponCell_2
+
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        self.contentView.backgroundColor = UIColorHex(f8f8f8);
+        [self.contentView addSubview:self.separatorView];
+        [self.contentView addSubview:self.titleLabel];
+        [self.contentView addSubview:self.rightArrowIV];
+        [self.contentView addSubview:self.priceIV];
+        [self.priceIV addSubview:self.priceLabel];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)setCellData:(WLKTCourseCouponData *)data{
+    self.priceLabel.text = [NSString stringWithFormat:@"¥%@", data.money];
+}
+
+#pragma mark - make constraints
+- (void)makeConstraints{
+    [self.separatorView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0.5));
+        make.top.mas_equalTo(self.contentView);
+        make.left.mas_equalTo(self.contentView);
+    }];
+    [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(15 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.contentView);
+    }];
+    [self.priceIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.contentView);
+        make.left.mas_equalTo(self.titleLabel.mas_right).offset(20 * ScreenRatio_6);
+    }];
+    [self.priceLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.priceIV);
+        make.right.mas_equalTo(self.priceIV.mas_right).offset(-5);
+    }];
+    [self.rightArrowIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-15 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.contentView);
+    }];
+    
+}
+
+#pragma mark - get
+- (UIView *)separatorView{
+    if (!_separatorView) {
+        _separatorView = [[UIView alloc]init];
+        _separatorView.backgroundColor = separatorView_color;
+    }
+    return _separatorView;
+}
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [[UILabel alloc]init];
+        _titleLabel.font = [UIFont systemFontOfSize:14 * ScreenRatio_6];
+        _titleLabel.textColor = KMainTextColor_9;
+        _titleLabel.text = @"优惠券";
+    }
+    return _titleLabel;
+}
+- (UIImageView *)rightArrowIV{
+    if (!_rightArrowIV) {
+        _rightArrowIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"课程详情进入"]];
+    }
+    return _rightArrowIV;
+}
+- (UIImageView *)priceIV{
+    if (!_priceIV) {
+        _priceIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"课程详情优惠券"]];
+    }
+    return _priceIV;
+}
+- (UILabel *)priceLabel{
+    if (!_priceLabel) {
+        _priceLabel = [[UILabel alloc]init];
+        _priceLabel.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+        _priceLabel.textColor = UIColorHex(ffffff);
+        _priceLabel.textAlignment = NSTextAlignmentRight;
+    }
+    return _priceLabel;
+}
+
+@end

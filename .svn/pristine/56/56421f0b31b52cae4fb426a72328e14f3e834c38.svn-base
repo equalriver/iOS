@@ -1,0 +1,19 @@
+//
+//  WLKTCourseDetailEvaluationStarView.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/2.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourseDetailNewCourse_commentStar.h"
+
+@protocol CourseDetailEvaluationStarDelegate <NSObject>
+- (void)didSelectedStarItem:(NSInteger)index;
+@end
+
+@interface WLKTCourseDetailEvaluationStarView : UIView
+@property (weak, nonatomic) id<CourseDetailEvaluationStarDelegate> delegate;
+- (void)setStarWithData:(WLKTCourseDetailNewCourse_commentStar *)data;
+@end

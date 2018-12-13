@@ -1,0 +1,47 @@
+//
+//  WLKTGoSaleCourseApi.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/9/13.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTGoSaleCourseApi.h"
+
+#import "WLKTLogin.h"
+
+@interface WLKTGoSaleCourseApi ()
+@property (copy, nonatomic) NSString *cid;
+@property (assign, nonatomic) int page;
+
+@end
+
+@implementation WLKTGoSaleCourseApi
+
+- (instancetype)initWithCid:(NSString *)cid page:(int)page
+{
+    self = [super init];
+    if (self) {
+        _cid = cid;
+        _page = page;
+    }
+    return self;
+}
+
+- (NSString *)requestUrl {
+    return @"mycoupon/course";
+}
+
+- (YTKRequestMethod)requestMethod {
+    return YTKRequestMethodPost;
+}
+
+- (id)requestArgument {
+    return @{
+             @"id" : _cid,
+             @"page" : @(_page)
+             };
+}
+
+@end
+

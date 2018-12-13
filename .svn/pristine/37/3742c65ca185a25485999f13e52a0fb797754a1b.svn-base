@@ -1,0 +1,15 @@
+//
+//  WLKTCourseDetailVC.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/10/26.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface WLKTCourseDetailVC : UIViewController
+- (instancetype)initWithCourseId:(NSString *)courseId;
+@property (strong, nonatomic) UITableView *tableView;
+@property (copy, nonatomic) void (^completion)(void);
+@end

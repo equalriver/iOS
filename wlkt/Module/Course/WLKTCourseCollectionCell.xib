@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="12121" systemVersion="16G29" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES">
+    <device id="retina4_7" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="12089"/>
+        <capability name="Aspect ratio constraints" minToolsVersion="5.1"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <collectionViewCell opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" reuseIdentifier="WLKTCourseCollectionCell" id="gTV-IL-0wX" customClass="WLKTCourseCollectionCell">
+            <rect key="frame" x="0.0" y="0.0" width="243" height="255"/>
+            <autoresizingMask key="autoresizingMask"/>
+            <view key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center">
+                <rect key="frame" x="0.0" y="0.0" width="243" height="255"/>
+                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                <subviews>
+                    <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="dBK-PS-Edk">
+                        <rect key="frame" x="0.0" y="0.0" width="243" height="146"/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                        <constraints>
+                            <constraint firstAttribute="width" secondItem="dBK-PS-Edk" secondAttribute="height" multiplier="5:3" id="GgC-Or-g11"/>
+                        </constraints>
+                    </view>
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="gpT-Jy-IBD">
+                        <rect key="frame" x="8" y="151" width="227" height="17"/>
+                        <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                        <nil key="textColor"/>
+                        <nil key="highlightedColor"/>
+                    </label>
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Qwi-QA-05T">
+                        <rect key="frame" x="8" y="172" width="227" height="17"/>
+                        <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                        <nil key="textColor"/>
+                        <nil key="highlightedColor"/>
+                    </label>
+                </subviews>
+            </view>
+            <constraints>
+                <constraint firstItem="Qwi-QA-05T" firstAttribute="top" secondItem="gpT-Jy-IBD" secondAttribute="bottom" constant="4" id="5mg-KJ-d15"/>
+                <constraint firstItem="dBK-PS-Edk" firstAttribute="leading" secondItem="gTV-IL-0wX" secondAttribute="leading" id="BQt-Cp-tKr"/>
+                <constraint firstItem="gpT-Jy-IBD" firstAttribute="top" secondItem="dBK-PS-Edk" secondAttribute="bottom" constant="5" id="J4q-RM-K0j"/>
+                <constraint firstItem="gpT-Jy-IBD" firstAttribute="leading" secondItem="gTV-IL-0wX" secondAttribute="leading" constant="8" id="LEf-zH-jAK"/>
+                <constraint firstAttribute="trailing" secondItem="gpT-Jy-IBD" secondAttribute="trailing" constant="8" id="NIq-88-blb"/>
+                <constraint firstAttribute="trailing" secondItem="Qwi-QA-05T" secondAttribute="trailing" constant="8" id="aX7-BH-O83"/>
+                <constraint firstItem="Qwi-QA-05T" firstAttribute="leading" secondItem="gTV-IL-0wX" secondAttribute="leading" constant="8" id="atS-dM-l4i"/>
+                <constraint firstItem="dBK-PS-Edk" firstAttribute="top" secondItem="gTV-IL-0wX" secondAttribute="top" id="tPm-8x-7Ob"/>
+                <constraint firstAttribute="trailing" secondItem="dBK-PS-Edk" secondAttribute="trailing" id="ukm-gH-r2e"/>
+            </constraints>
+            <size key="customSize" width="243" height="255"/>
+            <connections>
+                <outlet property="imageView" destination="dBK-PS-Edk" id="7ae-c7-ga5"/>
+                <outlet property="priceLabel" destination="Qwi-QA-05T" id="HNo-Es-TNo"/>
+                <outlet property="titleLabel" destination="gpT-Jy-IBD" id="uN5-CX-fKe"/>
+            </connections>
+            <point key="canvasLocation" x="-63.5" y="94.5"/>
+        </collectionViewCell>
+    </objects>
+</document>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="12121" systemVersion="16F73" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES">
+    <device id="retina4_7" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="12089"/>
+        <capability name="Constraints with non-1.0 multipliers" minToolsVersion="5.1"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view contentMode="scaleToFill" id="ji1-g4-pkQ" customClass="WLKTActivityConditionPickerView">
+            <rect key="frame" x="0.0" y="0.0" width="398" height="297"/>
+            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+            <subviews>
+                <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" style="plain" separatorStyle="default" rowHeight="44" sectionHeaderHeight="28" sectionFooterHeight="28" translatesAutoresizingMaskIntoConstraints="NO" id="mXN-VL-kr0">
+                    <rect key="frame" x="0.0" y="0.0" width="133" height="297"/>
+                    <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                    <connections>
+                        <outlet property="dataSource" destination="ji1-g4-pkQ" id="Vci-zY-LlM"/>
+                        <outlet property="delegate" destination="ji1-g4-pkQ" id="Jgc-AL-uRw"/>
+                    </connections>
+                </tableView>
+                <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" style="plain" separatorStyle="default" rowHeight="44" sectionHeaderHeight="28" sectionFooterHeight="28" translatesAutoresizingMaskIntoConstraints="NO" id="KOt-qi-ukQ">
+                    <rect key="frame" x="133" y="0.0" width="265" height="297"/>
+                    <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                    <connections>
+                        <outlet property="dataSource" destination="ji1-g4-pkQ" id="DIC-SS-VCH"/>
+                        <outlet property="delegate" destination="ji1-g4-pkQ" id="uCM-eX-ki5"/>
+                    </connections>
+                </tableView>
+            </subviews>
+            <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+            <constraints>
+                <constraint firstAttribute="trailing" secondItem="KOt-qi-ukQ" secondAttribute="trailing" id="18a-jU-ybJ"/>
+                <constraint firstItem="KOt-qi-ukQ" firstAttribute="leading" secondItem="mXN-VL-kr0" secondAttribute="trailing" id="6fe-8B-y3x"/>
+                <constraint firstItem="KOt-qi-ukQ" firstAttribute="top" secondItem="ji1-g4-pkQ" secondAttribute="top" id="IzZ-3i-kbO"/>
+                <constraint firstItem="mXN-VL-kr0" firstAttribute="leading" secondItem="ji1-g4-pkQ" secondAttribute="leading" id="Jmf-RV-Pd2"/>
+                <constraint firstItem="mXN-VL-kr0" firstAttribute="top" secondItem="ji1-g4-pkQ" secondAttribute="top" id="OHh-7K-Frr"/>
+                <constraint firstItem="mXN-VL-kr0" firstAttribute="width" secondItem="ji1-g4-pkQ" secondAttribute="width" multiplier="1:3" id="aCA-EZ-QB4"/>
+                <constraint firstAttribute="bottom" secondItem="mXN-VL-kr0" secondAttribute="bottom" id="gRM-3q-kvr"/>
+                <constraint firstAttribute="bottom" secondItem="KOt-qi-ukQ" secondAttribute="bottom" id="mh7-hg-HQd"/>
+            </constraints>
+            <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
+            <connections>
+                <outlet property="primaryTableView" destination="mXN-VL-kr0" id="d2G-V6-Iq3"/>
+                <outlet property="secondTableView" destination="KOt-qi-ukQ" id="eS2-JA-ld3"/>
+            </connections>
+            <point key="canvasLocation" x="85" y="14.5"/>
+        </view>
+    </objects>
+</document>

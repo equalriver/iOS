@@ -1,0 +1,19 @@
+//
+//  WLKTCourseDetailOtherCourseCell.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/1.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourseDetailNewAbout_list.h"
+
+@protocol WLKTCourseDetailOtherCourseDelegate <NSObject>
+- (void)didSelectedOtherCourseCollectionViewItem:(NSIndexPath *)indexPath;
+@end
+
+@interface WLKTCourseDetailOtherCourseCell : UITableViewCell
+@property (weak, nonatomic) id<WLKTCourseDetailOtherCourseDelegate> delegate;
+- (instancetype)initWithData:(NSArray<WLKTCourseDetailNewAbout_list *> *)array;
+@end

@@ -1,0 +1,16 @@
+//
+//  WLKTCourseDetailRegisterAlert.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/23.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourseDetailData.h"
+
+@interface WLKTCourseDetailRegisterAlert : UIView
+- (instancetype)initWithData:(WLKTCourseDetailData *)data target:(UIViewController *)vc;
+@property (strong, nonatomic) UIView *contentView;
+
+@end

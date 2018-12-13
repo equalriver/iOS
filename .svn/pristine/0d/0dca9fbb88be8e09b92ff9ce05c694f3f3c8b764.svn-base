@@ -1,0 +1,81 @@
+//
+//  UILabel+WLKTLabelTools.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/22.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "UILabel+WLKTLabelTools.h"
+
+@implementation UILabel (WLKTLabelTools)
+
++ (CGSize)getSizeWithStr:(NSString *) str Width:(float)width Font:(float)fontSize
+{
+    NSDictionary * attribute = @{NSFontAttributeName:[UIFont systemFontOfSize:fontSize]};
+    CGSize tempSize = [str boundingRectWithSize:CGSizeMake(width, MAXFLOAT)
+                                        options:NSStringDrawingUsesLineFragmentOrigin
+                                     attributes:attribute
+                                        context:nil].size;
+    
+    return CGSizeMake(ceil(tempSize.width), ceil(tempSize.height));
+}
+
++ (CGSize)getSizeWithStr:(NSString *) str Height:(float)height Font:(float)fontSize
+{
+    NSDictionary * attribute = @{NSFontAttributeName :[UIFont systemFontOfSize:fontSize] };
+    CGSize tempSize = [str boundingRectWithSize:CGSizeMake(MAXFLOAT, height)
+                                      options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading
+                                   attributes:attribute
+                                      context:nil].size;
+    
+    return CGSizeMake(ceil(tempSize.width), ceil(tempSize.height));
+}
+
++ (CGFloat)getSpaceLabelHeight:(NSString *)str withFont:(UIFont *)font withWidth:(CGFloat)width lineSpacing:(CGFloat)lineSpacing wordSpacing:(CGFloat)wordSpacing{
+    NSMutableParagraphStyle *paraStyle = [[NSMutableParagraphStyle alloc] init];
+    paraStyle.lineSpacing = lineSpacing;
+    paraStyle.hyphenationFactor = 1.0;//连字符属性
+    paraStyle.firstLineHeadIndent = 40.0;//每段的首行缩进
+    paraStyle.paragraphSpacingBefore = 0.0;//段落间距
+    paraStyle.headIndent = 0;//整段缩进
+    paraStyle.tailIndent = 0;//右侧缩进或显示宽度
+    NSDictionary *dic = @{NSFontAttributeName:font, NSParagraphStyleAttributeName:paraStyle, NSKernAttributeName:@(wordSpacing)
+                          };
+    
+    CGSize size = [str boundingRectWithSize:CGSizeMake(width, MAXFLOAT) options:NSStringDrawingUsesLineFragmentOrigin attributes:dic context:nil].size;
+    return size.height;
+}
+
++ (UILabel *)itemLabelWithText:(NSString *)str{
+    UILabel *l = [[UILabel alloc]init];
+    l.textAlignment = NSTextAlignmentCenter;
+    l.font = [UIFont systemFontOfSize:9 *ScreenRatio_6];
+    l.textColor = [UIColor colorWithHexString:@"#ee402d"];
+    l.layer.cornerRadius = 1.5;
+    l.layer.borderColor = [UIColor colorWithHexString:@"#ee402d"].CGColor;
+    l.layer.borderWidth = 0.3;
+    l.layer.masksToBounds = YES;
+    l.text = str;
+    return l;
+}
+
++ (NSAttributedString *)setAttributedString:(NSString *)str withFont:(UIFont *)font lineSpacing:(CGFloat)lineSpacing wordSpacing:(CGFloat)wordSpacing{
+    NSMutableParagraphStyle *paraStyle = [[NSMutableParagraphStyle alloc] init];
+    paraStyle.lineBreakMode = NSLineBreakByTruncatingTail;
+    paraStyle.lineSpacing = lineSpacing; //设置行间距
+    paraStyle.hyphenationFactor = 1.0;//连字符属性
+    paraStyle.firstLineHeadIndent = 20.0;//每段的首行缩进
+    paraStyle.paragraphSpacingBefore = 0.0;//段落间距
+    paraStyle.headIndent = 0;//整段缩进
+    paraStyle.tailIndent = 0;//右侧缩进或显示宽度
+    //设置字间距 NSKernAttributeName:@1.5f
+    NSDictionary *dic = @{NSFontAttributeName:font, NSParagraphStyleAttributeName:paraStyle, NSKernAttributeName:@(wordSpacing)
+                          };
+    if (str) {
+        return [[NSAttributedString alloc] initWithString:str attributes:dic];
+    }
+    return nil;
+}
+
+@end

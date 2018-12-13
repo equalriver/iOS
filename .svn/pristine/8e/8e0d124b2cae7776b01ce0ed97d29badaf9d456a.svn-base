@@ -1,0 +1,115 @@
+//
+//  WLKTActivityDetailVRPhotoCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/12.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTActivityDetailVRPhotoCell.h"
+
+@interface ActivityDetailVRPhotoCollectionCell: UICollectionViewCell
+@property (strong, nonatomic) UIImageView *VRImageIV;
+- (void)setCellData:(UIImage *)image;
+@end
+
+@implementation ActivityDetailVRPhotoCollectionCell
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self.contentView addSubview:self.VRImageIV];
+    }
+    return self;
+}
+
+- (void)setCellData:(UIImage *)image{
+    self.VRImageIV.image = image;
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.VRImageIV.image = nil;
+}
+
+- (UIImageView *)VRImageIV{
+    if (!_VRImageIV) {
+        _VRImageIV = [[UIImageView alloc]initWithFrame:self.bounds];
+        _VRImageIV.layer.masksToBounds = YES;
+        _VRImageIV.layer.cornerRadius = 3;
+    }
+    return _VRImageIV;
+}
+
+@end
+
+
+/***************************************************************************/
+@interface WLKTActivityDetailVRPhotoCell ()<UICollectionViewDelegate, UICollectionViewDataSource>
+@property (strong, nonatomic) UICollectionView *contentCV;
+@property (strong, nonatomic) UICollectionViewFlowLayout *layout;
+@property (copy, nonatomic) NSArray *imageArr;
+@end
+
+@implementation WLKTActivityDetailVRPhotoCell
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [self.contentView addSubview:self.contentCV];
+    }
+    return self;
+}
+
+
+#pragma mark - collection view
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    if (self.imageArr.count) {
+        return self.imageArr.count;
+    }
+    return 1;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+    ActivityDetailVRPhotoCollectionCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"ActivityDetailVRPhotoCollectionCell" forIndexPath:indexPath];
+    if (!self.imageArr.count) {
+        [cell setCellData:[UIImage imageNamed:@"VR"]];
+    }
+    else{
+        
+    }
+    return cell;
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    if ([self.delegate respondsToSelector:@selector(didSelectedVRPhotoWithIndex:)]) {
+        [self.delegate didSelectedVRPhotoWithIndex:indexPath];
+    }
+}
+
+#pragma mark - get
+- (UICollectionView *)contentCV{
+    if (!_contentCV) {
+        _contentCV = [[UICollectionView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 105) collectionViewLayout:self.layout];
+        _contentCV.showsVerticalScrollIndicator = NO;
+        _contentCV.showsHorizontalScrollIndicator = NO;
+        _contentCV.delegate = self;
+        _contentCV.dataSource = self;
+        _contentCV.backgroundColor = UIColorHex(ffffff);
+        [_contentCV registerClass:[ActivityDetailVRPhotoCollectionCell class] forCellWithReuseIdentifier:@"ActivityDetailVRPhotoCollectionCell"];
+    }
+    return _contentCV;
+}
+- (UICollectionViewFlowLayout *)layout{
+    if (!_layout) {
+        _layout = [UICollectionViewFlowLayout new];
+        _layout.itemSize = CGSizeMake(140, 90);
+        _layout.minimumInteritemSpacing = 10;
+        _layout.scrollDirection = UICollectionViewScrollDirectionHorizontal;
+        _layout.sectionInset = UIEdgeInsetsMake(0, 10, 15, 10);
+    }
+    return _layout;
+}
+
+@end
+

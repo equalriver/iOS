@@ -1,0 +1,350 @@
+//
+//  WLKTHPFilterBar.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/3/2.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTHPFilterBar.h"
+#import "WLKTHPFilterView.h"
+//
+//@protocol HPFilterBarClassifyCollectionCellDelegate<NSObject>
+//- (void)didSelectedClassifyItem:(NSInteger)index;
+//@end
+
+@interface HPFilterBarClassifyCollectionCell: UICollectionViewCell
+@property (strong, nonatomic) UILabel *itemLabel;
+//@property (weak, nonatomic) id<HPFilterBarClassifyCollectionCellDelegate> delegate;
+@property (nonatomic) NSInteger index;
+@end
+
+@implementation HPFilterBarClassifyCollectionCell
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self.contentView addSubview:self.itemLabel];
+        [self.itemLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.centerX.centerY.mas_equalTo(self.contentView);
+        }];
+    }
+    return self;
+}
+
+//- (void)itemLabelAct:(UIButton *)sender{
+//
+//    if ([self.delegate respondsToSelector:@selector(didSelectedClassifyItem:)]) {
+//        [self.delegate didSelectedClassifyItem:self.index];
+//    }
+//}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.itemLabel.text = nil;
+}
+
+- (UILabel *)itemLabel{
+    if (!_itemLabel) {
+        _itemLabel = [UILabel new];
+        _itemLabel.font = [UIFont systemFontOfSize:14 *ScreenRatio_6];
+        _itemLabel.textColor = KMainTextColor_3;
+    }
+    return _itemLabel;
+}
+@end
+
+//***************************************************************
+
+@interface HPFilterBarFilterCollectionCell: UICollectionViewCell
+@property (strong, nonatomic) UILabel *titleLabel;
+@property (strong, nonatomic) UIImageView *closeIV;
+
+@property (nonatomic) NSInteger index;
+@end
+
+@implementation HPFilterBarFilterCollectionCell
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        self.contentView.layer.borderColor = KMainTextColor_9.CGColor;
+        self.contentView.layer.borderWidth = 0.5;
+        self.contentView.layer.masksToBounds = YES;
+        self.contentView.layer.cornerRadius = frame.size.height /2;
+        [self.contentView addSubview:self.titleLabel];
+        [self.contentView addSubview:self.closeIV];
+        [self.closeIV mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.centerY.mas_equalTo(self.contentView);
+            make.right.mas_equalTo(self.contentView).offset(-10 *ScreenRatio_6);
+            make.size.mas_equalTo(CGSizeMake(12 *ScreenRatio_6, 12 *ScreenRatio_6));
+        }];
+        [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.height.centerY.mas_equalTo(self.contentView);
+            make.left.mas_equalTo(self.contentView).offset(10 *ScreenRatio_6);
+            make.right.mas_equalTo(self.closeIV.mas_left);
+        }];
+        
+    }
+    return self;
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.titleLabel.text = nil;
+
+}
+
+#pragma mark - get
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [UILabel new];
+        _titleLabel.font = [UIFont systemFontOfSize:14 *ScreenRatio_6];
+        _titleLabel.textColor = KMainTextColor_3;
+
+    }
+    return _titleLabel;
+}
+- (UIImageView *)closeIV{
+    if (!_closeIV) {
+        _closeIV = [UIImageView new];
+        _closeIV.image = [UIImage imageNamed:@"CourseList关闭"];
+    }
+    return _closeIV;
+}
+
+@end
+
+
+//***************************************************************
+@interface WLKTHPFilterBar ()<UICollectionViewDelegateFlowLayout, UICollectionViewDataSource, UICollectionViewDelegate, WLKTHPFilterViewDelegate>
+@property (strong, nonatomic) UICollectionView *classifyCV;
+@property (strong, nonatomic) UICollectionView *filterItemCV;
+@property (strong, nonatomic) UIView *separator_1;
+@property (strong, nonatomic) UIView *separator_2;
+@property (strong, nonatomic) UIView *separator_3;
+@property (strong, nonatomic) UIButton *filterBtn;
+
+@property (nonatomic) BOOL isFilterViewShow;
+@property (copy, nonatomic) NSArray<WLKTClassifyFliterItem *> *classifyArr;
+@property (strong, nonatomic) NSMutableArray<NSIndexPath *> *filterItemArr;
+@property (strong, nonatomic) WLKTClassifyData *data;
+@property (nonatomic) NSInteger currentClassifySelected;
+@end
+
+@implementation WLKTHPFilterBar
+- (instancetype)initWithFrame:(CGRect)frame classifyData:(WLKTClassifyData *)data
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        _data = data;
+        _currentClassifySelected = 0;
+        _classifyArr = [NSArray arrayWithArray:data.filter];
+        self.backgroundColor = [UIColor whiteColor];
+        [self addSubview:self.classifyCV];
+        [self addSubview:self.filterItemCV];
+        [self addSubview:self.separator_1];
+        [self addSubview:self.separator_2];
+        [self addSubview:self.separator_3];
+        [self addSubview:self.filterBtn];
+        [self.classifyCV mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(ScreenWidth - 35 *ScreenRatio_6 - 0.5, frame.size.height - 0.5));
+            make.left.top.mas_equalTo(self);
+        }];
+        [self.filterItemCV mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(ScreenWidth - 35 *ScreenRatio_6 - 0.5, 25 *ScreenRatio_6));
+            make.left.centerY.mas_equalTo(self);
+        }];
+        [self.separator_1 mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(0.5, frame.size.height));
+            make.left.mas_equalTo(self.classifyCV.mas_right);
+            make.centerY.mas_equalTo(self);
+        }];
+        [self.separator_2 mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(frame.size.width, 0.5));
+            make.left.bottom.mas_equalTo(self);
+        }];
+        [self.separator_3 mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(0.5, frame.size.height));
+            make.right.centerY.mas_equalTo(self);
+        }];
+        [self.filterBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(35 *ScreenRatio_6, frame.size.height - 0.5));
+            make.right.top.mas_equalTo(self);
+        }];
+    }
+    return self;
+}
+
+- (void)filterBtnAct:(UIButton *)sender{
+    WLKTHPFilterView *v = [[WLKTHPFilterView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight -IphoneXBottomInsetHeight) data:self.data indexPaths:self.filterItemArr];
+    v.delegate = self;
+    [[UIApplication sharedApplication].keyWindow addSubview:v];
+    
+}
+
+#pragma mark - WLKTHPFilterViewDelegate
+- (void)didClickFilterViewHandleButton:(FilterViewHandleButtonType)type conditions:(NSArray *)array{
+
+    [self.filterItemArr removeAllObjects];
+    [self.filterItemArr addObjectsFromArray:array];
+    if ([self.delegate respondsToSelector:@selector(didClickFilterWithData:)]) {
+        [self.delegate didClickFilterWithData:array];
+    }
+    
+    if (array) {
+        self.classifyCV.hidden = YES;
+        self.filterItemCV.hidden = false;
+        self.filterBtn.selected = YES;
+        [self.filterItemCV reloadData];
+    }
+    else{
+        self.classifyCV.hidden = false;
+        self.filterItemCV.hidden = YES;
+        self.filterBtn.selected = false;
+        [self.classifyCV reloadData];
+    }
+
+}
+
+#pragma mark - collection view
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    if (collectionView == self.classifyCV) {
+        return self.classifyArr.firstObject.saleVo.count;
+        
+    }
+    return self.filterItemArr.count;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+    if (collectionView == self.classifyCV) {
+        HPFilterBarClassifyCollectionCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"HPFilterBarClassifyCollectionCell" forIndexPath:indexPath];
+        cell.itemLabel.text = self.classifyArr.firstObject.saleVo[indexPath.item].title;
+        cell.index = indexPath.item;
+        if (self.currentClassifySelected == indexPath.item) {
+            cell.itemLabel.textColor = UIColorHex(33c4da);
+
+        }
+        else{
+            cell.itemLabel.textColor = KMainTextColor_3;
+        }
+        return cell;
+    }
+    HPFilterBarFilterCollectionCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"HPFilterBarFilterCollectionCell" forIndexPath:indexPath];
+
+    if (self.filterItemArr.count -1 >= indexPath.item) {
+        NSIndexPath *index = self.filterItemArr[indexPath.item];
+        cell.titleLabel.text = self.data.filter[index.section].saleVo[index.item].title;
+    }
+    return cell;
+    
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    if (collectionView == self.classifyCV) {
+        self.currentClassifySelected = indexPath.item;
+        [self.classifyCV reloadSections:[NSIndexSet indexSetWithIndex:indexPath.section]];
+        if ([self.delegate respondsToSelector:@selector(didSelectedClassifyWithIndex:)]) {
+            [self.delegate didSelectedClassifyWithIndex:indexPath.item];
+        }
+    }
+    else{
+        [self.filterItemArr removeObjectAtIndex:indexPath.item];
+        [self.filterItemCV deleteItemsAtIndexPaths:@[indexPath]];
+        if ([self.delegate respondsToSelector:@selector(didClickFilterWithData:)]) {
+            [self.delegate didClickFilterWithData:self.filterItemArr];
+        }
+        if (self.filterItemArr.count == 0) {
+            self.filterItemCV.hidden = YES;
+            self.classifyCV.hidden = false;
+            self.filterBtn.selected = false;
+            [self.classifyCV reloadData];
+        }
+    }
+
+}
+
+#pragma mark - flow layout
+- (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath{
+    if (collectionView == self.classifyCV) {
+        CGSize s = [self.classifyArr.firstObject.saleVo[indexPath.item].title getSizeWithHeight:20 *ScreenRatio_6 Font:15 *ScreenRatio_6];
+        return CGSizeMake(s.width + 10 *ScreenRatio_6, 40 *ScreenRatio_6);
+    }
+    NSIndexPath *index = self.filterItemArr[indexPath.item];
+    CGSize s = [self.data.filter[index.section].saleVo[index.item].title getSizeWithHeight:20 *ScreenRatio_6 Font:15 *ScreenRatio_6];
+    return CGSizeMake(s.width + 40 *ScreenRatio_6, 25 *ScreenRatio_6);
+}
+
+- (UIEdgeInsets)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout insetForSectionAtIndex:(NSInteger)section{
+    return UIEdgeInsetsMake(0, 10 *ScreenRatio_6, 0, 5);
+}
+
+- (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout minimumInteritemSpacingForSectionAtIndex:(NSInteger)section{
+    return 5;
+}
+
+#pragma mark - get
+- (UICollectionView *)classifyCV{
+    if (!_classifyCV) {
+        UICollectionViewFlowLayout *l = [[UICollectionViewFlowLayout alloc]init];
+        l.scrollDirection = UICollectionViewScrollDirectionHorizontal;
+        _classifyCV = [[UICollectionView alloc]initWithFrame:CGRectNull collectionViewLayout:l];
+        _classifyCV.backgroundColor = UIColorHex(ffffff);
+        _classifyCV.dataSource = self;
+        _classifyCV.delegate = self;
+        _classifyCV.showsHorizontalScrollIndicator = false;
+        [_classifyCV registerClass:[HPFilterBarClassifyCollectionCell class] forCellWithReuseIdentifier:@"HPFilterBarClassifyCollectionCell"];
+        
+    }
+    return _classifyCV;
+}
+- (UICollectionView *)filterItemCV{
+    if (!_filterItemCV) {
+        UICollectionViewFlowLayout *l = [[UICollectionViewFlowLayout alloc]init];
+        _filterItemCV = [[UICollectionView alloc]initWithFrame:CGRectNull collectionViewLayout:l];
+        _filterItemCV.backgroundColor = UIColorHex(ffffff);
+        _filterItemCV.dataSource = self;
+        _filterItemCV.delegate = self;
+        _filterItemCV.hidden = YES;
+        [_filterItemCV registerClass:[HPFilterBarFilterCollectionCell class] forCellWithReuseIdentifier:@"HPFilterBarFilterCollectionCell"];
+    }
+    return _filterItemCV;
+}
+- (UIView *)separator_1{
+    if (!_separator_1) {
+        _separator_1 = [UIView new];
+        _separator_1.backgroundColor = kMainBackgroundColor;
+    }
+    return _separator_1;
+}
+- (UIView *)separator_2{
+    if (!_separator_2) {
+        _separator_2 = [UIView new];
+        _separator_2.backgroundColor = kMainBackgroundColor;
+    }
+    return _separator_2;
+}
+- (UIView *)separator_3{
+    if (!_separator_3) {
+        _separator_3 = [UIView new];
+        _separator_3.backgroundColor = kMainBackgroundColor;
+    }
+    return _separator_3;
+}
+- (UIButton *)filterBtn{
+    if (!_filterBtn) {
+        _filterBtn = [UIButton new];
+        [_filterBtn addTarget:self action:@selector(filterBtnAct:) forControlEvents:UIControlEventTouchUpInside];
+        [_filterBtn setImage:[UIImage imageNamed:@"CourseList筛选"] forState:UIControlStateNormal];
+        [_filterBtn setImage:[UIImage imageNamed:@"CourseList筛选选中"] forState:UIControlStateSelected];
+    }
+    return _filterBtn;
+}
+- (NSMutableArray<NSIndexPath *> *)filterItemArr{
+    if (!_filterItemArr) {
+        _filterItemArr = [NSMutableArray arrayWithCapacity:5];
+    }
+    return _filterItemArr;
+}
+
+@end

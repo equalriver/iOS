@@ -1,0 +1,113 @@
+//
+//  WLKTHPRecommendInterestCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/1/24.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTHPRecommendInterestCell.h"
+
+@interface WLKTHPRecommendInterestCollectionCell: UICollectionViewCell
+@property (strong, nonatomic) UIImageView *iconIV;
+@property (strong, nonatomic) UILabel *titleLabel;
+@end
+
+@implementation WLKTHPRecommendInterestCollectionCell
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self.contentView addSubview:self.iconIV];
+        [self.contentView addSubview:self.titleLabel];
+        [self.iconIV mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.centerX.top.mas_equalTo(self.contentView);
+            make.size.mas_equalTo(CGSizeMake(40, 40));
+        }];
+        [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.width.bottom.left.mas_equalTo(self.contentView);
+            make.height.mas_equalTo(15);
+        }];
+    }
+    return self;
+}
+
+- (void)setCellImage:(NSString *)imgurl title:(NSString *)title{
+    [self.iconIV setImageURL:[NSURL URLWithString:imgurl]];
+    self.titleLabel.text = title;
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.iconIV.image = nil;
+    self.titleLabel.text = nil;
+}
+
+- (UIImageView *)iconIV{
+    if (!_iconIV) {
+        _iconIV = [UIImageView new];
+        _iconIV.contentMode = UIViewContentModeScaleToFill;
+    }
+    return _iconIV;
+}
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [UILabel new];
+        _titleLabel.font = [UIFont systemFontOfSize:13 *ScreenRatio_6];
+        _titleLabel.textColor = KMainTextColor_3;
+        _titleLabel.textAlignment = NSTextAlignmentCenter;
+    }
+    return _titleLabel;
+}
+@end
+
+///////////////////////////////////////////////////////////////////////
+@interface WLKTHPRecommendInterestCell ()<UICollectionViewDelegate, UICollectionViewDataSource>
+@property (strong, nonatomic) UICollectionView *collection;
+@property (copy, nonatomic) NSArray<WLKTHomepageInterestItem *> *dataArr;
+@end
+
+@implementation WLKTHPRecommendInterestCell
+- (instancetype)initWithInterestArray:(NSArray *)array
+{
+    self = [super init];
+    if (self) {
+        _dataArr = [NSArray arrayWithArray:array];
+        [self.contentView addSubview:self.collection];
+    }
+    return self;
+}
+
+#pragma mark - collection view
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    return self.dataArr.count;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTHPRecommendInterestCollectionCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"WLKTHPRecommendInterestCollectionCell" forIndexPath:indexPath];
+    [cell setCellImage:self.dataArr[indexPath.item].image title:self.dataArr[indexPath.item].title];
+    return cell;
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    if ([self.delegate respondsToSelector:@selector(didSelectedInterestItem:)]) {
+        [self.delegate didSelectedInterestItem:indexPath.item];
+    }
+}
+
+- (UICollectionView *)collection{
+    if (!_collection) {
+        UICollectionViewFlowLayout *l = [UICollectionViewFlowLayout new];
+        l.itemSize = CGSizeMake(60, 60);
+        l.minimumLineSpacing = 20;
+        l.sectionInset = UIEdgeInsetsMake(0, 10 *ScreenRatio_6, 10 *ScreenRatio_6, 10 *ScreenRatio_6);
+        l.scrollDirection = UICollectionViewScrollDirectionHorizontal;
+        _collection = [[UICollectionView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 70) collectionViewLayout:l];
+        _collection.backgroundColor = [UIColor whiteColor];
+        _collection.delegate = self;
+        _collection.dataSource = self;
+        [_collection registerClass:[WLKTHPRecommendInterestCollectionCell class] forCellWithReuseIdentifier:@"WLKTHPRecommendInterestCollectionCell"];
+    }
+    return _collection;
+}
+@end

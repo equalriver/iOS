@@ -1,0 +1,174 @@
+//
+//  WLKTActivityDetailEvaluationVC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/13.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTActivityDetailEvaluationVC.h"
+#import "WLKTActivityDetailEvaluationStarView.h"
+#import "WLKTActivityDetailGoEvaluationVC.h"
+#import "WLKTActivityDetailCommentListApi.h"
+#import "WLKTActivityDetailEvaluation_2_cell.h"
+#import "WLKTTableviewRefresh.h"
+#import "WLKTActivityCommentStar.h"
+#import "WLKTActivityCommentList.h"
+
+@interface WLKTActivityDetailEvaluationVC ()<UITableViewDelegate, UITableViewDataSource, ActivityDetailEvaluationStarDelegate>
+@property (strong, nonatomic) UITableView *tableView;
+@property (strong, nonatomic) WLKTActivityDetailEvaluationStarView *starView;
+@property (strong, nonatomic) WLKTActivity *activity;
+@property (copy, nonatomic) NSString *currentStar;
+@property (nonatomic) NSInteger page;
+@property (strong, nonatomic) NSMutableArray<WLKTActivityCommentList *> *commentArr;
+@end
+
+@implementation WLKTActivityDetailEvaluationVC
+- (instancetype)initWithActivity:(WLKTActivity *)activity
+{
+    self = [super init];
+    if (self) {
+        _activity = activity;
+        [self.view addSubview:self.tableView];
+        self.title = @"评价";
+        _page = 1;
+        _currentStar = @"0";
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]initWithImage:[UIImage imageNamed:@"评价b"] style:UIBarButtonItemStylePlain target:self action:@selector(rightBarButtonItemAct)];
+    [self setRefresh];
+}
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    [self.tableView.mj_header beginRefreshing];
+}
+
+#pragma mark - network
+- (void)setRefresh{
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^{
+        weakSelf.page = 1;
+
+        [weakSelf requestWithStar:weakSelf.currentStar page:weakSelf.page];
+    }];
+    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableView block:^{
+        if (weakSelf.commentArr.count) {
+            weakSelf.page++;
+            [weakSelf requestWithStar:weakSelf.currentStar page:weakSelf.page];
+        }
+        else{
+            weakSelf.tableView.mj_footer = nil;
+        }
+    }];
+}
+
+- (void)requestWithStar:(NSString *)star page:(NSInteger)page{
+    WLKTActivityDetailCommentListApi *api = [[WLKTActivityDetailCommentListApi alloc]initWithActivity:self.activity.aid star:star page:page];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        if (self.page == 1) {
+            [self.commentArr removeAllObjects];
+            [self.tableView.mj_footer resetNoMoreData];
+        }
+        WLKTActivityCommentStar *commentStar = [WLKTActivityCommentStar modelWithJSON:request.responseJSONObject[@"result"][@"star"]];
+        NSArray *arr = [NSArray modelArrayWithClass:[WLKTActivityCommentList class] json:request.responseJSONObject[@"result"][@"list"]];
+        [_commentArr addObjectsFromArray:arr];
+
+        if (self.page == 1) {
+
+            if (!arr.count) {
+                self.tableView.state = WLKTViewStateEmpty;
+                self.tableView.imageForStateEmpty = [UIImage imageNamed:@"message_bg"];
+            }
+        }
+        else{
+            if (arr.count) {
+                [self.tableView.mj_footer endRefreshing];
+            }
+            else{
+                [self.tableView.mj_footer endRefreshingWithNoMoreData];
+            }
+        }
+        [self.starView setStarWithData:commentStar];
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView reloadData];
+
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView.mj_footer endRefreshing];
+//        self.tableView.state = WLKTViewStateError;
+    }];
+}
+
+#pragma mark - star delegate
+- (void)didSelectedStarItem:(NSInteger)index{
+    [self.tableView scrollToTop];
+    self.currentStar = [NSString stringWithFormat:@"%ld", index];
+    [self.tableView.mj_header beginRefreshing];
+}
+
+#pragma mark - table view
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return self.commentArr.count;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTActivityCommentList *item = self.commentArr[indexPath.row];
+    CGFloat h = 100;
+    if (item.picture.count) {
+        h += ((item.thumb_picture.count + 2) /3)* 115 * ScreenRatio_6;
+    }
+    h += [UILabel getSizeWithStr:item.content Width:ScreenWidth - 20 Font:13].height;
+    return h;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTActivityDetailEvaluation_2_cell *cell = [tableView dequeueReusableCellWithIdentifier:@"WLKTActivityDetailEvaluation_2_cell"];
+    if (cell == nil) {
+        cell = [[WLKTActivityDetailEvaluation_2_cell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"WLKTActivityDetailEvaluation_2_cell"];
+    }
+    [cell setCellData:self.commentArr[indexPath.row]];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+#pragma mark - action
+- (void)rightBarButtonItemAct{
+    if (self.activity) {
+        WLKTActivityDetailGoEvaluationVC *vc = [[WLKTActivityDetailGoEvaluationVC alloc]initWithActivity:self.activity];
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+}
+
+#pragma mark - get
+- (UITableView *)tableView{
+    if (!_tableView) {
+        _tableView = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight - 50) style:UITableViewStylePlain];
+        _tableView.delegate = self;
+        _tableView.dataSource = self;
+        _tableView.backgroundColor = UIColorHex(ffffff);
+        _tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+        _tableView.tableHeaderView = self.starView;
+    }
+    return _tableView;
+}
+- (WLKTActivityDetailEvaluationStarView *)starView{
+    if (!_starView) {
+        _starView = [[WLKTActivityDetailEvaluationStarView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 85)];
+        _starView.delegate = self;
+    }
+    return _starView;
+}
+- (NSMutableArray<WLKTActivityCommentList *> *)commentArr{
+    if (!_commentArr) {
+        _commentArr = [NSMutableArray arrayWithCapacity:10];
+    }
+    return _commentArr;
+}
+@end
+

@@ -1,0 +1,204 @@
+//
+//  WLKTCourseDetailEvaluationCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/10/31.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTCourseDetailEvaluationCell.h"
+#import "WLKTCourseDetailImagesCollectionCell.h"
+
+@interface WLKTCourseDetailEvaluationCell ()<MIPhotoBrowserDelegate, UICollectionViewDelegate, UICollectionViewDataSource>
+@property (strong, nonatomic) UILabel *usernameLabel;
+@property (strong, nonatomic) UIImageView *starIV;
+@property (strong, nonatomic) UILabel *scoreLabel;
+@property (strong, nonatomic) UILabel *detailLabel;
+@property (strong, nonatomic) UILabel *time_schoolNameLabel;
+@property (strong, nonatomic) UICollectionView *imageCV;
+@property (strong, nonatomic) UICollectionViewFlowLayout *layout;
+
+@property (strong, nonatomic) WLKTCourseDetailNewCourse_commentItem *data;
+@end
+
+@implementation WLKTCourseDetailEvaluationCell
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [self.contentView addSubview:self.usernameLabel];
+        [self.contentView addSubview:self.starIV];
+        [self.contentView addSubview:self.scoreLabel];
+        [self.contentView addSubview:self.detailLabel];
+        [self.contentView addSubview:self.imageCV];
+        [self.contentView addSubview:self.time_schoolNameLabel];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)setCellData:(WLKTCourseDetailNewCourse_commentItem *)data{
+    _data = data;
+    self.usernameLabel.text = [NSString stringWithFormat:@"%@(用户名)", data.username];
+    if (data.total_score.floatValue >= 4.5) {
+        self.starIV.image = [UIImage imageNamed:@"5星"];
+    }
+    if (data.total_score.floatValue >= 3.5 && data.total_score.floatValue < 4.5) {
+        self.starIV.image = [UIImage imageNamed:@"4星"];
+    }
+    if (data.total_score.floatValue >= 2.5 && data.total_score.floatValue < 3.5) {
+        self.starIV.image = [UIImage imageNamed:@"3星"];
+    }
+    if (data.total_score.floatValue >= 1.5 && data.total_score.floatValue < 2.5) {
+        self.starIV.image = [UIImage imageNamed:@"2星"];
+    }
+    if (data.total_score.floatValue < 1.5) {
+        self.starIV.image = [UIImage imageNamed:@"1星"];
+    }
+    self.scoreLabel.text = [NSString stringWithFormat:@"效果：%@  师资：%@  环境：%@", data.effect, data.teacher, data.environment];
+    self.detailLabel.text = data.content;
+    self.time_schoolNameLabel.text = [NSString stringWithFormat:@"%@   %@", data.create_time, data.schoolname];
+    if (data.thumb_picture.count == 0) {
+        [self.time_schoolNameLabel mas_remakeConstraints:^(MASConstraintMaker *make) {
+            make.top.mas_equalTo(self.detailLabel.mas_bottom).offset(10 * ScreenRatio_6);
+            make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+            make.right.mas_equalTo(self.contentView).offset(-10 * ScreenRatio_6);
+        }];
+    }
+    else{
+        [self.time_schoolNameLabel mas_remakeConstraints:^(MASConstraintMaker *make) {
+            make.top.mas_equalTo(self.imageCV.mas_bottom).offset(10 * ScreenRatio_6);
+            make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+            make.right.mas_equalTo(self.contentView).offset(-10 * ScreenRatio_6);
+        }];
+        CGFloat h = ((self.data.picture.count + 2) /3)* 115 * ScreenRatio_6;
+        [self.imageCV mas_remakeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(ScreenWidth, h));
+            make.left.mas_equalTo(self.contentView);
+            make.top.mas_equalTo(self.detailLabel.mas_bottom).offset(10 * ScreenRatio_6);
+        }];
+        [self.imageCV reloadData];
+    }
+}
+
+#pragma mark - collection view
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    return self.data.thumb_picture.count;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTCourseDetailImagesCollectionCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"WLKTCourseDetailImagesCollectionCell" forIndexPath:indexPath];
+    [cell setCellData:self.data.thumb_picture[indexPath.item]];
+    return cell;
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTCourseDetailImagesCollectionCell *cell = (WLKTCourseDetailImagesCollectionCell *)[collectionView cellForItemAtIndexPath:indexPath];
+    MIPhotoBrowser *photoBrowser = [[MIPhotoBrowser alloc] init];
+    photoBrowser.delegate = self;
+    photoBrowser.sourceImagesContainerView = cell.contentView;
+    photoBrowser.imageCount = self.data.picture.count;
+    photoBrowser.currentImageIndex = indexPath.item;
+    [photoBrowser show];
+}
+
+#pragma mark - photo browser
+- (NSString *)photoBrowser:(MIPhotoBrowser *)photoBrowser URLImageForIndex:(NSInteger)index{
+    return self.data.picture[index];
+}
+
+#pragma mark -
+- (void)makeConstraints{
+    [self.usernameLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.contentView);
+    }];
+    [self.starIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.usernameLabel.mas_bottom).offset(10 * ScreenRatio_6);
+    }];
+    [self.scoreLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.starIV.mas_right).offset(15 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.starIV);
+    }];
+    [self.detailLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.starIV.mas_bottom).offset(15 * ScreenRatio_6);
+        make.size.mas_equalTo(CGSizeMake(310 * ScreenRatio_6, 15));
+    }];
+    [self.imageCV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0.00001));
+        make.left.mas_equalTo(self.contentView);
+        make.top.mas_equalTo(self.detailLabel.mas_bottom).offset(10 * ScreenRatio_6);
+    }];
+    [self.time_schoolNameLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(self.detailLabel.mas_bottom).offset(130 * ScreenRatio_6);
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.right.mas_equalTo(self.contentView).offset(-10 * ScreenRatio_6);
+    }];
+}
+
+#pragma mark - get
+- (UILabel *)usernameLabel{
+    if (!_usernameLabel) {
+        _usernameLabel = [UILabel new];
+        _usernameLabel.font = [UIFont systemFontOfSize:13 *ScreenRatio_6];
+        _usernameLabel.textColor = UIColorHex(333333);
+    }
+    return _usernameLabel;
+}
+- (UIImageView *)starIV{
+    if (!_starIV) {
+        _starIV = [UIImageView new];
+    }
+    return _starIV;
+}
+- (UILabel *)scoreLabel{
+    if (!_scoreLabel) {
+        _scoreLabel = [UILabel new];
+        _scoreLabel.font = [UIFont systemFontOfSize:11 *ScreenRatio_6];
+        _scoreLabel.textColor = UIColorHex(999999);
+    }
+    return _scoreLabel;
+}
+- (UILabel *)detailLabel{
+    if (!_detailLabel) {
+        _detailLabel = [UILabel new];
+        _detailLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        _detailLabel.textColor = UIColorHex(333333);
+        _detailLabel.numberOfLines = 2;
+    }
+    return _detailLabel;
+}
+- (UILabel *)time_schoolNameLabel{
+    if (!_time_schoolNameLabel) {
+        _time_schoolNameLabel = [UILabel new];
+        _time_schoolNameLabel.font = [UIFont systemFontOfSize:11 *ScreenRatio_6];
+        _time_schoolNameLabel.textColor = UIColorHex(999999);
+    }
+    return _time_schoolNameLabel;
+}
+- (UICollectionView *)imageCV{
+    if (!_imageCV) {
+        _imageCV = [[UICollectionView alloc]initWithFrame:CGRectZero collectionViewLayout:self.layout];
+        _imageCV.backgroundColor = [UIColor whiteColor];
+        _imageCV.scrollEnabled = false;
+        _imageCV.dataSource = self;
+        _imageCV.delegate = self;
+        [_imageCV registerClass:[WLKTCourseDetailImagesCollectionCell class] forCellWithReuseIdentifier:@"WLKTCourseDetailImagesCollectionCell"];
+    }
+    return _imageCV;
+}
+- (UICollectionViewFlowLayout *)layout{
+    if (!_layout) {
+        _layout = [UICollectionViewFlowLayout new];
+        _layout.itemSize = CGSizeMake(115 * ScreenRatio_6, 115 * ScreenRatio_6);
+        _layout.minimumInteritemSpacing = 2.5 *ScreenRatio_6;
+        _layout.minimumLineSpacing = 5 *ScreenRatio_6;
+        _layout.scrollDirection = UICollectionViewScrollDirectionVertical;
+        _layout.sectionInset = UIEdgeInsetsMake(0, 10 *ScreenRatio_6, 0, 10 *ScreenRatio_6);
+    }
+    return _layout;
+}
+
+@end

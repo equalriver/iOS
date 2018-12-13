@@ -1,0 +1,33 @@
+//
+//  WLKTColors.h
+//  wlkt
+//
+//  Created by slovelys on 17/3/21.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#ifndef WLKTColors_h
+#define WLKTColors_h
+
+#define kTextColor UIColorHex(666666)
+#define kNavBarBackgroundColor UIColorHex(33c4da)
+#define KNavBarTintColor [UIColor whiteColor]
+#define kHUDBackgroundColor [UIColor colorWithWhite:0.1 alpha:0.85]
+#define kHUDForegroundColor [UIColor whiteColor]
+
+#define kButtonBackgroundNormalColor [UIImage imageWithColor:[UIColor redColor]]
+#define kButtonBackgroundHighlightedColor [UIImage imageWithColor:[[UIColor redColor] colorByChangeHue:0 saturation:0 brightness:-0.2 alpha:0]]
+#define kButtonBackgroundDisabledColor [UIImage imageWithColor:[UIColor colorWithWhite:0.9 alpha:1]]
+#define kButtonTitleNormalColor [UIColor whiteColor]
+#define kButtonTitleDisabledColor [UIColor lightGrayColor]
+
+
+// 活动
+static NSString * const kActivityDarkBlack = @"333333";
+static NSString * const kActivityLightBlack = @"3F3F3F";
+static NSString * const kActivityLightGray = @"999999";
+static NSString * const kActivityDarkRed = @"EE1050";
+static NSString * const kActivityLightRed = @"F05252";
+static NSString * const kActivityYellow = @"FFC62B";
+
+#endif /* WLKTColors_h */

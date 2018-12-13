@@ -1,0 +1,248 @@
+//
+//  WLKTMsgNotiTVC.m
+//  wlkt
+//
+//  Created by 尹平江 on 17/3/23.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTMsgNotiTVC.h"
+#import "WLKTMsgNotiCell.h"
+#import "WLKTMsgNotiApi.h"
+#import "WLKTMsgNotiData.h"
+#import "WLKTMsgNotiDitalData.h"
+#import <AFNetworking.h>
+#import "WLKTMsgReadAllApi.h"
+#import "WLKTTableviewRefresh.h"
+#import "WLKTMessageManager.h"
+#import "WLKTMessageReadApi.h"
+
+@interface WLKTMsgNotiTVC ()
+@property (strong, nonatomic) NSArray *dataArr;
+@property (strong, nonatomic) NSMutableArray *backArr;
+@property (assign, nonatomic) NSInteger page;
+@property (assign, nonatomic) NSInteger currentCount;
+@property (assign, nonatomic) BOOL isFirstRefresh;
+@property (strong, nonatomic) NSMutableArray *dataIdArr;
+@end
+
+static NSString * const msgNotiCell = @"msgNotiCell";
+
+@implementation WLKTMsgNotiTVC
+
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.isFirstRefresh = YES;
+    [self setHeaderRefreshing];
+    [self setFooterRefreshing];
+    [self.tableView.mj_header beginRefreshing];
+    self.navigationItem.title = @"消息通知";
+    
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    UIBarButtonItem *rightBarItem = [[UIBarButtonItem alloc]initWithTitle:@"一键已读" style:UIBarButtonItemStylePlain target:self action:@selector(readAllAct)];
+    rightBarItem.tintColor = KMainTextColor_3;
+    self.navigationItem.rightBarButtonItem = rightBarItem;
+ 
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]initWithImage:[UIImage imageNamed:@"箭头左"] style:UIBarButtonItemStylePlain target:self action:@selector(backButtonAct)];
+}
+
+- (void)setHeaderRefreshing{
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^() {
+        WLKTMsgNotiApi *api = [[WLKTMsgNotiApi alloc]init];
+        [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+            WLKTMsgNotiData *data = [WLKTMsgNotiData modelWithDictionary:request.responseJSONObject[@"result"]];
+            weakSelf.dataArr = [data.list copy];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (!weakSelf.dataArr.count) {
+                    weakSelf.tableView.state = WLKTViewStateEmpty;
+                    weakSelf.tableView.imageForStateEmpty = [UIImage imageNamed:@"message_bg"];
+                    [weakSelf.tableView reloadData];
+                }
+                if (weakSelf.dataArr.count && weakSelf.isFirstRefresh) {//执行一次
+                    weakSelf.currentCount = weakSelf.dataArr.count /10 > weakSelf.page ? (weakSelf.page + 1) * 10 : weakSelf.dataArr.count;
+                    if (weakSelf.currentCount >= 10) {
+                        for (int i = 0; i < 10; i++) {
+                            [weakSelf.backArr addObject:weakSelf.dataArr[i]];
+                        }
+                        weakSelf.currentCount = 10;
+                    }
+                    else{
+                        for (int i = 0; i < weakSelf.dataArr.count; i++) {
+                            [weakSelf.backArr addObject:weakSelf.dataArr[i]];
+                        }
+                        weakSelf.currentCount = weakSelf.dataArr.count;
+                    }
+                    weakSelf.page++;
+                }
+                [weakSelf.tableView reloadData];
+                sleep(1);
+                [weakSelf.tableView.mj_header endRefreshing];
+                
+            });
+            
+        } failure:^(__kindof YTKBaseRequest *request) {
+            [weakSelf.tableView.mj_header endRefreshing];
+//            weakSelf.tableView.state = WLKTViewStateError;
+            
+        }];
+        
+    }];
+    
+}
+
+- (void)setFooterRefreshing{
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableView block:^() {
+        if (weakSelf.dataArr.count > 10) {
+            //page此时初始为1
+            NSInteger count = weakSelf.dataArr.count /10 >weakSelf.page ? (weakSelf.page + 1) * 10 : weakSelf.dataArr.count;
+            
+            for (NSInteger i = weakSelf.currentCount; i < count; i++) {
+                [weakSelf.backArr addObject:weakSelf.dataArr[i]];
+            }
+            if (weakSelf.backArr.count == weakSelf.dataArr.count) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [weakSelf.tableView reloadData];
+                    sleep(1);
+                    [weakSelf.tableView.mj_footer endRefreshingWithNoMoreData];
+                });
+            }
+            else{
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [weakSelf.tableView reloadData];
+                    sleep(1);
+                    weakSelf.page++;
+                    weakSelf.currentCount = count;
+                    [weakSelf.tableView.mj_footer endRefreshing];
+                });
+            }
+            
+        }
+        else{
+            [weakSelf.tableView.mj_footer endRefreshingWithNoMoreData];
+        }
+        
+    }];
+    
+}
+
+- (void)backButtonAct{
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+#pragma mark - request
+
+- (void)readMessageWithID:(NSInteger)msgID index:(NSIndexPath *)index{
+    WLKTMsgNotiDitalData *data = self.dataArr[index.row];
+    WLKTMessageReadApi *api = [[WLKTMessageReadApi alloc]initWithMessageId:data.msgId];
+    
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            data.status = YES;
+            [self.tableView reloadRowAtIndexPath:index withRowAnimation:UITableViewRowAnimationFade];
+            for (WLKTMsgNotiDitalData *data in self.dataArr) {
+                if (data.status) {//都是已读
+                    [[NSNotificationCenter defaultCenter]postNotification:[NSNotification notificationWithName:@"msgRead" object:nil]];
+                    [[WLKTMessageManager sharedManager] clearBadge];
+                }
+            }
+        });
+
+    } failure:^(__kindof YTKBaseRequest *request) {
+        
+    }];
+    
+}
+
+- (void)readAllAct{
+    WLKTMsgReadAllApi *api = [[WLKTMsgReadAllApi alloc]init];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        if (self.dataArr.count > 0) {
+            for (WLKTMsgNotiDitalData *data in self.dataArr) {
+                data.status = YES;
+            }
+            [[NSNotificationCenter defaultCenter]postNotification:[NSNotification notificationWithName:@"msgRead" object:nil]];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (![SVProgressHUD isVisible]) {
+                    [SVProgressHUD show];
+                    [SVProgressHUD dismissWithDelay:2];
+                }
+                [self.tableView reloadData];
+                [[WLKTMessageManager sharedManager] clearBadge];
+            });
+
+        }
+    } failure:^(__kindof YTKBaseRequest *request) {
+        ShowApiError;
+    }];
+}
+
+#pragma mark - Table view data source
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return self.backArr.count;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    WLKTMsgNotiCell *cell = [tableView dequeueReusableCellWithIdentifier:msgNotiCell];
+    if (!cell) {
+        cell = [[WLKTMsgNotiCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:msgNotiCell];
+    }
+    if (self.dataArr.count > 0) {
+        self.isFirstRefresh = NO;
+        [cell setCellContent:self.dataArr[indexPath.row]];
+        WLKTMsgNotiDitalData *data = self.dataArr[indexPath.row];
+        if (data.status == NO) {//未读消息
+            [self.dataIdArr addObject:data];
+        }
+        
+    }
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTMsgNotiDitalData *data = self.dataArr[indexPath.row];
+    [self readMessageWithID:data.msgId index:indexPath];
+    
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return 140 * ScreenRatio_6;
+}
+
+-(void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if ([cell respondsToSelector:@selector(setSeparatorInset:)]) {
+        [cell setSeparatorInset:UIEdgeInsetsZero];
+    }
+    
+    if ([cell respondsToSelector:@selector(setLayoutMargins:)]) {
+        [cell setLayoutMargins:UIEdgeInsetsZero];
+    }
+}
+
+#pragma mark - get
+
+- (NSArray *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [NSArray array];
+    }
+    return _dataArr;
+}
+- (NSMutableArray *)dataIdArr{
+    if (!_dataIdArr) {
+        _dataIdArr = [NSMutableArray array];
+    }
+    return _dataIdArr;
+}
+- (NSMutableArray *)backArr{
+    if (!_backArr) {
+        _backArr = [NSMutableArray arrayWithCapacity:10];
+    }
+    return _backArr;
+}
+@end

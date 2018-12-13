@@ -1,0 +1,66 @@
+//
+//  WLKTPayCourseData.h
+//  wlkt
+//
+//  Created by 尹平江 on 17/3/29.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "WLKTPayCourseYouhuiData.h"
+
+@interface WLKTPayCourseData : NSObject<YYModel>
+///地址id
+@property (copy, nonatomic) NSString *address;
+///原价
+@property (copy, nonatomic) NSString *oldprice;
+///交易时间
+@property (copy, nonatomic) NSString *payment_notify_time;
+///课时价/一口价
+@property (copy, nonatomic) NSString *feestype;
+///总额
+@property (copy, nonatomic) NSString *totalmoney;
+///"paytype": "alipay"
+@property (copy, nonatomic) NSString *paytype;
+
+@property (copy, nonatomic) NSString *img;
+///"school": "20110715080"
+@property (copy, nonatomic) NSString *school;
+///"schoolname": "南博教育"
+@property (copy, nonatomic) NSString *schoolname;
+///"keshi": "0"
+@property (copy, nonatomic) NSString *keshi;
+///学校优惠券"schyhq": "0.00"
+@property (copy, nonatomic) NSString *schyhq;
+///平台优惠券"ptyhq": "0.00"
+@property (copy, nonatomic) NSString *ptyhq;
+///"orderid": "201709302189815072"
+@property (copy, nonatomic) NSString *orderid;
+///"cid": "129"
+@property (copy, nonatomic) NSString *cid;
+///"id": "358"
+@property (copy, nonatomic) NSString *idid;
+///"payment_trade_no": "2017093021001004620210513344"
+@property (copy, nonatomic) NSString *payment_trade_no;
+///"coursename": "南博测试课程"
+@property (copy, nonatomic) NSString *coursename;
+///"pointname": "南博测试"
+@property (copy, nonatomic) NSString *pointname;
+///"pointaddress": "四川省成都市高新区环球中心"
+@property (copy, nonatomic) NSString *pointaddress;
+///标准,等级(初级/中级…)
+@property (copy, nonatomic) NSString *standard;
+///"suid": "20110715072"
+@property (copy, nonatomic) NSString *suid;
+///"price": "0.01"
+@property (copy, nonatomic) NSString *price;
+///"ctype": "班课"
+@property (copy, nonatomic) NSString *ctype;
+///"onecut": "1"
+@property (copy, nonatomic) NSString *onecut;
+
+@property (copy, nonatomic) NSArray<WLKTPayCourseYouhuiData *> *yhlist;
+//"money": "0.01"
+//    "paydate": "2017-09-30",
+@end
+

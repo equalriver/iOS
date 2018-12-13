@@ -1,0 +1,282 @@
+//
+//  WLKTCourseDetailHeadCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/22.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTCourseDetailHeadCell.h"
+
+@interface WLKTCourseDetailHeadCell ()
+@property (strong, nonatomic) UIImageView *imgIV;
+@property (strong, nonatomic) UILabel *ageAreaLabel;
+@property (strong, nonatomic) UILabel *schoolNameLabel;
+@property (strong, nonatomic) UIImageView *tagIconIV;
+@property (strong, nonatomic) UILabel *tagLabel;
+@property (strong, nonatomic) UILabel *courseNameLabel;
+@property (strong, nonatomic) UIImageView *eyeIconIV;
+@property (strong, nonatomic) UILabel *lookTimesLabel;
+@property (strong, nonatomic) UIView *scoreView;
+@property (strong, nonatomic) UIImageView *scoreIV;
+@property (strong, nonatomic) UILabel *scoreLabel;
+@property (strong, nonatomic) UIView *priceBgView;
+@property (strong, nonatomic) UILabel *priceLabel;
+@property (strong, nonatomic) UILabel *buyTotalLabel;
+
+@end
+
+@implementation WLKTCourseDetailHeadCell
+
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [self.contentView addSubview:self.imgIV];
+        [self.contentView addSubview:self.ageAreaLabel];
+        [self.contentView addSubview:self.schoolNameLabel];
+        [self.contentView addSubview:self.tagIconIV];
+        [self.contentView addSubview:self.tagLabel];
+        [self.contentView addSubview:self.courseNameLabel];
+        [self.contentView addSubview:self.eyeIconIV];
+        [self.contentView addSubview:self.lookTimesLabel];
+        [self.contentView addSubview:self.scoreView];
+        [self.scoreView addSubview:self.scoreIV];
+        [self.scoreView addSubview:self.scoreLabel];
+        [self.contentView addSubview:self.priceBgView];
+        [self.priceBgView addSubview:self.priceLabel];
+        [self.contentView addSubview:self.buyTotalLabel];
+    }
+    return self;
+}
+
+- (void)setCellData:(WLKTCourse *)data{
+    [self.imgIV setImageURL:[NSURL URLWithString:data.img]];
+    if (data.age_area.length) {
+        self.ageAreaLabel.hidden = NO;
+        self.ageAreaLabel.text = data.age_area;
+    }
+    self.schoolNameLabel.text = data.schoolname;
+    self.courseNameLabel.text = data.coursename;
+    self.lookTimesLabel.text = [NSString stringWithFormat:@"%ld人看过", data.hits];
+    if (data.score.floatValue >= 4.5) {
+        self.scoreIV.image = [UIImage imageNamed:@"5星"];
+    }
+    else if (data.score.floatValue >= 3.5 && data.score.floatValue < 4.5){
+        self.scoreIV.image = [UIImage imageNamed:@"4星"];
+    }
+    else if (data.score.floatValue >= 2.5 && data.score.floatValue < 3.5){
+        self.scoreIV.image = [UIImage imageNamed:@"3星"];
+    }
+    else if (data.score.floatValue >= 1.5 && data.score.floatValue < 2.5){
+        self.scoreIV.image = [UIImage imageNamed:@"2星"];
+    }
+    else{
+        self.scoreIV.image = [UIImage imageNamed:@"1星"];
+    }
+    if (ScreenHeight < 667) {
+        self.scoreLabel.text = [NSString stringWithFormat:@"%ld条评论  |  效果：%@  |  师资：%@  |  环境：%@", data.comment_num, data.effect, data.teach_score, data.environment];
+    }
+    else{
+        self.scoreLabel.text = [NSString stringWithFormat:@"%ld条评论   |   效果：%@   |   师资：%@   |   环境：%@", data.comment_num, data.effect, data.teach_score, data.environment];
+    }
+
+    NSString *s;
+    NSMutableAttributedString *str;
+    if (data.oldprice.length > 0) {
+        s = [NSString stringWithFormat:@"¥%@ 原价 ¥%@", data.showprice, data.oldprice];
+        str = [[NSMutableAttributedString alloc]initWithString:s];
+            [str setAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:10]} range:NSMakeRange(data.showprice.length + 2, data.oldprice.length + 4)];
+        [self makeConstraintsWithPriceSize:[UILabel getSizeWithStr:s Height:20 Font:17]];
+    }
+    else{
+        s = [NSString stringWithFormat:@"¥%@", data.showprice];
+        str = [[NSMutableAttributedString alloc]initWithString:s];
+        [self makeConstraintsWithPriceSize:[UILabel getSizeWithStr:s Height:20 Font:28]];
+    }
+    [str setAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:15 weight:UIFontWeightSemibold]} range:NSMakeRange(0, 1)];
+    [str setAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:19 weight:UIFontWeightSemibold]} range:NSMakeRange(1, data.showprice.length)];
+
+    self.priceLabel.attributedText = str;
+    self.buyTotalLabel.text = [NSString stringWithFormat:@"%@人已收藏", data.shoucangnum];
+   
+}
+
+#pragma mark - make constraints
+- (void)makeConstraintsWithPriceSize:(CGSize)size{
+    [self.imgIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 210 * ScreenRatio_6));
+        make.top.mas_equalTo(self.contentView);
+        make.left.mas_equalTo(self.contentView);
+    }];
+    [self.ageAreaLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(100, 20));
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.bottom.mas_equalTo(self.imgIV.mas_bottom).offset(-10 * ScreenRatio_6);
+    }];
+    [self.schoolNameLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.imgIV.mas_bottom).offset(15 * ScreenRatio_6);
+    }];
+    [self.tagIconIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.schoolNameLabel.mas_right).offset(5 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.schoolNameLabel);
+    }];
+    [self.tagLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.tagIconIV.mas_right).offset(3);
+        make.centerY.mas_equalTo(self.schoolNameLabel);
+    }];
+    [self.courseNameLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(self.schoolNameLabel.mas_bottom).offset(10 * ScreenRatio_6);
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.width.mas_equalTo(295 * ScreenRatio_6);
+    }];
+    [self.lookTimesLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-10 * ScreenRatio_6);
+        make.bottom.mas_equalTo(self.courseNameLabel.mas_bottom);
+    }];
+    [self.eyeIconIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerX.mas_equalTo(self.lookTimesLabel);
+        make.bottom.mas_equalTo(self.lookTimesLabel.mas_top).offset(-7 * ScreenRatio_6);
+    }];
+    [self.scoreView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(355 * ScreenRatio_6, 20));
+        make.left.mas_equalTo(self.contentView).offset(10);
+        make.top.mas_equalTo(self.courseNameLabel.mas_bottom).offset(10 * ScreenRatio_6);
+    }];
+    [self.scoreIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.scoreView).offset(10 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.scoreView);
+    }];
+    [self.scoreLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.scoreIV.mas_right).offset(10 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.scoreView);
+    }];
+    [self.priceBgView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.scoreView.mas_bottom).offset(10 * ScreenRatio_6);
+        make.size.mas_equalTo(CGSizeMake(size.width + 10 , 40));
+    }];
+    [self.priceLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.center.mas_equalTo(self.priceBgView);
+    }];
+    [self.buyTotalLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.priceBgView.mas_right).offset(10 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.priceBgView);
+    }];
+}
+
+#pragma mark - get
+- (UIImageView *)imgIV{
+    if (!_imgIV) {
+        _imgIV = [[UIImageView alloc]init];
+    }
+    return _imgIV;
+}
+- (UILabel *)ageAreaLabel{
+    if (!_ageAreaLabel) {
+        _ageAreaLabel = [UILabel new];
+        _ageAreaLabel.backgroundColor = UIColorHex(f6c447);
+        _ageAreaLabel.layer.cornerRadius = 3 *ScreenRatio_6;
+        _ageAreaLabel.layer.masksToBounds = YES;
+        _ageAreaLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        _ageAreaLabel.textAlignment = NSTextAlignmentCenter;
+        _ageAreaLabel.textColor = UIColorHex(333333);
+        _ageAreaLabel.hidden = YES;
+    }
+    return _ageAreaLabel;
+    return _ageAreaLabel;
+}
+- (UILabel *)schoolNameLabel{
+    if (!_schoolNameLabel) {
+        _schoolNameLabel = [[UILabel alloc]init];
+        _schoolNameLabel.font = [UIFont systemFontOfSize:13 *ScreenRatio_6];
+        _schoolNameLabel.textColor = UIColorHex(333333);
+    }
+    return _schoolNameLabel;
+}
+- (UIImageView *)tagIconIV{
+    if (!_tagIconIV) {
+        _tagIconIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"机构认证"]];
+    }
+    return _tagIconIV;
+}
+- (UILabel *)tagLabel{
+    if (!_tagLabel) {
+        _tagLabel = [UILabel new];
+        _tagLabel.font = [UIFont systemFontOfSize:10 *ScreenRatio_6];
+        _tagLabel.textColor = UIColorHex(999999);
+        _tagLabel.text = @"认证机构";
+    }
+    return _tagLabel;
+}
+- (UILabel *)courseNameLabel{
+    if (!_courseNameLabel) {
+        _courseNameLabel = [UILabel new];
+        _courseNameLabel.font = [UIFont systemFontOfSize:15 *ScreenRatio_6 weight:UIFontWeightSemibold];
+        _courseNameLabel.textColor = UIColorHex(333333);
+    }
+    return _courseNameLabel;
+}
+- (UIImageView *)eyeIconIV{
+    if (!_eyeIconIV) {
+        _eyeIconIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"预览"]];
+    }
+    return _eyeIconIV;
+}
+- (UILabel *)lookTimesLabel{
+    if (!_lookTimesLabel) {
+        _lookTimesLabel = [UILabel new];
+        _lookTimesLabel.font = [UIFont systemFontOfSize:10 *ScreenRatio_6];
+        _lookTimesLabel.textColor = UIColorHex(999999);
+ 
+    }
+    return _lookTimesLabel;
+}
+- (UIView *)scoreView{
+    if (!_scoreView) {
+        _scoreView = [UIView new];
+        _scoreView.backgroundColor = UIColorHex(37becc);
+    }
+    return _scoreView;
+}
+- (UIImageView *)scoreIV{
+    if (!_scoreIV) {
+        _scoreIV = [UIImageView new];
+    }
+    return _scoreIV;
+}
+- (UILabel *)scoreLabel{
+    if (!_scoreLabel) {
+        _scoreLabel = [UILabel new];
+        _scoreLabel.font = [UIFont systemFontOfSize:10 *ScreenRatio_6];
+        _scoreLabel.textColor = UIColorHex(ffffff);
+    }
+    return _scoreLabel;
+}
+- (UIView *)priceBgView{
+    if (!_priceBgView) {
+        _priceBgView = [UIView new];
+        _priceBgView.backgroundColor = UIColorHex(e43b3b);
+        _priceBgView.layer.cornerRadius = 3 *ScreenRatio_6;
+        _priceBgView.layer.masksToBounds = YES;
+    }
+    return _priceBgView;
+}
+- (UILabel *)priceLabel{
+    if (!_priceLabel) {
+        _priceLabel = [[UILabel alloc]init];
+        _priceLabel.textColor = UIColorHex(ffffff);
+    }
+    return _priceLabel;
+}
+- (UILabel *)buyTotalLabel{
+    if (!_buyTotalLabel) {
+        _buyTotalLabel = [UILabel new];
+        _buyTotalLabel.font = [UIFont systemFontOfSize:10 *ScreenRatio_6];
+        _buyTotalLabel.textColor = UIColorHex(999999);
+    }
+    return _buyTotalLabel;
+}
+
+@end

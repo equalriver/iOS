@@ -1,0 +1,243 @@
+//
+//  WLKActivityViewController.m
+//  wlkt
+//
+//  Created by slovelys on 2017/7/11.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKActivityViewController.h"
+
+#import "WLKTActivityCell.h"
+#import "WLKTActivityDetailVC.h"
+
+#import "WLKTActivityListApi.h"
+#import "WLKTActivity.h"
+#import "WLKTActivityList.h"
+
+#import "WLKTBlurView.h"
+#import "WLKTActivityConditionPickerView.h"
+#import "WLKTTableviewRefresh.h"
+
+@interface WLKActivityViewController ()
+
+@property (assign, nonatomic) ActivityListPosition position;
+
+@property (copy, nonatomic) NSString *activityId;
+
+@property (copy, nonatomic) NSMutableArray *dataSource;
+@property (assign, nonatomic) int page;
+
+@property (strong, nonatomic) UIBarButtonItem *right;
+@property (strong, nonatomic) WLKTActivityConditionPickerView *pickerView;
+@property (copy, nonatomic) NSString *condition;
+@property (strong, nonatomic) NSMutableDictionary *para;
+@property (copy, nonatomic) NSDictionary *info;
+@end
+
+@implementation WLKActivityViewController
+
+- (instancetype)initWithActivityListPosition:(ActivityListPosition)position activityId:(NSString *)actid info:(NSDictionary *)info{
+    WLKActivityViewController *vc = [[UIStoryboard storyboardWithName:kCourseStoryboardName bundle:nil] instantiateViewControllerWithIdentifier:kActivityIdentifier];
+    vc.position = position;
+    vc.activityId = actid ?: @"0";
+    if (info) {
+        vc.info = [NSDictionary dictionaryWithDictionary:info];
+    }
+    return vc;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+//    self.navigationItem.rightBarButtonItem = self.right;
+//    self.parentViewController.navigationItem.rightBarButtonItem = self.right;
+    self.tableView.tableFooterView = [UIView new];
+    self.page = 1;
+
+    @weakify(self)
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^() {
+        @strongify(self)
+        _page = 1;
+        
+        [self loadDataWithPage:self.page];
+    }];
+    
+    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableView block:^() {
+        @strongify(self)
+        _page += 1;
+        [self loadDataWithPage:self.page];
+    }];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(activityConditionNoti:) name:kActivityCondition object:nil];
+}
+
+- (void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (_info) {
+            if (!self.para) {
+                _para = [NSMutableDictionary dictionary];
+            }
+            [_para setValuesForKeysWithDictionary:_info];
+        }
+        [self.dataSource removeAllObjects];
+        [self.tableView reloadData];
+        [self loadDataWithPage:1];
+    });
+}
+
+- (void)activityConditionNoti:(NSNotification *)noti {
+    self.para = [noti.userInfo mutableCopy];
+    [self.dataSource removeAllObjects];
+    [self.tableView reloadData];
+    [self loadDataWithPage:1];
+}
+
+- (void)loadDataWithPage:(int)page {
+    self.tableView.state = WLKTViewStateLoading;
+    WLKTActivityListApi *api;
+    if (!self.para) {
+       api = [[WLKTActivityListApi alloc] initWithParam:@{@"aid" : self.activityId,
+                                                       @"page" : @(page)}];
+    } else {
+//        [self.para addEntriesFromDictionary:@{@"page" : @(self.page)}];
+        [self.para setObject:self.activityId forKey:@"aid"];
+        [self.para setObject:@(self.page) forKey:@"page"];
+        
+        api = [[WLKTActivityListApi alloc] initWithParam:self.para];
+    }
+    @weakify(self)
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        self.tableView.state = WLKTViewStateNormal;
+        if (self.page == 1) {
+            [self.dataSource removeAllObjects];
+            [self.tableView.mj_footer resetNoMoreData];
+        }
+        @strongify(self)
+        WLKTActivityList *list = [WLKTActivityList modelWithJSON:request.responseJSONObject[@"result"]];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.dataSource addObjectsFromArray:list.list];
+            if (list.list.count == 0 && page > 1) {
+                [self.tableView.mj_footer endRefreshingWithNoMoreData];
+                [self.tableView reloadData];
+                return;
+            }
+            if (!self.dataSource.count) {
+                self.tableView.state = WLKTViewStateEmpty;
+                self.tableView.imageForStateEmpty = [UIImage imageNamed:@"activity_empty"];
+                self.tableView.titleForStateEmpty = @"暂无数据";
+                [self.tableView.mj_header endRefreshing];
+                [self.tableView reloadData];
+            }
+            else{
+                [self.tableView.mj_header endRefreshing];
+                [self.tableView.mj_footer endRefreshing];
+                [self.tableView reloadData];
+            }
+
+        });
+
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView.mj_footer endRefreshing];
+        self.tableView.state = WLKTViewStateNormal;
+//        self.tableView.state = WLKTViewStateError;
+    }];
+}
+
+#pragma mark - Table view data source
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+
+    return self.dataSource.count;
+}
+
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    WLKTActivityCell *cell = [tableView dequeueReusableCellWithIdentifier:@"activityCell" forIndexPath:indexPath];
+    cell.needLine = YES;
+    // Configure the cell...
+    cell.model = self.dataSource[indexPath.row];
+    return cell;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+    WLKTActivity *model = self.dataSource[indexPath.row];
+    if (!model.subtitle.length) {
+        return kActivityCellWithNoContentLabelHeight;
+    }
+    return kActivityCellWithContentLabelHeight;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    if (self.dataSource.count > 0) {
+        WLKTActivity *act = self.dataSource[indexPath.row];
+        WLKTActivityDetailVC *vc = [[WLKTActivityDetailVC alloc] initWithActivityId:act.aid];
+        vc.hidesBottomBarWhenPushed = YES;
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+}
+
+//#pragma mark - WLKTActivityConditionPickerViewDelegate
+//
+//- (void)activityConditionPickerViewDidSelectedAtIndex:(NSInteger)index condition:(NSString *)condition {
+//    self.page = 1;
+//    self.condition = condition;
+//    switch (index) {
+//        case 0:
+//            self.para = @{ @"time" : condition,
+//                           @"page" : @(self.page)};
+//            break;
+//            
+//        default:
+//            break;
+//    }
+//}
+
+#pragma mark - Action
+
+- (void)rightBarButtonItemClick {
+    //    [self.conditionPickerController presentPopupControllerAnimated:YES];
+    [[WLKTBlurView sharedInstance] showBlurViewInView:self.view completion:^{
+        
+        [self.parentViewController.view addSubview:self.pickerView];
+        [self.parentViewController.view bringSubviewToFront:self.pickerView];
+    }];
+    [WLKTBlurView sharedInstance].touchBlock = ^{
+        [self.pickerView removeFromSuperview];
+        [[WLKTBlurView sharedInstance] hideBlurViewImmediately];
+    };
+    
+}
+
+#pragma mark - Setters & Getters
+
+- (NSMutableArray *)dataSource {
+    if (!_dataSource) {
+        _dataSource = [NSMutableArray array];
+    }
+    return  _dataSource;
+}
+
+- (UIBarButtonItem *)right {
+    if (!_right) {
+        _right = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"activity_rigtBarItem"] style:UIBarButtonItemStylePlain target:self action:@selector(rightBarButtonItemClick)];
+    }
+    return _right;
+}
+
+- (WLKTActivityConditionPickerView *)pickerView {
+    if (!_pickerView) {
+        _pickerView = [[[NSBundle mainBundle] loadNibNamed:@"WLKTActivityConditionPickerView" owner:nil options:nil] firstObject];
+        _pickerView.frame = CGRectMake(0, 0, kScreenWidth, 262);
+//        _pickerView.delegate = self;
+    }
+    return _pickerView;
+}
+
+@end

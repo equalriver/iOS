@@ -1,0 +1,245 @@
+//
+//  WLKTActivityDetail_Q_A_VC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/13.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTActivityDetail_Q_A_VC.h"
+#import "WLKTActivityDetail_Q_A_2_cell.h"
+#import "WLKTActivityDetail_Q_A_2_headerQuestionView.h"
+#import "WLKTActivityDetailGoQuestionVC.h"
+#import "WLKTActivityDetail_Q_A_listApi.h"
+#import "WLKTTableviewRefresh.h"
+#import "WLKTActivityDetail_QA_question.h"
+#import "WLKTActivityDetailGoAnswerVC.h"
+#import "WLKTExchangeButton.h"
+
+@interface WLKTActivityDetail_Q_A_VC ()<ActivityDetail_Q_A_2_headerQuestionDelegate>
+@property (strong, nonatomic) WLKTActivity *activity;
+@property (nonatomic) NSInteger page;
+@property (strong, nonatomic) NSMutableArray<WLKTActivityDetail_QA_question *> *dataArr;
+@property (strong, nonatomic) NSMutableArray<NSNumber *> *answerStateArr;
+@end
+
+@implementation WLKTActivityDetail_Q_A_VC
+- (instancetype)initWithStyle:(UITableViewStyle)style activity:(WLKTActivity *)activity
+{
+    self = [super initWithStyle:style];
+    if (self) {
+        _activity = activity;
+        self.title = @"问答";
+        self.tableView.tableHeaderView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, 0.01, 0.01)];
+        self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+        _page = 1;
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]initWithImage:[UIImage imageNamed:@"问问"] style:UIBarButtonItemStylePlain target:self action:@selector(rightBarButtonItemAct)];
+    [self setRefresh];
+    
+}
+
+- (void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    [self.tableView.mj_header beginRefreshing];
+}
+
+#pragma mark - network
+- (void)setRefresh{
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^{
+        weakSelf.page = 1;
+ 
+        [weakSelf requestWithPage:weakSelf.page];
+    }];
+    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableView block:^{
+        if (weakSelf.dataArr.count) {
+            weakSelf.page++;
+            [weakSelf requestWithPage:weakSelf.page];
+        }
+        else{
+            weakSelf.tableView.mj_footer = nil;
+        }
+    }];
+    self.tableView.mj_footer.automaticallyHidden = false;
+}
+
+- (void)requestWithPage:(NSInteger)page{
+    WLKTActivityDetail_Q_A_listApi *api = [[WLKTActivityDetail_Q_A_listApi alloc]initWithActivity:self.activity.aid page:page];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        NSArray *arr = [NSArray modelArrayWithClass:[WLKTActivityDetail_QA_question class] json:request.responseJSONObject[@"result"][@"list"]];
+        if (self.page == 1) {
+            [self.dataArr removeAllObjects];
+            [self.tableView.mj_footer resetNoMoreData];
+        }
+        [self.dataArr addObjectsFromArray:arr];
+        for (int i = 0; i < self.dataArr.count; i++) {
+            [self.answerStateArr addObject:@(NO)];
+        }
+
+        if (self.page == 1) {
+    
+            if (!arr.count) {
+                self.tableView.state = WLKTViewStateEmpty;
+                self.tableView.imageForStateEmpty = [UIImage imageNamed:@"message_bg"];
+            }
+        }
+        else{
+            if (arr.count) {
+                [self.tableView.mj_footer endRefreshing];
+            }
+            else{
+                [self.tableView.mj_footer endRefreshingWithNoMoreData];
+            }
+        }
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView reloadData];
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView.mj_footer endRefreshing];
+//        self.tableView.state = WLKTViewStateError;
+
+    }];
+}
+
+#pragma mark - action
+- (void)rightBarButtonItemAct{
+    WLKTActivityDetailGoQuestionVC *vc = [[WLKTActivityDetailGoQuestionVC alloc]initWithActivity:self.activity];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+- (void)moreAnswerButtonAct:(UIButton *)sender{
+    BOOL isMore = false;
+    if (self.answerStateArr.count > sender.tag) {
+        isMore = ((NSNumber *)[self.answerStateArr objectAtIndexedSubscript:sender.tag]).boolValue;
+    }
+    [self.answerStateArr setObject:@(!isMore) atIndexedSubscript:sender.tag];
+    [self.tableView reloadData];
+}
+
+#pragma mark - header button delegate
+- (void)didSelectedAnswerButtonAtIndex:(NSInteger)index{
+    WLKTActivityDetailGoAnswerVC *vc = [[WLKTActivityDetailGoAnswerVC alloc]initWithQuestion:self.dataArr[index] activity:self.activity];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+#pragma mark - table view
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return self.dataArr.count;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    if (self.answerStateArr.count) {
+        if (self.answerStateArr[section].boolValue) {
+            return self.dataArr[section].answerlist.count;
+        }
+        else if (self.dataArr[section].answerlist.count) {
+            return 1;
+        }
+    }
+    return self.dataArr[section].answerlist.count > 1 ? 1 : self.dataArr[section].answerlist.count;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (self.dataArr[indexPath.section].answerlist.count) {
+        return 55 + [UILabel getSizeWithStr:self.dataArr[indexPath.section].answerlist[indexPath.row].answer Width:315 * ScreenRatio_6 Font:13.5].height;
+    }
+    return 0;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 55 + [UILabel getSizeWithStr:self.dataArr[section].question Width:275 * ScreenRatio_6 Font:13.5].height;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    if (self.dataArr[section].answerlist.count > 1) {
+        return 30;
+    }
+    return 5;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTActivityDetail_Q_A_2_cell *cell = [tableView dequeueReusableCellWithIdentifier:@"WLKTActivityDetail_Q_A_2_cell"];
+    if (cell == nil) {
+        cell = [[WLKTActivityDetail_Q_A_2_cell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"WLKTActivityDetail_Q_A_2_cell"];
+    }
+    [cell setCellData:self.dataArr[indexPath.section].answerlist[indexPath.row]];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    WLKTActivityDetail_Q_A_2_headerQuestionView *v = [[WLKTActivityDetail_Q_A_2_headerQuestionView alloc]initWithIndex:section frame:CGRectMake(0, 0, ScreenWidth, 55 + [UILabel getSizeWithStr:self.dataArr[section].question Width:275 * ScreenRatio_6 Font:13.5].height)];
+    v.delegate = self;
+    [v setCellData:self.dataArr[section]];
+    return v;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section{
+    if (self.dataArr[section].answerlist.count > 1) {
+        UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 30)];
+        v.backgroundColor = [UIColor whiteColor];
+        
+        UIView *separatorView = [[UIView alloc]initWithFrame:CGRectMake(0, 25, ScreenWidth, 5)];
+        separatorView.backgroundColor = separatorView_color;
+        [v addSubview:separatorView];
+        
+        UIView *content = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 25)];
+        [v addSubview:content];
+        
+        WLKTExchangeButton *btn = [WLKTExchangeButton new];
+        [btn setTitleColor:KMainTextColor_9 forState:UIControlStateNormal];
+        btn.titleLabel.font = [UIFont systemFontOfSize:9 * ScreenRatio_6];
+        [btn setTitle:[NSString stringWithFormat:@"全部%ld个回答", self.dataArr[section].answerlist.count] forState:UIControlStateNormal];
+        [btn setImage:[UIImage imageNamed:@"箭头下"] forState:UIControlStateNormal];
+        if (self.answerStateArr.count > section) {
+            if (self.answerStateArr[section].boolValue) {
+                [btn setTitle:@"" forState:UIControlStateNormal];
+                [btn setImage:[UIImage imageNamed:@"箭头上"] forState:UIControlStateNormal];
+            }
+            else{
+                [btn setTitle:[NSString stringWithFormat:@"全部%ld个回答", self.dataArr[section].answerlist.count] forState:UIControlStateNormal];
+                [btn setImage:[UIImage imageNamed:@"箭头下"] forState:UIControlStateNormal];
+            }
+        }
+        
+        btn.tag = section;
+        [btn addTarget:self action:@selector(moreAnswerButtonAct:) forControlEvents:UIControlEventTouchUpInside];
+        [content addSubview:btn];
+        [btn mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(115, 15));
+            make.center.mas_equalTo(content);
+        }];
+        
+        return v;
+    }
+    else{
+        UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 5)];
+        v.backgroundColor = separatorView_color;
+        return v;
+    }
+    
+}
+
+#pragma mark - get
+- (NSMutableArray<WLKTActivityDetail_QA_question *> *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray arrayWithCapacity:10];
+    }
+    return _dataArr;
+}
+- (NSMutableArray<NSNumber *> *)answerStateArr{
+    if (!_answerStateArr) {
+        _answerStateArr = [NSMutableArray array];
+    }
+    return _answerStateArr;
+}
+
+@end
+

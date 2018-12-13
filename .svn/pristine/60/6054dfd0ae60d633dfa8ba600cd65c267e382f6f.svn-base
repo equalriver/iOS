@@ -1,0 +1,20 @@
+//
+//  WLKTCourseDetailHeadIndexes.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/10/26.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@protocol CourseDetailHeadIndexesDelegate <NSObject>
+- (void)CourseDetailHeadIndexesDidClick:(NSInteger)tag;
+
+@end
+
+@interface WLKTCourseDetailHeadIndexes : UIView
+@property (weak, nonatomic) id<CourseDetailHeadIndexesDelegate> delegate;
+- (void)setItemColorAtIndex:(NSInteger)index;
+
+@end

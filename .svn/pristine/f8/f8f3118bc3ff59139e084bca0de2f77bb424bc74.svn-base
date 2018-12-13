@@ -1,0 +1,217 @@
+//
+//  WLKTActivityDetailComplaint_2_cell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/13.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTActivityDetailComplaint_2_cell.h"
+#import "WLKTCourseDetailImagesCollectionCell.h"
+#import "MIPhotoBrowser.h"
+
+@interface WLKTActivityDetailComplaint_2_cell ()<MIPhotoBrowserDelegate, UICollectionViewDelegate, UICollectionViewDataSource>
+@property (strong, nonatomic) UILabel *detailLabel;
+@property (strong, nonatomic) UICollectionView *imageCV;
+@property (strong, nonatomic) UICollectionViewFlowLayout *layout;
+@property (strong, nonatomic) UILabel *username_timeLabel;
+@property (strong, nonatomic) UIImageView *answerIV;
+@property (strong, nonatomic) UILabel *answerLabel;
+@property (strong, nonatomic) UILabel *answerName_timeLabel;
+@property (strong, nonatomic) UIView *bottomView;
+
+@property (strong, nonatomic) WLKTActivityDetailComplaintItem *data;
+@end
+
+@implementation WLKTActivityDetailComplaint_2_cell
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        [self.contentView addSubview:self.answerIV];
+        [self.contentView addSubview:self.detailLabel];
+        [self.contentView addSubview:self.imageCV];
+        [self.contentView addSubview:self.username_timeLabel];
+        [self.answerIV addSubview:self.answerLabel];
+        [self.answerIV addSubview:self.answerName_timeLabel];
+        [self.contentView addSubview:self.bottomView];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)setCellData:(WLKTActivityDetailComplaintItem *)data{
+    _data = data;
+    self.answerIV.hidden = YES;
+    self.detailLabel.text = data.describe;
+    self.username_timeLabel.text = [NSString stringWithFormat:@"投诉人：%@  投诉时间：%@", data.username, data.create_time];
+    if (data.handlelist.count) {//回复
+        self.answerIV.hidden = NO;
+        self.answerLabel.text = [NSString stringWithFormat:@"回复：%@", data.handlelist[0].result];
+        self.answerName_timeLabel.text = [NSString stringWithFormat:@"解决人：%@  处理时间：%@", data.handlelist[0].username, data.handlelist[0].create_time];
+    }
+    if (data.thumb_picture.count == 0) {
+        self.imageCV.hidden = YES;
+        [self.username_timeLabel mas_remakeConstraints:^(MASConstraintMaker *make) {
+            make.top.mas_equalTo(self.detailLabel.mas_bottom).offset(10);
+            make.left.mas_equalTo(self.contentView).offset(10);
+            make.right.mas_equalTo(self.answerIV.mas_right).offset(-5);
+        }];
+    }
+    else{
+        self.imageCV.hidden = false;
+        [self.imageCV mas_remakeConstraints:^(MASConstraintMaker *make) {
+            make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+            make.top.mas_equalTo(self.detailLabel.mas_bottom).offset(15 * ScreenRatio_6);
+            make.size.mas_equalTo(CGSizeMake(ScreenWidth, ((self.data.picture.count + 2) /3)* 115 * ScreenRatio_6));
+        }];
+        [self.username_timeLabel mas_remakeConstraints:^(MASConstraintMaker *make) {
+            make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+            make.top.mas_equalTo(self.imageCV.mas_bottom).offset(3);
+            make.right.mas_equalTo(self.answerIV.mas_right).offset(-5);
+        }];
+        [self.imageCV reloadData];
+    }
+}
+
+#pragma mark - collection view
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    return self.data.thumb_picture.count;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTCourseDetailImagesCollectionCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"WLKTCourseDetailImagesCollectionCell" forIndexPath:indexPath];
+    [cell setCellData:self.data.thumb_picture[indexPath.item]];
+    return cell;
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTCourseDetailImagesCollectionCell *cell = (WLKTCourseDetailImagesCollectionCell *)[collectionView cellForItemAtIndexPath:indexPath];
+    MIPhotoBrowser *photoBrowser = [[MIPhotoBrowser alloc] init];
+    photoBrowser.delegate = self;
+    photoBrowser.sourceImagesContainerView = cell.contentView;
+    photoBrowser.imageCount = self.data.picture.count;
+    photoBrowser.currentImageIndex = indexPath.item;
+    [photoBrowser show];
+}
+
+
+#pragma mark - photo browser
+- (NSString *)photoBrowser:(MIPhotoBrowser *)photoBrowser URLImageForIndex:(NSInteger)index{
+    return self.data.picture[index];
+}
+
+#pragma mark -
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.detailLabel.text = nil;
+    self.username_timeLabel.text = nil;
+    self.answerLabel.text = nil;
+    self.answerName_timeLabel.text = nil;
+}
+
+- (void)makeConstraints{
+    [self.detailLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.contentView).offset(15 * ScreenRatio_6);
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-10 * ScreenRatio_6);
+    }];
+    [self.imageCV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0));
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.detailLabel.mas_bottom).offset(15 * ScreenRatio_6);
+    }];
+    [self.username_timeLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.detailLabel.mas_bottom).offset(135);
+    }];
+    [self.answerIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.username_timeLabel.mas_bottom).offset(5);
+    }];
+    [self.answerLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.answerIV).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.answerIV).offset(15 * ScreenRatio_6);
+        make.right.mas_equalTo(self.answerIV.mas_right).offset(-10 * ScreenRatio_6);
+    }];
+    [self.answerName_timeLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.answerLabel);
+        make.top.mas_equalTo(self.answerLabel.mas_bottom).offset(10 * ScreenRatio_6);
+    }];
+    [self.bottomView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 5));
+        make.bottom.mas_equalTo(self.contentView.mas_bottom);
+    }];
+}
+
+
+#pragma mark - get
+- (UILabel *)detailLabel{
+    if (!_detailLabel) {
+        _detailLabel = [UILabel new];
+        _detailLabel.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+        _detailLabel.textColor = KMainTextColor_3;
+        _detailLabel.numberOfLines = 0;
+    }
+    return _detailLabel;
+}
+- (UICollectionView *)imageCV{
+    if (!_imageCV) {
+        _imageCV = [[UICollectionView alloc]initWithFrame:CGRectNull collectionViewLayout:self.layout];
+        _imageCV.backgroundColor = [UIColor whiteColor];
+        _imageCV.scrollEnabled = false;
+        _imageCV.dataSource = self;
+        _imageCV.delegate = self;
+        [_imageCV registerClass:[WLKTCourseDetailImagesCollectionCell class] forCellWithReuseIdentifier:@"WLKTCourseDetailImagesCollectionCell"];
+    }
+    return _imageCV;
+}
+- (UICollectionViewFlowLayout *)layout{
+    if (!_layout) {
+        _layout = [UICollectionViewFlowLayout new];
+        _layout.itemSize = CGSizeMake(115 * ScreenRatio_6, 115 * ScreenRatio_6);
+        _layout.minimumInteritemSpacing = 5 * ScreenRatio_6;
+        _layout.sectionInset = UIEdgeInsetsMake(0, 10 * ScreenRatio_6, 0, 10 * ScreenRatio_6);
+    }
+    return _layout;
+}
+- (UILabel *)username_timeLabel{
+    if (!_username_timeLabel) {
+        _username_timeLabel = [UILabel new];
+        _username_timeLabel.font = [UIFont systemFontOfSize:11 * ScreenRatio_6];
+        _username_timeLabel.textColor = KMainTextColor_9;
+    }
+    return _username_timeLabel;
+}
+- (UIImageView *)answerIV{
+    if (!_answerIV) {
+        _answerIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"气泡框"]];
+    }
+    return _answerIV;
+}
+- (UILabel *)answerLabel{
+    if (!_answerLabel) {
+        _answerLabel = [UILabel new];
+        _answerLabel.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+        _answerLabel.textColor = KMainTextColor_3;
+        _answerLabel.numberOfLines = 0;
+    }
+    return _answerLabel;
+}
+- (UILabel *)answerName_timeLabel{
+    if (!_answerName_timeLabel) {
+        _answerName_timeLabel = [UILabel new];
+        _answerName_timeLabel.font = [UIFont systemFontOfSize:11 * ScreenRatio_6];
+        _answerName_timeLabel.textColor = KMainTextColor_9;
+    }
+    return _answerName_timeLabel;
+}
+- (UIView *)bottomView{
+    if (!_bottomView) {
+        _bottomView = [UIView new];
+        _bottomView.backgroundColor = separatorView_color;
+    }
+    return _bottomView;
+}
+@end
+

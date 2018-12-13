@@ -1,0 +1,262 @@
+
+//
+//  WLKTPolicyPhone.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/2/27.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTPolicyPhone.h"
+
+@interface WLKTPolicyPhone ()
+@property (strong, nonatomic) UIView *bgView;
+@property (strong, nonatomic) UIView *contentView;
+@property (strong, nonatomic) UILabel *titleLabel;
+@property (strong, nonatomic) UITextField *phoneTF;
+@property (strong, nonatomic) UIView *sepView;
+@property (strong, nonatomic) UIImageView *checkIcon_1;
+@property (strong, nonatomic) UIImageView *checkIcon_2;
+@property (strong, nonatomic) UILabel *checkDetail_1;
+@property (strong, nonatomic) UILabel *checkDetail_2;
+@property (strong, nonatomic) UIButton *callButton;
+@property (copy, nonatomic) void(^callBlock)(void);
+@end
+
+@implementation WLKTPolicyPhone
++ (void)policyPhoneWithType:(WLKTPolicyPhoneType)type typeId:(NSString *)typeId target:(UIViewController *)vc{
+    
+    WLKTPolicyPhone *obj = [[WLKTPolicyPhone alloc]init];
+    [obj initUI];
+    
+    @weakify(obj)
+    
+    obj.callBlock = ^{
+        
+        @strongify(obj)
+        if ([obj.phoneTF.text isValidPhoneNumber]) {
+            WLKTPolicyPhoneApi *api = [[WLKTPolicyPhoneApi alloc]initWithType:type typeId:typeId phone:obj.phoneTF.text];
+            [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+                NSString *code = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"errorCode"]];
+                if ([code isEqualToString:@"0"]) {
+                    NSString* str = [NSString stringWithFormat:@"telprompt://%@", request.responseJSONObject[@"result"][@"phone"]];
+                    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:str]];
+                }
+                else{
+                    [SVProgressHUD showInfoWithStatus:request.responseJSONObject[@"message"]];
+                }
+                
+                [obj.bgView removeFromSuperview];
+                
+            } failure:^(__kindof YTKBaseRequest *request) {
+                
+            }];
+        }
+        else{
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                [SVProgressHUD showInfoWithStatus:@"未输入或输入不正确"];
+            });
+            
+        }
+    };
+}
+/*
++ (void)policyPhoneWithType:(WLKTPolicyPhoneType)type typeId:(NSString *)typeId target:(UIViewController *)vc{
+    
+    UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"隐私电话" message:@"请输入当前手机的手机号码，便于接通，否则提示为空号。\n请放心使用该功能，你的电话不会被泄露" preferredStyle:UIAlertControllerStyleAlert];
+    [ac addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
+        textField.placeholder = @"请输入手机号码";
+        textField.keyboardType = UIKeyboardTypeNumberPad;
+    }];
+    [ac addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    [ac addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        UITextField *tf = ac.textFields.firstObject;
+        if ([tf.text isValidPhoneNumber]) {
+            WLKTPolicyPhoneApi *api = [[WLKTPolicyPhoneApi alloc]initWithType:type typeId:typeId phone:tf.text];
+            [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+                NSString *code = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"errorCode"]];
+                if ([code isEqualToString:@"0"]) {
+                    NSString* str = [NSString stringWithFormat:@"telprompt://%@", request.responseJSONObject[@"result"][@"phone"]];
+                    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:str]];
+                }
+                else{
+                    [SVProgressHUD showInfoWithStatus:request.responseJSONObject[@"message"]];
+                }
+                
+            } failure:^(__kindof YTKBaseRequest *request) {
+                
+            }];
+        }
+        else{
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                [SVProgressHUD showInfoWithStatus:@"未输入或输入不正确"];
+            });
+            
+        }
+        
+    }]];
+    [vc presentViewController:ac animated:YES completion:nil];
+    
+}
+*/
+
+- (void)initUI
+{
+    [[UIApplication sharedApplication].keyWindow addSubview:self.bgView];
+    [self.bgView addSubview:self.contentView];
+    [self.contentView addSubview:self.titleLabel];
+    [self.contentView addSubview:self.phoneTF];
+    [self.contentView addSubview:self.sepView];
+    [self.contentView addSubview:self.checkIcon_1];
+    [self.contentView addSubview:self.checkIcon_2];
+    [self.contentView addSubview:self.checkDetail_1];
+    [self.contentView addSubview:self.checkDetail_2];
+    [self.contentView addSubview:self.callButton];
+    [self makeConstraints];
+    
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]initWithActionBlock:^(id  _Nonnull sender) {
+        [self.bgView removeFromSuperview];
+    }];
+    [self.bgView addGestureRecognizer:tap];
+
+}
+
+- (void)callButtonAct{
+
+    !_callBlock ?: _callBlock();
+}
+
+
+- (void)makeConstraints{
+    [self.contentView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(270 *ScreenRatio_6, 290 *ScreenRatio_6));
+        make.centerX.mas_equalTo(self);
+        make.top.mas_equalTo(self).offset(160 *ScreenRatio_6);
+    }];
+    [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.width.centerX.mas_equalTo(self.contentView);
+        make.height.mas_equalTo(20 *ScreenRatio_6);
+        make.top.mas_equalTo(self.contentView).offset(10 *ScreenRatio_6);
+    }];
+    [self.phoneTF mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(30 *ScreenRatio_6);
+        make.right.mas_equalTo(self.contentView).offset(-30 *ScreenRatio_6);
+        make.height.mas_equalTo(25 *ScreenRatio_6);
+        make.top.mas_equalTo(self.titleLabel.mas_bottom).offset(40 *ScreenRatio_6);
+    }];
+    [self.sepView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.right.bottom.mas_equalTo(self.phoneTF);
+        make.height.mas_equalTo(0.5);
+    }];
+    [self.checkIcon_1 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 *ScreenRatio_6);
+        make.size.mas_equalTo(CGSizeMake(15 *ScreenRatio_6, 15 *ScreenRatio_6));
+        make.top.mas_equalTo(self.sepView).offset(10 *ScreenRatio_6);
+    }];
+    [self.checkDetail_1 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.right.mas_equalTo(self.phoneTF);
+        make.top.mas_equalTo(self.checkIcon_1);
+        make.height.mas_equalTo(40 *ScreenRatio_6);
+    }];
+    [self.checkIcon_2 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 *ScreenRatio_6);
+        make.size.mas_equalTo(CGSizeMake(15 *ScreenRatio_6, 15 *ScreenRatio_6));
+        make.top.mas_equalTo(self.checkDetail_1.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    [self.checkDetail_2 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.right.mas_equalTo(self.phoneTF);
+        make.top.mas_equalTo(self.checkIcon_2);
+        make.height.mas_equalTo(40 *ScreenRatio_6);
+    }];
+    [self.callButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.width.centerX.bottom.mas_equalTo(self.contentView);
+        make.height.mas_equalTo(45 *ScreenRatio_6);
+    }];
+}
+
+#pragma mark - get
+- (UIView *)bgView{
+    if (!_bgView) {
+        _bgView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+        _bgView.backgroundColor = [UIColor colorWithWhite:0.3 alpha:0.5];
+    }
+    return _bgView;
+}
+- (UIView *)contentView{
+    if (!_contentView) {
+        _contentView = [UIView new];
+        _contentView.backgroundColor = [UIColor whiteColor];
+        _contentView.layer.masksToBounds = YES;
+        _contentView.layer.cornerRadius = 6 *ScreenRatio_6;
+    }
+    return _contentView;
+}
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [UILabel new];
+        _titleLabel.font = [UIFont systemFontOfSize:16 *ScreenRatio_6];
+        _titleLabel.textColor = KMainTextColor_3;
+        _titleLabel.textAlignment = NSTextAlignmentCenter;
+        _titleLabel.text = @"隐私电话";
+    }
+    return _titleLabel;
+}
+- (UITextField *)phoneTF{
+    if (!_phoneTF) {
+        _phoneTF = [UITextField new];
+        _phoneTF.font = [UIFont systemFontOfSize:14 *ScreenRatio_6];
+        _phoneTF.textColor = KMainTextColor_6;
+        _phoneTF.placeholder = @"输入当前手机号码";
+    }
+    return _phoneTF;
+}
+- (UIView *)sepView{
+    if (!_sepView) {
+        _sepView = [UIView new];
+        _sepView.backgroundColor = kMainBackgroundColor;
+    }
+    return _sepView;
+}
+- (UIImageView *)checkIcon_1{
+    if (!_checkIcon_1) {
+        _checkIcon_1 = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"证明1-拷贝-4"]];
+    }
+    return _checkIcon_1;
+}
+- (UIImageView *)checkIcon_2{
+    if (!_checkIcon_2) {
+        _checkIcon_2 = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"证明1-拷贝-4"]];
+    }
+    return _checkIcon_2;
+}
+- (UILabel *)checkDetail_1{
+    if (!_checkDetail_1) {
+        _checkDetail_1 = [UILabel new];
+        _checkDetail_1.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        _checkDetail_1.textColor = KMainTextColor_9;
+        _checkDetail_1.numberOfLines = 0;
+    }
+    return _checkDetail_1;
+}
+- (UILabel *)checkDetail_2{
+    if (!_checkDetail_2) {
+        _checkDetail_2 = [UILabel new];
+        _checkDetail_2.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        _checkDetail_2.textColor = KMainTextColor_9;
+        _checkDetail_2.numberOfLines = 0;
+    }
+    return _checkDetail_2;
+}
+- (UIButton *)callButton{
+    if (!_callButton) {
+        _callButton = [UIButton new];
+        _callButton.titleLabel.font = [UIFont systemFontOfSize:16 *ScreenRatio_6];
+        _callButton.backgroundColor = kMainTextColor_red;
+        [_callButton setTitle:@"拨打隐私电话(咨询课程)" forState:UIControlStateNormal];
+        [_callButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        [_callButton addTarget:self action:@selector(callButtonAct) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _callButton;
+}
+
+@end

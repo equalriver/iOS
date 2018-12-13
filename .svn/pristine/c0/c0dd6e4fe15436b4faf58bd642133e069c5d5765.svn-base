@@ -1,0 +1,39 @@
+//
+//  WLKTCourseDetailApi.m
+//  wlkt
+//
+//  Created by slovelys on 17/4/6.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTCourseDetailApi.h"
+
+@interface WLKTCourseDetailApi ()
+
+@property (copy, nonatomic) NSString *courseId;
+
+@end
+
+@implementation WLKTCourseDetailApi
+
+- (instancetype)initWithCourseId:(NSString *)courseId {
+    WLKT_INIT(
+              _courseId = [courseId copy];
+    )
+}
+
+- (YTKRequestMethod)requestMethod {
+    return YTKRequestMethodPost;
+}
+
+- (NSString *)requestUrl {
+    return  @"course/details/";
+}
+
+- (id)requestArgument {
+    return @{
+             @"id" : _courseId
+             };
+}
+
+@end

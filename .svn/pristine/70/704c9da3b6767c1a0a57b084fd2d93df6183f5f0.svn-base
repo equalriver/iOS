@@ -1,0 +1,350 @@
+//
+//  WLKTActiveFreeSuccessVC.m
+//  wlkt
+//
+//  Created by 尹平江 on 2017/7/12.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTActiveFreeSuccessVC.h"
+#import "AppDelegate.h"
+#import "WLKTHomepageViewController.h"
+#import "WLKTLogin.h"
+#import "WLKTActiveFreeApi.h"
+#import "WLKTActiveVC.h"
+
+@interface WLKTActiveFreeSuccessVC ()
+
+@end
+
+@implementation WLKTActiveFreeSuccessVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.navigationItem.title = @"报名成功";
+    self.view.backgroundColor = fillViewColor;
+    //设置导航title字体颜色和大小
+    [self.navigationController.navigationBar setTitleTextAttributes:@{
+                                                                      NSFontAttributeName:navigationTitleFont,
+                                                                      NSForegroundColorAttributeName:navigationTitleColor}];
+
+    [self addViews];
+//    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]initWithImage:[UIImage new] style:UIBarButtonItemStylePlain target:self action:@selector(backButtonAct)];
+//    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]initWithTitle:@"完成" style:UIBarButtonItemStylePlain target:self action:@selector(freeFinishBarButtonAct)];
+    
+    [self.finishButton addTarget:self action:@selector(freeFinishAct:) forControlEvents:UIControlEventTouchUpInside];
+    
+}
+
+- (void)addViews{
+    [self.view addSubview:self.upBgView];
+    [self.upBgView addSubview:self.stateImageView];
+    [self.upBgView addSubview:self.stateLabel_1];
+    [self.view addSubview:self.finishButton];
+    [self.view addSubview:self.bgView];
+    [self.bgView addSubview:self.studentInfoTitle];
+    [self.bgView addSubview:self.studentNameLabel];
+    [self.bgView addSubview:self.studentBadgeLabel];
+    [self.bgView addSubview:self.studentNameTF];
+    [self.bgView addSubview:self.phoneLabel];
+    [self.bgView addSubview:self.phoneBadgeLabel];
+    [self.bgView addSubview:self.phoneTF];
+    [self.bgView addSubview:self.separatorView_1];
+    [self.bgView addSubview:self.separatorView_2];
+    
+    [self.view setNeedsUpdateConstraints];
+    [self.view updateConstraintsIfNeeded];
+
+}
+
+#pragma mark - button
+
+- (void)freeFinishAct:(UIButton *)sender{
+    if (self.studentNameTF.text.length == 0) {
+        [SVProgressHUD showInfoWithStatus:@"请输入姓名"];
+        return;
+    }
+    if (self.studentNameTF.text.length < 1) {
+        [SVProgressHUD showInfoWithStatus:@"请输入完整姓名"];
+        return;
+    }
+    if (self.phoneTF.text.length == 0) {
+        [SVProgressHUD showInfoWithStatus:@"请输入手机号码"];
+        return;
+    }
+    if (![self valiMobile:self.phoneTF.text]) {
+        [SVProgressHUD showInfoWithStatus:@"手机号码不正确"];
+        return;
+    }
+    [SVProgressHUD show];
+    WLKTActiveFreeApi *api = [[WLKTActiveFreeApi alloc]initWithHdid:self.aid uname:self.studentNameTF.text uphone:self.phoneTF.text renshu:@"1"];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        if (request.responseStatusCode == 200) {
+            [SVProgressHUD showSuccessWithStatus:@"报名成功"];
+            sleep(2);
+            [self.navigationController pushViewController:[[WLKTActiveVC alloc]init] animated:YES];
+        }
+    } failure:^(__kindof YTKBaseRequest *request) {
+        ShowApiError;
+    }];
+    
+}
+
+
+- (void)freeFinishBarButtonAct{
+    [self.navigationController popToRootViewControllerAnimated:YES];
+}
+
+- (void)backButtonAct{
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (BOOL)valiMobile:(NSString *)mobile
+{
+    mobile = [mobile stringByReplacingOccurrencesOfString:@" " withString:@""];
+    if (mobile.length != 11)
+    {
+        return NO;
+    }else{
+        /**
+         * 移动号段正则表达式
+         */
+        NSString *CM_NUM = @"^((13[4-9])|(147)|(15[0-2,7-9])|(178)|(18[2-4,7-8]))\\d{8}|(1705)\\d{7}$";
+        /**
+         * 联通号段正则表达式
+         */
+        NSString *CU_NUM = @"^((13[0-2])|(145)|(15[5-6])|(176)|(18[5,6]))\\d{8}|(1709)\\d{7}$";
+        /**
+         * 电信号段正则表达式
+         */
+        NSString *CT_NUM = @"^((133)|(153)|(177)|(18[0,1,9]))\\d{8}$";
+        NSPredicate *pred1 = [NSPredicate predicateWithFormat:@"SELF MATCHES %@", CM_NUM];
+        BOOL isMatch1 = [pred1 evaluateWithObject:mobile];
+        NSPredicate *pred2 = [NSPredicate predicateWithFormat:@"SELF MATCHES %@", CU_NUM];
+        BOOL isMatch2 = [pred2 evaluateWithObject:mobile];
+        NSPredicate *pred3 = [NSPredicate predicateWithFormat:@"SELF MATCHES %@", CT_NUM];
+        BOOL isMatch3 = [pred3 evaluateWithObject:mobile];
+        
+        if (isMatch1 || isMatch2 || isMatch3) {
+            return YES;
+        }else{
+            return NO;
+        }
+    }
+}
+
+#pragma mark - 
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event{
+    [self.view endEditing:YES];
+}
+
+#pragma mark - updateViewConstraints
+
+- (void)updateViewConstraints{
+    [self.upBgView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 160 * ScreenRatio_6));
+        make.top.mas_equalTo(self.view);
+        make.left.mas_equalTo(self.view);
+    }];
+    [self.stateImageView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(60 * ScreenRatio_6, 60 * ScreenRatio_6));
+        make.centerX.mas_equalTo(self.upBgView);
+        make.top.mas_equalTo(self.upBgView).offset(40 * ScreenRatio_6);
+    }];
+    [self.stateLabel_1 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(120 * ScreenRatio_6, 30 * ScreenRatio_6));
+        make.top.mas_equalTo(self.stateImageView.mas_bottom).offset(13 * ScreenRatio_6);
+        make.centerX.mas_equalTo(self.upBgView);
+    }];
+    [self.bgView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 150 * ScreenRatio_6));
+        make.left.mas_equalTo(self.view);
+        make.top.mas_equalTo(self.upBgView.mas_bottom).offset(5);
+    }];
+    [self.studentInfoTitle mas_makeConstraints:^(MASConstraintMaker *make) {
+        if (ScreenRatio_6 < 1.0) {
+            make.size.mas_equalTo(CGSizeMake(ScreenWidth - 15 * ScreenRatio_6, 20 * ScreenRatio_6));
+        }
+        else{
+            make.size.mas_equalTo(CGSizeMake(ScreenWidth - 20 * ScreenRatio_6, 20 * ScreenRatio_6));
+        }
+        make.top.mas_equalTo(self.bgView).offset(10 * ScreenRatio_6);
+        make.left.mas_equalTo(self.bgView).offset(15 * ScreenRatio_6);
+    }];
+    [self.separatorView_1 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 1));
+        make.left.mas_equalTo(self.bgView);
+        make.top.mas_equalTo(self.studentInfoTitle.mas_bottom).offset(10 * ScreenRatio_6);
+    }];
+    [self.studentNameLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(35 * ScreenRatio_6, 20 * ScreenRatio_6));
+        make.left.mas_equalTo(self.bgView).offset(15 * ScreenRatio_6);
+        make.top.mas_equalTo(self.separatorView_1.mas_bottom).offset(15 * ScreenRatio_6);
+    }];
+    [self.studentBadgeLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(15 * ScreenRatio_6, 15 * ScreenRatio_6));
+        make.left.mas_equalTo(self.studentNameLabel.mas_right);
+        make.top.mas_equalTo(self.studentNameLabel);
+    }];
+    [self.studentNameTF mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(250 * ScreenRatio_6, 20 * ScreenRatio_6));
+        make.left.mas_equalTo(self.studentBadgeLabel.mas_right);
+        make.centerY.mas_equalTo(self.studentNameLabel);
+    }];
+    [self.separatorView_2 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 1));
+        make.left.mas_equalTo(self.bgView);
+        make.top.mas_equalTo(self.studentNameLabel.mas_bottom).offset(10 * ScreenRatio_6);
+    }];
+    [self.phoneLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(35 * ScreenRatio_6, 20 * ScreenRatio_6));
+        make.left.mas_equalTo(self.bgView).offset(15 * ScreenRatio_6);
+        make.top.mas_equalTo(self.separatorView_2.mas_bottom).offset(15 * ScreenRatio_6);
+    }];
+    [self.phoneBadgeLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(15 * ScreenRatio_6, 15 * ScreenRatio_6));
+        make.left.mas_equalTo(self.phoneLabel.mas_right);
+        make.top.mas_equalTo(self.separatorView_2.mas_bottom).offset(15 * ScreenRatio_6);
+    }];
+    [self.phoneTF mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(250 * ScreenRatio_6, 20 * ScreenRatio_6));
+        make.left.mas_equalTo(self.phoneBadgeLabel.mas_right);
+        make.centerY.mas_equalTo(self.phoneLabel);
+    }];
+    [self.finishButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(340 * ScreenRatio_6, 45 * ScreenRatio_6));
+        make.top.mas_equalTo(self.bgView.mas_bottom).offset(24 * ScreenRatio_6);
+        make.centerX.mas_equalTo(self.view);
+    }];
+    [super updateViewConstraints];
+}
+
+#pragma mark - get
+- (UIView *)upBgView{
+    if (!_upBgView) {
+        _upBgView = [[UIView alloc]init];
+        _upBgView.backgroundColor = [UIColor whiteColor];
+    }
+    return _upBgView;
+}
+
+- (UIImageView *)stateImageView{
+    if (!_stateImageView) {
+        _stateImageView = [[UIImageView alloc]init];
+        _stateImageView.image = [UIImage imageNamed:@"成功"];
+    }
+    return _stateImageView;
+}
+- (UILabel *)stateLabel_1{
+    if (!_stateLabel_1) {
+        _stateLabel_1 = [[UILabel alloc]init];
+        _stateLabel_1.textColor = [UIColor colorWithHexString:@"#333333"];
+        _stateLabel_1.font = [UIFont boldSystemFontOfSize:18];
+        _stateLabel_1.textAlignment = NSTextAlignmentCenter;
+        _stateLabel_1.text = @"报名成功!";
+        
+    }
+    return _stateLabel_1;
+}
+- (UIButton *)finishButton{
+    if (!_finishButton) {
+        _finishButton = [[UIButton alloc]init];
+        [_finishButton setTitle:@"确定" forState:UIControlStateNormal];
+        [_finishButton setTitleColor:[UIColor colorWithHexString:@"#ffffff"] forState:UIControlStateNormal];
+        _finishButton.backgroundColor = [UIColor colorWithHexString:@"#33c4da"];
+        _finishButton.layer.masksToBounds = YES;
+        _finishButton.layer.cornerRadius = 4;
+        _finishButton.titleLabel.font = [UIFont systemFontOfSize:14];
+    }
+    return _finishButton;
+}
+- (UIView *)bgView{
+    if (!_bgView) {
+        _bgView = [[UIView alloc]init];
+        _bgView.backgroundColor = [UIColor whiteColor];
+    }
+    return _bgView;
+}
+
+- (UIView *)separatorView_1{
+    if (!_separatorView_1) {
+        _separatorView_1 = [[UIView alloc]init];
+        _separatorView_1.backgroundColor = fillViewColor;
+    }
+    return _separatorView_1;
+}
+- (UIView *)separatorView_2{
+    if (!_separatorView_2) {
+        _separatorView_2 = [[UIView alloc]init];
+        _separatorView_2.backgroundColor = fillViewColor;
+    }
+    return _separatorView_2;
+}
+- (UILabel *)studentInfoTitle{
+    if (!_studentInfoTitle) {
+        _studentInfoTitle = [[UILabel alloc]init];
+        _studentInfoTitle.text = @"为了方便活动组织者与您保持联系,请填写您的报名信息";
+        _studentInfoTitle.textColor = [UIColor colorWithHexString:@"#333333"];
+        _studentInfoTitle.font = [UIFont systemFontOfSize:12];
+        
+    }
+    return _studentInfoTitle;
+}
+- (UILabel *)studentNameLabel{
+    if (!_studentNameLabel) {
+        _studentNameLabel = [[UILabel alloc]init];
+        _studentNameLabel.textColor = [UIColor colorWithHexString:@"#333333"];
+        _studentNameLabel.text = @"姓名";
+        _studentNameLabel.font = [UIFont systemFontOfSize:14];
+    }
+    return _studentNameLabel;
+}
+- (UILabel *)studentBadgeLabel{
+    if (!_studentBadgeLabel) {
+        _studentBadgeLabel = [[UILabel alloc]init];
+        _studentBadgeLabel.textColor = [UIColor redColor];
+        _studentBadgeLabel.text = @"*";
+        _studentBadgeLabel.font = [UIFont systemFontOfSize:20 * ScreenRatio_6];
+    }
+    return _studentBadgeLabel;
+}
+- (UILabel *)phoneLabel{
+    if (!_phoneLabel) {
+        _phoneLabel = [[UILabel alloc]init];
+        _phoneLabel.textColor = [UIColor colorWithHexString:@"#333333"];
+        _phoneLabel.text = @"电话";
+        _phoneLabel.font = [UIFont systemFontOfSize:14];
+    }
+    return _phoneLabel;
+}
+- (UILabel *)phoneBadgeLabel{
+    if (!_phoneBadgeLabel) {
+        _phoneBadgeLabel = [[UILabel alloc]init];
+        _phoneBadgeLabel.textColor = [UIColor redColor];
+        _phoneBadgeLabel.text = @"*";
+        _phoneBadgeLabel.font = [UIFont systemFontOfSize:20 * ScreenRatio_6];
+    }
+    return _phoneBadgeLabel;
+}
+- (UITextField *)studentNameTF{
+    if (!_studentNameTF) {
+        _studentNameTF = [[UITextField alloc]init];
+        _studentNameTF.placeholder = @"请填写你的姓名";
+        _studentNameTF.font = [UIFont systemFontOfSize:11];
+        _studentNameTF.textColor = userLabelColor;
+        _studentNameTF.clearButtonMode = UITextFieldViewModeWhileEditing;
+    }
+    return _studentNameTF;
+}
+- (UITextField *)phoneTF{
+    if (!_phoneTF) {
+        _phoneTF = [[UITextField alloc]init];
+        _phoneTF.placeholder = @"请填写你的手机号码";
+        _phoneTF.keyboardType = UIKeyboardTypeNumberPad;
+        _phoneTF.font = [UIFont systemFontOfSize:11]; 
+        _phoneTF.textColor = userLabelColor;
+        _phoneTF.clearButtonMode = UITextFieldViewModeWhileEditing;
+    }
+    return _phoneTF;
+}
+@end

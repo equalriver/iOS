@@ -1,0 +1,163 @@
+//
+//  WLKTActivityCell.m
+//  wlkt
+//
+//  Created by slovelys on 2017/7/11.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTActivityCell.h"
+
+#import "WLKTBorderLabel.h"
+
+#import "WLKTActivity.h"
+
+@interface WLKTActivityCell ()
+
+@property (weak, nonatomic) IBOutlet UIImageView *imgView;
+
+@property (weak, nonatomic) IBOutlet UILabel *hitsLabel;
+
+@property (weak, nonatomic) IBOutlet UILabel *titleLabel;
+
+@property (weak, nonatomic) IBOutlet UILabel *timeLabel;
+
+@property (weak, nonatomic) IBOutlet UILabel *locationLabel;
+
+@property (weak, nonatomic) IBOutlet WLKTBorderLabel *statusLabel;
+
+@property (weak, nonatomic) IBOutlet UILabel *chargeLabel;
+
+@property (weak, nonatomic) IBOutlet UILabel *contentLabel;
+
+@property (strong, nonatomic) UIImageView *endView;
+
+@end
+
+@implementation WLKTActivityCell
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    self.imgView.layer.masksToBounds = YES;
+    self.imgView.layer.cornerRadius = 3;
+
+    // Initialization code
+//    self.timeLabel.text = @"时间：2017.7.10-2017.8.9";
+//    self.locationLabel.text = @"地点：四川省体育馆 523.4km";
+//    self.chargeLabel.text = @"50-200元";
+    
+//    NSMutableAttributedString *location = [[NSMutableAttributedString alloc] initWithString:@"地点：四川省体育馆 523.4km"];
+//    [location setFont:[UIFont systemFontOfSize:11] range:NSMakeRange(9, 7)];
+//    
+//    NSMutableAttributedString *charge = [[NSMutableAttributedString alloc] initWithString:@"50-200元"];
+//    [charge setFont:[UIFont systemFontOfSize:11] range:NSMakeRange(6, 1)];
+//    
+//    self.locationLabel.attributedText = location;
+//    self.chargeLabel.attributedText = charge;
+//    self.chargeLabel.textColor = [UIColor redColor];
+//
+//    self.statusLabel.text = @"即将开始";
+//    self.statusLabel.layer.borderWidth = 1;
+//    self.statusLabel.layer.borderColor = [UIColor yellowColor].CGColor;
+//    self.statusLabel.edgeInsets = UIEdgeInsetsMake(4, 6, 4, 6);
+//
+//    self.contentLabel.text = @"";
+}
+
++ (NSString *)identifier {
+    return @"activityCell";
+}
+
+- (void)setModel:(WLKTActivity *)model {
+    [super setModel:model];
+    self.endView.hidden = YES;
+    [self.imgView setImageURL:[NSURL URLWithString:model.img]];
+    self.titleLabel.text = model.title;
+    
+    self.timeLabel.text = model.asctime;
+    self.hitsLabel.text = model.hits;
+    
+//    self.locationLabel.text = model.shortaddress;
+    NSMutableAttributedString *location = [[NSMutableAttributedString alloc] initWithString:[[[@"地点:" stringByAppendingString:model.shortaddress] stringByAppendingString:@" "] stringByAppendingString:model.distance ?: @""]];
+    [location setFont:[UIFont systemFontOfSize:11] range:NSMakeRange(model.shortaddress.length + 4, model.distance.length)];
+    self.locationLabel.attributedText = location;
+    
+    
+    self.timeLabel.textColor = UIColorHex(999999);
+    self.locationLabel.textColor = UIColorHex(999999);
+    self.contentLabel.textColor = UIColorHex(999999);
+    
+    self.statusLabel.text = model.actstatus;
+    self.statusLabel.layer.borderWidth = 1;
+    self.statusLabel.edgeInsets = UIEdgeInsetsMake(3, 5, 3, 5);
+    if ([model.actstatus isEqualToString:@"即将开始"]) {
+        self.statusLabel.layer.borderColor = UIColorHex(ffc62b).CGColor;
+        self.statusLabel.textColor = UIColorHex(ffc62b);
+    } else if ([model.actstatus isEqualToString:@"进行中"]) {
+        self.statusLabel.layer.borderColor = UIColorHex(f05252).CGColor;
+        self.statusLabel.textColor = UIColorHex(f05252);
+    } else if([model.actstatus isEqualToString:@"已结束"]) {
+        self.statusLabel.layer.borderColor = UIColorHex(999999).CGColor;
+        self.statusLabel.textColor = UIColorHex(999999);
+        self.endView.hidden = NO;
+    }
+    
+    self.chargeLabel.textColor = [UIColor redColor];
+    if (model.feesxz.integerValue == 0) {
+        self.chargeLabel.text = @"免费";
+    } else {
+        NSMutableAttributedString *charge = [[NSMutableAttributedString alloc] initWithString:[model.price stringByAppendingString:model.coin]];
+        [charge setFont:[UIFont systemFontOfSize:11] range:NSMakeRange(model.price.length, model.coin.length)];
+        self.chargeLabel.attributedText = charge;
+    }
+    
+    if (!self.hiddenContentLabel || model.subtitle.length) {
+//        self.contentLabel.text = @" ";
+//        [self.imgView mas_updateConstraints:^(MASConstraintMaker *make) {
+//            make.top.equalTo(self.contentView).offset(20);
+//            make.bottom.equalTo(self.contentView).offset(20);
+//        }];
+        
+        self.contentLabel.text = model.subtitle;
+    } else {
+        self.contentLabel.height = 1;
+    }
+    
+    
+    
+    if (self.needLine) {
+        UILabel *line = [UILabel new];
+        line.backgroundColor = UIColorHex(f4f4f4);
+        [self.contentView addSubview:line];
+        [line mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.left.equalTo(self.contentView).offset(15);
+//            make.right.equalTo(self.contentView).offset(15);
+            make.bottom.equalTo(self.contentView);
+            make.width.equalTo(@(kScreenWidth - 30));
+            make.height.equalTo(@1);
+        }];
+    }
+}
+
+- (UIImageView *)endView {
+    if (!_endView) {
+        _endView = [[UIImageView alloc] init];
+        _endView.backgroundColor = [UIColor blackColor];
+        _endView.alpha = 0.5;
+        _endView.image = [UIImage imageNamed:@"activity_end"];
+        [self.imgView addSubview:_endView];
+        [_endView mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.equalTo(self.imgView);
+            make.center.equalTo(self.imgView);
+        }];
+    }
+    return _endView;
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end

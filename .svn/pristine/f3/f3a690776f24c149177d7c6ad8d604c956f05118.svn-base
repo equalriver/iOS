@@ -1,0 +1,89 @@
+//
+//  WLKTTeachLocationCell.m
+//  wlkt
+//
+//  Created by 尹平江 on 17/4/10.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTTeachLocationCell.h"
+
+@implementation WLKTTeachLocationCell
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self.contentView addSubview:self.recommendIcon];
+        [self.contentView addSubview:self.recommendLabel];
+        [self.contentView addSubview:self.locationTitle];
+        [self.contentView addSubview:self.tuijianIcon];
+    }
+    [self setNeedsUpdateConstraints];
+    [self updateConstraintsIfNeeded];
+    return self;
+}
+
+- (void)updateConstraints{
+    [self.tuijianIcon mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(25 * ScreenRatio_6, 25 * ScreenRatio_6));
+        make.left.mas_equalTo(self);
+        make.top.mas_equalTo(self);
+    }];
+    [self.recommendLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(self.contentView.size.width /2, 10 * ScreenRatio_6));
+        make.right.mas_equalTo(self.contentView.mas_right);
+        make.top.mas_equalTo(self.locationTitle.mas_bottom);
+    }];
+    [self.recommendIcon mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(10 * ScreenRatio_6, 10 * ScreenRatio_6));
+        make.top.mas_equalTo(self.locationTitle.mas_bottom);
+        make.right.mas_equalTo(self.recommendLabel.mas_left).offset(-2);
+    }];
+
+    [super updateConstraints];
+}
+
+#pragma mark - get
+
+- (UIImageView *)tuijianIcon{
+    if (!_tuijianIcon) {
+        _tuijianIcon = [[UIImageView alloc]init];
+        _tuijianIcon.image = [UIImage imageNamed:@"推荐icon"];
+        
+    }
+    return _tuijianIcon;
+}
+- (UILabel *)locationTitle{
+    if (!_locationTitle) {
+        _locationTitle = [[UILabel alloc]initWithFrame:CGRectMake(0, 0, self.contentView.size.width, self.contentView.size.height - 10 * ScreenRatio_6)];
+        _locationTitle.textColor = userLabelColor;
+        _locationTitle.font = [UIFont systemFontOfSize:15 * ScreenRatio_6];
+        _locationTitle.textAlignment = NSTextAlignmentCenter;
+        _locationTitle.layer.borderWidth = 1;
+        _locationTitle.layer.borderColor = [UIColor lightGrayColor].CGColor;
+        _locationTitle.layer.masksToBounds = YES;
+        _locationTitle.layer.cornerRadius = 3;
+        _locationTitle.numberOfLines = 0;
+    }
+    return _locationTitle;
+}
+
+- (UIImageView *)recommendIcon{
+    if (!_recommendIcon) {
+        _recommendIcon = [[UIImageView alloc]init];
+        _recommendIcon.image = [UIImage imageNamed:@"推荐"];
+    }
+    return _recommendIcon;
+}
+- (UILabel *)recommendLabel{
+    if (!_recommendLabel) {
+        _recommendLabel = [[UILabel alloc]init];
+        _recommendLabel.text = @"离你最近";
+        _recommendLabel.textColor = [UIColor colorWithWhite:0.8 alpha:1.0];
+        _recommendLabel.font = [UIFont systemFontOfSize:10 * ScreenRatio_6];
+    }
+    return _recommendLabel;
+}
+
+@end

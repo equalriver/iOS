@@ -1,0 +1,15 @@
+//
+//  WLKTCourseDetail_Q_A_VC.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/2.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourse.h"
+
+@interface WLKTCourseDetail_Q_A_VC : UITableViewController
+- (instancetype)initWithStyle:(UITableViewStyle)style course:(WLKTCourse *)course;
+
+@end

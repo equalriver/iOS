@@ -1,0 +1,322 @@
+//
+//  WLKTClassifyFliterBtns.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/7.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTClassifyFliterBtns.h"
+#import "WLKTExchangeButton.h"
+
+@interface WLKTClassifyFliterBtns ()<WLKTClassifySearchResultDelegate>
+@property (strong, nonatomic) WLKTExchangeButton *searchNearBtn;
+@property (strong, nonatomic) WLKTExchangeButton *searchAllBtn;
+@property (strong, nonatomic) WLKTExchangeButton *searchSortBtn;
+@property (strong, nonatomic) WLKTExchangeButton *searchFliterBtn;
+@property (strong, nonatomic) WLKTClassifySearchResult *searchAllResult;
+@property (strong, nonatomic) UIView *separatorView_1;
+
+@property (strong, nonatomic) NSMutableDictionary<NSNumber *, NSNumber *> *searchResultIndex;
+@property (assign, nonatomic) NSInteger searchAllLevel_1_index;
+@property (assign, nonatomic) NSInteger searchAllLevel_2_index;
+@property (assign, nonatomic) ClassifySearchType currentType;
+@property (copy, nonatomic) NSString *searchValue;
+
+@end
+
+@implementation WLKTClassifyFliterBtns
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+
+        _searchAllLevel_1_index = -1;
+        _searchAllLevel_2_index = -1;
+        for (int i = 0; i < 4; i++) {
+            self.searchResultIndex[@(i)] = @(-1);
+        }
+        _currentType = ClassifySearchTypeNone;
+        [self addSubview:self.searchNearBtn];
+        [self addSubview:self.searchAllBtn];
+        [self addSubview:self.searchSortBtn];
+        [self addSubview:self.searchFliterBtn];
+        [self addSubview:self.separatorView_1];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+#pragma mark - action
+- (void)searchButtonAct:(UIButton *)sender{
+    NSArray *arr = @[self.searchNearBtn, self.searchAllBtn, self.searchSortBtn, self.searchFliterBtn];
+    for (UIButton *b in arr) {
+        if (b != sender) {
+            b.selected = false;
+        }
+    }
+    switch (sender.tag) {
+        case ClassifySearchTypeDistance:
+            if (self.data.distance.count == 0) {
+                return;
+            }
+        case ClassifySearchTypeClassify:
+            if (self.data.classify.count == 0) {
+                return;
+            }
+        case ClassifySearchTypeSmartSort:
+            if (self.data.smartsort.count == 0) {
+                return;
+            }
+        case ClassifySearchTypeFliter:
+            if (self.data.filter.count == 0) {
+                return;
+            }
+        default:
+            break;
+    }
+    sender.selected = !sender.isSelected;
+    UIView *keyWindow = [UIApplication sharedApplication].keyWindow;
+    
+    for (UIView *v in keyWindow.subviews) {
+        if ([v isKindOfClass:[WLKTClassifySearchResult class]]) {
+            if (self.currentType != sender.tag) {
+                [[NSNotificationCenter defaultCenter]postNotificationName:@"ClassifyFliterViewRemoveByButton" object:nil];
+            }
+            [v removeFromSuperview];
+        }
+    }
+    if (sender.selected) {
+        self.currentType = sender.tag;
+        
+        if (sender.tag == ClassifySearchTypeClassify && self.isCourseList) {
+            WLKTClassifySearchResult *sr = [[WLKTClassifySearchResult alloc]initWithSearchData:self.data searchType:sender.tag  searchAllLevel_1_index:self.searchAllLevel_1_index searchAllLevel_2_index:self.searchAllLevel_2_index completion:^{
+                sender.selected = false;
+            }];
+            sr.frame = CGRectMake(0, NavigationBarAndStatusHeight + 40, ScreenWidth, ScreenHeight - NavigationBarAndStatusHeight -40);
+            sr.delegate = self;
+            [keyWindow addSubview:sr];
+            [keyWindow bringSubviewToFront:sr];
+//            [sr mas_makeConstraints:^(MASConstraintMaker *make) {
+//                make.top.mas_equalTo(self.searchNearBtn.mas_bottom);
+//                make.left.mas_equalTo(self.searchNearBtn);
+//                make.width.mas_equalTo(ScreenWidth);
+//                make.height.mas_equalTo(ScreenHeight - 100);
+//            }];
+            [[NSNotificationCenter defaultCenter]postNotificationName:kClassifyFliterViewAddNoti object:nil];
+        }
+        else{
+            WLKTClassifySearchResult *sr = [[WLKTClassifySearchResult alloc]initWithSearchType:sender.tag data:self.data index:self.searchResultIndex completion:^{
+                sender.selected = false;
+            }];
+            sr.frame = CGRectMake(0, NavigationBarAndStatusHeight + 40, ScreenWidth, ScreenHeight - NavigationBarAndStatusHeight -40);
+            sr.delegate = self;
+            [keyWindow addSubview:sr];
+            [keyWindow bringSubviewToFront:sr];
+//            [sr mas_makeConstraints:^(MASConstraintMaker *make) {
+//                make.top.mas_equalTo(self.searchNearBtn.mas_bottom);
+//                make.left.mas_equalTo(self.searchNearBtn);
+//                make.width.mas_equalTo(ScreenWidth);
+//                make.height.mas_equalTo(ScreenHeight - 100);
+//            }];
+            [[NSNotificationCenter defaultCenter]postNotificationName:kClassifyFliterViewAddNoti object:nil];
+        }
+    }
+}
+
+#pragma mark - WLKTClassifySearchResultDelegate
+- (void)didSelectedSearchResultType:(ClassifySearchType)type searchResultIndex:(NSMutableDictionary<NSNumber *,NSNumber *> *)searchResultIndex searchAllLevel_1_index:(NSInteger)searchAllLevel_1_index searchAllLevel_2_index:(NSInteger)searchAllLevel_2_index searchValue:(NSString *)searchValue completion:(void (^)(void))completion{
+    self.searchValue = searchValue;
+    if (type == ClassifySearchTypeClassify && self.isCourseList) {
+        self.searchAllLevel_1_index = searchAllLevel_1_index;
+        self.searchAllLevel_2_index = searchAllLevel_2_index;
+        if (searchAllLevel_2_index == -1) {
+            [self setButtonTitle:self.data.classify[searchAllLevel_1_index].title type:type];
+        }
+        else{
+            [self setButtonTitle:self.data.classify[searchAllLevel_1_index].child[searchAllLevel_2_index].title type:type];
+        }
+    }
+    else{
+        [self.searchResultIndex addEntriesFromDictionary:searchResultIndex];
+        switch (type) {
+            case ClassifySearchTypeDistance:
+                [self setButtonTitle:self.data.distance[searchResultIndex[@0].integerValue].title type:type];
+                break;
+            case ClassifySearchTypeClassify:
+                [self setButtonTitle:self.data.classify[searchResultIndex[@1].integerValue].title type:type];
+                break;
+            case ClassifySearchTypeSmartSort:
+                [self setButtonTitle:self.data.smartsort[searchResultIndex[@2].integerValue].title type:type];
+                break;
+            case ClassifySearchTypeFliter:
+                [self setButtonTitle:self.data.filter[searchResultIndex[@3].integerValue].title type:type];
+                break;
+            default:
+                break;
+        }
+        
+    }
+    if ([self.delegate respondsToSelector:@selector(didSelectedFliterButtonWithType:value:completion:)]) {
+        [self.delegate didSelectedFliterButtonWithType:type value:searchValue completion:^{
+            !completion ?: completion();
+        }];
+    }
+}
+
+#pragma mark -
+- (void)setButtonTitle:(NSString *)title type:(ClassifySearchType)type{
+    NSArray *arr = @[self.searchNearBtn, self.searchAllBtn, self.searchSortBtn, self.searchFliterBtn];
+    for (UIButton *b in arr) {
+        if (type == b.tag) {
+            [b setTitle:[NSString stringWithFormat:@"%@ ", title] forState:UIControlStateNormal];
+            [b setTitleColor:kMainTextColor_red forState:UIControlStateNormal];
+        }
+        else{
+            [b setTitleColor:KMainTextColor_3 forState:UIControlStateNormal];
+            switch (b.tag) {
+                case ClassifySearchTypeDistance:
+                    [b setTitle:@"附近 " forState:UIControlStateNormal];
+                    break;
+                case ClassifySearchTypeClassify:
+                    [b setTitle:@"全部分类 " forState:UIControlStateNormal];
+                    break;
+                case ClassifySearchTypeSmartSort:
+                    [b setTitle:@"智能排序 " forState:UIControlStateNormal];
+                    break;
+                case ClassifySearchTypeFliter:
+                    [b setTitle:@"筛选 " forState:UIControlStateNormal];
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+}
+
+- (void)resetButtonStatus{
+    NSArray *arr = @[self.searchNearBtn, self.searchAllBtn, self.searchSortBtn, self.searchFliterBtn];
+    for (UIButton *b in arr) {
+        b.selected = false;
+        [b setTitleColor:KMainTextColor_3 forState:UIControlStateNormal];
+        switch (b.tag) {
+            case ClassifySearchTypeDistance:
+                [b setTitle:@"附近 " forState:UIControlStateNormal];
+                break;
+            case ClassifySearchTypeClassify:
+                [b setTitle:@"全部分类 " forState:UIControlStateNormal];
+                break;
+            case ClassifySearchTypeSmartSort:
+                [b setTitle:@"智能排序 " forState:UIControlStateNormal];
+                break;
+            case ClassifySearchTypeFliter:
+                [b setTitle:@"筛选 " forState:UIControlStateNormal];
+                break;
+            default:
+                break;
+        }
+    }
+    
+}
+
+#pragma mark -
+- (void)makeConstraints{
+    [self.searchNearBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth /4, 40));
+        make.left.mas_equalTo(self);
+        make.top.mas_equalTo(self);
+    }];
+    [self.searchAllBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth /4, 40));
+        make.left.mas_equalTo(self.searchNearBtn.mas_right);
+        make.top.mas_equalTo(self);
+    }];
+    [self.searchSortBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth /4, 40));
+        make.left.mas_equalTo(self.searchAllBtn.mas_right);
+        make.top.mas_equalTo(self);
+    }];
+    [self.searchFliterBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth /4, 40));
+        make.left.mas_equalTo(self.searchSortBtn.mas_right);
+        make.top.mas_equalTo(self);
+    }];
+    [self.separatorView_1 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0.5));
+        make.left.mas_equalTo(self);
+        make.top.mas_equalTo(self.searchNearBtn.mas_bottom);
+    }];
+}
+
+#pragma mark - get
+- (NSMutableDictionary<NSNumber *,NSNumber *> *)searchResultIndex{
+    if (!_searchResultIndex) {
+        _searchResultIndex = [NSMutableDictionary dictionaryWithCapacity:10];
+    }
+    return _searchResultIndex;
+}
+- (WLKTExchangeButton *)searchNearBtn{
+    if (!_searchNearBtn) {
+        _searchNearBtn = [WLKTExchangeButton new];
+        _searchNearBtn.tag = ClassifySearchTypeDistance;
+        _searchNearBtn.titleLabel.font = [UIFont systemFontOfSize:12];
+        [_searchNearBtn setTitle:@"附近 " forState:UIControlStateNormal];
+        [_searchNearBtn setTitleColor:KMainTextColor_3 forState:UIControlStateNormal];
+        [_searchNearBtn setTitleColor:kMainTextColor_red forState:UIControlStateSelected];
+        [_searchNearBtn setImage:[UIImage imageNamed:@"下拉灰"] forState:UIControlStateNormal];
+        [_searchNearBtn setImage:[UIImage imageNamed:@"收起"] forState:UIControlStateSelected];
+        [_searchNearBtn addTarget:self action:@selector(searchButtonAct:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _searchNearBtn;
+}
+- (WLKTExchangeButton *)searchAllBtn{
+    if (!_searchAllBtn) {
+        _searchAllBtn = [WLKTExchangeButton new];
+        _searchAllBtn.tag = ClassifySearchTypeClassify;
+        _searchAllBtn.titleLabel.font = [UIFont systemFontOfSize:12];
+        [_searchAllBtn setTitle:@"全部分类 " forState:UIControlStateNormal];
+        [_searchAllBtn setTitleColor:KMainTextColor_3 forState:UIControlStateNormal];
+        [_searchAllBtn setTitleColor:kMainTextColor_red forState:UIControlStateSelected];
+        [_searchAllBtn setImage:[UIImage imageNamed:@"下拉灰"] forState:UIControlStateNormal];
+        [_searchAllBtn setImage:[UIImage imageNamed:@"收起"] forState:UIControlStateSelected];
+        [_searchAllBtn addTarget:self action:@selector(searchButtonAct:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _searchAllBtn;
+}
+- (WLKTExchangeButton *)searchSortBtn{
+    if (!_searchSortBtn) {
+        _searchSortBtn = [WLKTExchangeButton new];
+        _searchSortBtn.tag = ClassifySearchTypeSmartSort;
+        _searchSortBtn.titleLabel.font = [UIFont systemFontOfSize:12];
+        [_searchSortBtn setTitle:@"智能排序 " forState:UIControlStateNormal];
+        [_searchSortBtn setTitleColor:KMainTextColor_3 forState:UIControlStateNormal];
+        [_searchSortBtn setTitleColor:kMainTextColor_red forState:UIControlStateSelected];
+        [_searchSortBtn setImage:[UIImage imageNamed:@"下拉灰"] forState:UIControlStateNormal];
+        [_searchSortBtn setImage:[UIImage imageNamed:@"收起"] forState:UIControlStateSelected];
+        [_searchSortBtn addTarget:self action:@selector(searchButtonAct:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _searchSortBtn;
+}
+- (WLKTExchangeButton *)searchFliterBtn{
+    if (!_searchFliterBtn) {
+        _searchFliterBtn = [WLKTExchangeButton new];
+        _searchFliterBtn.tag = ClassifySearchTypeFliter;
+        _searchFliterBtn.titleLabel.font = [UIFont systemFontOfSize:12];
+        [_searchFliterBtn setTitle:@"筛选 " forState:UIControlStateNormal];
+        [_searchFliterBtn setTitleColor:KMainTextColor_3 forState:UIControlStateNormal];
+        [_searchFliterBtn setTitleColor:kMainTextColor_red forState:UIControlStateSelected];
+        [_searchFliterBtn setImage:[UIImage imageNamed:@"下拉灰"] forState:UIControlStateNormal];
+        [_searchFliterBtn setImage:[UIImage imageNamed:@"收起"] forState:UIControlStateSelected];
+        [_searchFliterBtn addTarget:self action:@selector(searchButtonAct:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _searchFliterBtn;
+}
+- (UIView *)separatorView_1{
+    if (!_separatorView_1) {
+        _separatorView_1 = [UIView new];
+        _separatorView_1.backgroundColor = separatorView_color;
+    }
+    return _separatorView_1;
+}
+
+@end

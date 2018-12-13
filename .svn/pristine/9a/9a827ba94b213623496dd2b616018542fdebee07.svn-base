@@ -1,0 +1,37 @@
+//
+//  WLKTCDQuestionDetail.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/4/8.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTCDQuestionDetail.h"
+
+@implementation WLKTCDQuestionDetail
++ (NSDictionary<NSString *, id> *)modelContainerPropertyGenericClass {
+    return @{
+             @"list": [CDQuestionDetailList class]
+             
+             };
+}
+@end
+
+
+@implementation CDQuestionDetailList
++ (NSDictionary *)modelCustomPropertyMapper {
+    return @{
+             @"aid" : @"id"
+             };
+}
+@end
+
+
+@implementation CDQuestionDetailQues
++ (NSDictionary *)modelCustomPropertyMapper {
+    return @{
+             @"qid" : @"id"
+             };
+}
+@end
+

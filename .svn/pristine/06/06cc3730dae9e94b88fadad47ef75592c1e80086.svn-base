@@ -1,0 +1,143 @@
+//
+//  WLKTCourseDetailComplaintVC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/2.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTCourseDetailComplaintVC.h"
+#import "WLKTCourseDetailComplaint_2_cell.h"
+#import "WLKTCourseDetailGoComplaintVC.h"
+#import "WLKTCourseDetailComplaintListApi.h"
+#import "WLKTTableviewRefresh.h"
+#import "WLKTCourseDetailNewCourse_complaintComItem.h"
+
+@interface WLKTCourseDetailComplaintVC ()
+@property (strong, nonatomic) WLKTCourse *course;
+@property (nonatomic) NSInteger page;
+@property (strong, nonatomic) NSMutableArray<WLKTCourseDetailNewCourse_complaintComItem *> *dataArr;
+@end
+
+@implementation WLKTCourseDetailComplaintVC
+- (instancetype)initWithCourse:(WLKTCourse *)course
+{
+    self = [super init];
+    if (self) {
+        _course = course;
+        self.title = @"投诉";
+        _page = 1;
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]initWithImage:[UIImage imageNamed:@"投诉b"] style:UIBarButtonItemStylePlain target:self action:@selector(rightBarButtonAct)];
+    [self setRefresh];
+}
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    [self.tableView.mj_header beginRefreshing];
+}
+
+#pragma mark - network
+- (void)setRefresh{
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^{
+        weakSelf.page = 1;
+
+        [weakSelf requestWithPage:weakSelf.page];
+    }];
+    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableView block:^{
+        if (weakSelf.dataArr.count) {
+            weakSelf.page++;
+            [weakSelf requestWithPage:weakSelf.page];
+        }
+        else{
+            weakSelf.tableView.mj_footer = nil;
+        }
+    }];
+}
+
+- (void)requestWithPage:(NSInteger)page{
+    WLKTCourseDetailComplaintListApi *api = [[WLKTCourseDetailComplaintListApi alloc]initWithCourseId:self.course.uid page:page];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        if (self.page == 1) {
+            [self.dataArr removeAllObjects];
+            [self.tableView.mj_footer resetNoMoreData];
+        }
+        [self.tableView.mj_header endRefreshing];
+        NSArray *arr = [NSArray modelArrayWithClass:[WLKTCourseDetailNewCourse_complaintComItem class] json:request.responseJSONObject[@"result"][@"list"]];
+        [_dataArr addObjectsFromArray:arr];
+
+        if (self.page == 1) {
+
+            if (!arr.count) {
+                self.tableView.state = WLKTViewStateEmpty;
+                self.tableView.imageForStateEmpty = [UIImage imageNamed:@"message_bg"];
+            }
+        }
+        else{
+            if (arr.count) {
+                [self.tableView.mj_footer endRefreshing];
+            }
+            else{
+                [self.tableView.mj_footer endRefreshingWithNoMoreData];
+            }
+        }
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView reloadData];
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView.mj_footer endRefreshing];
+//        self.tableView.state = WLKTViewStateError;
+    }];
+}
+
+#pragma mark - action
+- (void)rightBarButtonAct{
+    WLKTCourseDetailGoComplaintVC *vc = [[WLKTCourseDetailGoComplaintVC alloc]initWithCourse:self.course];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+#pragma mark - table view
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return self.dataArr.count;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    CGFloat h = 55;
+    if (self.dataArr[indexPath.row].thumb_picture.count) {
+        h += ((self.dataArr[indexPath.row].thumb_picture.count + 2) /3)* 120 * ScreenRatio_6;
+    }
+    CGFloat questionHeight = [UILabel getSizeWithStr:self.dataArr[indexPath.row].describe Width:ScreenWidth - 20 Font:13.5].height;
+    CGFloat answerHeight = 0;
+    if (self.dataArr[indexPath.row].handlelist.count) {
+        answerHeight = [UILabel getSizeWithStr:self.dataArr[indexPath.row].handlelist[0].result Width:340 * ScreenRatio_6 Font:13.5].height + 55;
+    }
+    return h + questionHeight + answerHeight;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTCourseDetailComplaint_2_cell *cell = [tableView dequeueReusableCellWithIdentifier:@"WLKTCourseDetailComplaint_2_cell"];
+    if (cell == nil) {
+        cell = [[WLKTCourseDetailComplaint_2_cell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"WLKTCourseDetailComplaint_2_cell"];
+    }
+    [cell setCellData:self.dataArr[indexPath.row]];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+#pragma mark - get
+- (NSMutableArray<WLKTCourseDetailNewCourse_complaintComItem *> *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray arrayWithCapacity:10];
+    }
+    return _dataArr;
+}
+
+@end

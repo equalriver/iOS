@@ -1,0 +1,940 @@
+
+@interface valueSelectCollectionCell : UICollectionViewCell
+@property (strong, nonatomic) UILabel *itemLabel;
+@end
+@implementation valueSelectCollectionCell
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self.contentView addSubview:self.itemLabel];
+    }
+    return self;
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.itemLabel.text = nil;
+    self.itemLabel.textColor = UIColorHex(333333);
+    self.itemLabel.layer.borderColor = UIColorHex(231812).CGColor;
+}
+
+- (void)setItemColor:(UIColor *)color{
+    self.itemLabel.textColor = color;
+    self.itemLabel.layer.borderColor = color.CGColor;
+}
+
+- (UILabel *)itemLabel{
+    if (!_itemLabel) {
+        _itemLabel = [[UILabel alloc]initWithFrame:CGRectMake(0, 0, 115 * ScreenRatio_6, 40 * ScreenRatio_6)];
+        _itemLabel.font = [UIFont systemFontOfSize:12];
+        _itemLabel.textColor = UIColorHex(333333);
+        _itemLabel.layer.borderColor = UIColorHex(231812).CGColor;
+        _itemLabel.layer.borderWidth = 0.5;
+        _itemLabel.layer.masksToBounds = YES;
+        _itemLabel.layer.cornerRadius = 2.5 * ScreenRatio_6;
+        _itemLabel.textAlignment = NSTextAlignmentCenter;
+    }
+    return _itemLabel;
+}
+@end
+/**********************************************************************/
+#import "WLKTCourseDetailData.h"
+@interface locationCollectionCell : UICollectionViewCell
+@property (strong, nonatomic) UILabel *itemLabel;
+@property (strong, nonatomic) UIImageView *tuijianIV;
+@property (strong, nonatomic) UILabel *tuijianLabel;
+@property (strong, nonatomic) UILabel *couponTagLabel;
+@property (strong, nonatomic) UILabel *distanceTagLabel;
+@property (strong, nonatomic) WLKTAddress *data;
+
+@end
+@implementation locationCollectionCell
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self.contentView addSubview:self.itemLabel];
+        [self.contentView addSubview:self.tuijianIV];
+        [self.contentView addSubview:self.tuijianLabel];
+        [self.contentView addSubview:self.couponTagLabel];
+        [self.contentView addSubview:self.distanceTagLabel];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.itemLabel.text = nil;
+    self.itemLabel.textColor = UIColorHex(333333);
+    self.itemLabel.layer.borderColor = UIColorHex(231812).CGColor;
+}
+
+- (void)setItemColor:(UIColor *)color{
+    self.itemLabel.textColor = color;
+    self.itemLabel.layer.borderColor = color.CGColor;
+}
+
+- (void)setData:(WLKTAddress *)data{
+    CGFloat h = 17;
+    if (data.discount.integerValue == 1) {//无折扣
+        h = 2;
+    }
+    [self.distanceTagLabel mas_updateConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(self.itemLabel.mas_bottom).offset(h);
+    }];
+}
+
+#pragma mark - make constraints
+- (void)makeConstraints{
+    [self.itemLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(115 * ScreenRatio_6, 40 * ScreenRatio_6));
+        make.top.mas_equalTo(self.contentView).offset(3);
+        make.left.mas_equalTo(self.contentView);
+    }];
+    [self.tuijianIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(33, 15));
+        make.top.mas_equalTo(self.contentView);
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-6);
+    }];
+    [self.tuijianLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(25, 15));
+        make.top.mas_equalTo(self.tuijianIV);
+        make.right.mas_equalTo(self.tuijianIV.mas_right).offset(-2);
+    }];
+    [self.couponTagLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(76, 12));
+        make.top.mas_equalTo(self.itemLabel.mas_bottom).offset(2);
+        make.left.mas_equalTo(self.contentView).offset(2);
+    }];
+    [self.distanceTagLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(40, 12));
+        make.top.mas_equalTo(self.itemLabel.mas_bottom).offset(17);
+        make.left.mas_equalTo(self.contentView).offset(2);
+    }];
+}
+
+#pragma mark - get
+- (UILabel *)itemLabel{
+    if (!_itemLabel) {
+        _itemLabel = [[UILabel alloc]init];
+        _itemLabel.font = [UIFont systemFontOfSize:12];
+        _itemLabel.textColor = UIColorHex(333333);
+        _itemLabel.layer.borderColor = UIColorHex(231812).CGColor;
+        _itemLabel.layer.borderWidth = 0.5;
+        _itemLabel.layer.masksToBounds = YES;
+        _itemLabel.layer.cornerRadius = 2.5 * ScreenRatio_6;
+        _itemLabel.textAlignment = NSTextAlignmentCenter;
+    }
+    return _itemLabel;
+}
+- (UIImageView *)tuijianIV{
+    if (!_tuijianIV) {
+        _tuijianIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"课程详情推荐"]];
+    }
+    return _tuijianIV;
+}
+- (UILabel *)tuijianLabel{
+    if (!_tuijianLabel) {
+        _tuijianLabel = [UILabel new];
+        _tuijianLabel.font = [UIFont systemFontOfSize:10];
+        _tuijianLabel.textColor = [UIColor whiteColor];
+        _tuijianLabel.text = @"推荐";
+        _tuijianLabel.textAlignment = NSTextAlignmentCenter;
+    }
+    return _tuijianLabel;
+}
+- (UILabel *)couponTagLabel{
+    if (!_couponTagLabel) {
+        _couponTagLabel = [UILabel new];
+        _couponTagLabel.font = [UIFont systemFontOfSize:9];
+        _couponTagLabel.textColor = UIColorHex(ff5a06);
+        _couponTagLabel.textAlignment = NSTextAlignmentCenter;
+        _couponTagLabel.text = @"此校区有优惠活动";
+        _couponTagLabel.backgroundColor = UIColorHex(feebe1);
+        _couponTagLabel.layer.cornerRadius = 1;
+        _couponTagLabel.layer.masksToBounds = YES;
+    }
+    return _couponTagLabel;
+}
+- (UILabel *)distanceTagLabel{
+    if (!_distanceTagLabel) {
+        _distanceTagLabel = [UILabel new];
+        _distanceTagLabel.font = [UIFont systemFontOfSize:9];
+        _distanceTagLabel.textColor = UIColorHex(c8c8c8);
+        _distanceTagLabel.backgroundColor = UIColorHex(f5f5f5);
+        _distanceTagLabel.layer.cornerRadius = 1;
+        _distanceTagLabel.layer.masksToBounds = YES;
+        _distanceTagLabel.textAlignment = NSTextAlignmentCenter;
+        _distanceTagLabel.text = @"离你最近";
+    }
+    return _distanceTagLabel;
+}
+@end
+
+/**********************************************************************/
+#import "WLKTCourseDetailRegisterAlert.h"
+#import "WLKTConfirmOrderVC.h"
+
+@interface WLKTCourseDetailRegisterAlert ()<UITableViewDelegate, UITableViewDataSource, UICollectionViewDelegate, UICollectionViewDataSource>
+@property (strong, nonatomic) UIView *tapBgView;
+@property (strong, nonatomic) UIImageView *imgIV;
+@property (strong, nonatomic) UILabel *titleLabel;
+@property (strong, nonatomic) UILabel *priceLabel;
+@property (strong, nonatomic) UILabel *typeLabel;
+@property (strong, nonatomic) UILabel *rawPriceLabel;
+@property (strong, nonatomic) UIView *separatorView;
+@property (strong, nonatomic) UITableView *contentTV;
+@property (strong, nonatomic) UICollectionView *valueSelectCV;
+@property (strong, nonatomic) UICollectionViewFlowLayout *valueSelectLayout;
+@property (strong, nonatomic) UILabel *courseNumLabel;
+@property (strong, nonatomic) UIView *courseSelectBgView;
+@property (strong, nonatomic) UIButton *minusButton;
+@property (strong, nonatomic) UIButton *addButton;
+@property (strong, nonatomic) UITextField *courseNumTF;
+@property (strong, nonatomic) UICollectionView *locationCV;
+@property (strong, nonatomic) UICollectionViewFlowLayout *locationLayout;
+@property (strong, nonatomic) UIButton *commitBtn;
+@property (strong, nonatomic) UIViewController *targetVC;
+
+@property (assign, nonatomic) NSInteger priceSelectedIndex;
+@property (assign, nonatomic) NSInteger typeSelectedIndex;
+@property (assign, nonatomic) NSInteger levelSelectedIndex;
+@property (assign, nonatomic) NSInteger locationSelectedIndex;
+@property (copy, nonatomic) NSString *priceTypeSelectedId;
+@property (copy, nonatomic) NSString *typeSelectedId;
+@property (copy, nonatomic) NSString *levelSelectedId;
+@property (assign, nonatomic) NSInteger courseNumber;
+@property (assign, nonatomic) NSInteger minCourseNumber;
+@property (assign, nonatomic) NSInteger maxCourseNumber;
+@property (strong, nonatomic) WLKTCourseDetailData *data;
+
+@property (strong, nonatomic) WLKTCourseItemData *selectedPriceType;
+@property (strong, nonatomic) WLKTCourseItemData *selectedType;
+@property (strong, nonatomic) WLKTCourseItemData *selectedLevel;
+@property (strong, nonatomic) WLKTAddress *selectedLocation;
+@property (strong, nonatomic) WLKTCoursePriceSublist_3 *selectedPriceData;
+@end
+
+@implementation WLKTCourseDetailRegisterAlert
+
+- (instancetype)initWithData:(WLKTCourseDetailData *)data target:(UIViewController *)vc
+{
+    self = [super init];
+    if (self) {
+        _targetVC = vc;
+        _data = data;
+        self.frame = CGRectMake(0, 0, ScreenWidth, ScreenHeight);
+        self.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.5];
+        [self addSubview:self.tapBgView];
+        [self addSubview:self.contentView];
+        [self.contentView addSubview:self.imgIV];
+        [self.contentView addSubview:self.titleLabel];
+        [self.contentView addSubview:self.priceLabel];
+        [self.contentView addSubview:self.typeLabel];
+        [self.contentView addSubview:self.rawPriceLabel];
+        [self.contentView addSubview:self.separatorView];
+        [self.contentView addSubview:self.contentTV];
+        [self.contentView addSubview:self.commitBtn];
+        [self makeConstraints];
+
+        WS(weakSelf);
+        [self.tapBgView addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithActionBlock:^(id  _Nonnull sender) {
+            [UIView viewAnimateDismissWithDuration:0.7 delay:0.0 target:weakSelf.contentView completion:^(BOOL finished) {
+                if (finished) {
+                    [weakSelf endEditing:YES];
+                    //dispatch_time_t t = dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC * 0.25);
+                    //dispatch_after(t, dispatch_get_main_queue(), ^{
+                        [weakSelf removeFromSuperview];
+                    //});
+                }
+            }];
+        }]];
+        
+        [self setAlertViewData:data];
+        [UIView viewAnimateComeOutWithDuration:0.7 delay:0.0 target:self.contentView completion:^(BOOL finished) {
+            if (finished) {
+                [self.contentTV reloadData];
+            }
+        }];
+    }
+    //keyboard
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardFrameChange:) name:UIKeyboardWillChangeFrameNotification object:nil];
+    return self;
+}
+
+- (void)dealloc{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (void)setAlertViewData:(WLKTCourseDetailData *)data{
+    self.minCourseNumber = data.oneprice.mincourse.integerValue;
+    self.maxCourseNumber = data.oneprice.totalcourse.integerValue;
+    self.courseNumber = data.oneprice.mincourse.integerValue;
+    if (!(self.minCourseNumber || self.maxCourseNumber)) {
+        self.courseNumber = 1;
+    }
+    self.courseNumTF.text = [NSString stringWithFormat:@"%ld", (long)self.courseNumber];
+    self.priceTypeSelectedId = data.oneprice.price_type;
+    self.typeSelectedId = data.oneprice.class_type;
+    self.levelSelectedId = data.oneprice.standard;
+    for (WLKTCoursePriceListData *priceListData in data.pricelist) {
+        if ([priceListData.iid isEqualToString:data.oneprice.price_type]) {
+            [priceListData.banxing enumerateObjectsUsingBlock:^(WLKTCoursePriceSublistData * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                if ([obj.iid isEqualToString: data.oneprice.class_type]) {//遍历最低价班型
+                    [obj.biaozhun enumerateObjectsUsingBlock:^(WLKTCoursePriceSublist_2 * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                        if ([obj.iid isEqualToString:data.oneprice.standard]) {//遍历最低价等级
+                            self.priceLabel.text = [NSString stringWithFormat:@"¥%@", obj.price.price];
+                            
+                            if (self.data.point[self.locationSelectedIndex].discount.integerValue != 1) {//有折扣
+                                if (obj.price.oldprice && ![obj.price.oldprice containsString:@"null"]) {
+                                    NSString *str = [NSString stringWithFormat:@"原价：¥%@", obj.price.oldprice];
+                                    NSMutableAttributedString *attStr = [[NSMutableAttributedString alloc]initWithString:str];
+                                    [attStr setAttributes:@{
+                                                            NSFontAttributeName: [UIFont systemFontOfSize:12]
+                                                            } range:NSMakeRange(0, 3)];
+                                    [attStr setAttributes:@{NSStrikethroughStyleAttributeName : @(NSUnderlinePatternSolid | NSUnderlineStyleSingle),
+                                                            NSFontAttributeName: [UIFont systemFontOfSize:12]
+                                                            } range:NSMakeRange(3, str.length - 3)];
+                                    self.rawPriceLabel.attributedText = attStr;
+                                }
+                            }
+                            else{
+                                self.rawPriceLabel.attributedText = nil;
+                            }
+                            
+                            self.selectedPriceData = obj.price;
+                            *stop = YES;
+                        }
+                    }];
+                    *stop = YES;
+                }
+            }];
+        }
+    }
+    [self.imgIV setImageURL:[NSURL URLWithString:data.list.img]];
+    self.titleLabel.text = data.list.coursename;
+    self.typeLabel.text = data.list.target;
+}
+
+- (void)updatePrice{
+    for (WLKTCoursePriceListData *priceListData in self.data.pricelist) {
+        if ([priceListData.iid isEqualToString:self.priceTypeSelectedId]) {
+            if (self.priceTypeSelectedId.intValue == 1) {
+                self.typeLabel.text = @"一口价";
+            }
+            else{
+                self.typeLabel.text = @"课时价";
+            }
+            for (WLKTCoursePriceSublistData *listData in priceListData.banxing) {
+                if ([self.typeSelectedId isEqualToString: listData.iid]) {
+                    [listData.biaozhun enumerateObjectsUsingBlock:^(WLKTCoursePriceSublist_2 * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                        if ([self.levelSelectedId isEqualToString: obj.iid]) {
+                            self.minCourseNumber = obj.price.minks.integerValue;
+                            self.maxCourseNumber = obj.price.maxks.integerValue;
+                            self.courseNumber = self.courseNumber > self.maxCourseNumber ? self.maxCourseNumber : self.courseNumber;
+                            self.courseNumTF.text = [NSString stringWithFormat:@"%ld", (long)self.courseNumber];
+                            self.priceLabel.text = [NSString stringWithFormat:@"¥%@", obj.price.price];
+                            
+                            if (self.data.point[self.locationSelectedIndex].discount.integerValue != 1) {//有折扣
+                                if (obj.price.oldprice && ![obj.price.oldprice containsString:@"null"]) {
+                                    NSString *str = [NSString stringWithFormat:@"原价：¥%@", obj.price.oldprice];
+                                    NSMutableAttributedString *attStr = [[NSMutableAttributedString alloc]initWithString:str];
+                                    [attStr setAttributes:@{
+                                                            NSFontAttributeName: [UIFont systemFontOfSize:12]
+                                                            } range:NSMakeRange(0, 3)];
+                                    [attStr setAttributes:@{NSStrikethroughStyleAttributeName : @(NSUnderlinePatternSolid | NSUnderlineStyleSingle),
+                                                            NSFontAttributeName: [UIFont systemFontOfSize:12]
+                                                            } range:NSMakeRange(3, str.length - 3)];
+                                    self.rawPriceLabel.attributedText = attStr;
+                                }
+                            }
+                            else{
+                                self.rawPriceLabel.attributedText = nil;
+                            }
+                            
+                            self.selectedPriceData = obj.price;
+                            *stop = YES;
+                        }
+                    }];
+                }
+            }
+        }
+    }
+}
+
+#pragma mark - aciton
+- (void)commitBtnAct:(UIButton *)sender{
+    [self endEditing:YES];
+    if (self.courseNumber == 0) {
+        self.courseNumber = 1;
+    }
+    dispatch_time_t t = dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC * 0.25);
+    dispatch_after(t, dispatch_get_main_queue(), ^{
+        NSDictionary *dic = @{
+                              @"selectedPriceType": self.selectedPriceType,
+                              @"selectedType": self.selectedType,
+                              @"selectedLevel": self.selectedLevel,
+                              @"selectedLocation": self.selectedLocation,
+                              @"selectedPriceData": self.selectedPriceData,
+                              @"courseNumber": @(self.courseNumber),
+                              };
+
+        WLKTConfirmOrderVC *vc = [[WLKTConfirmOrderVC alloc]initWithCourseData:self.data.list dic:dic];
+        [self.targetVC.navigationController pushViewController:vc animated:YES];
+    });
+}
+
+- (void)courseNumAct:(UIButton *)sender{
+    [self endEditing:YES];
+    if (self.maxCourseNumber) {
+        if (sender.tag == 0 && self.courseNumber > self.minCourseNumber && self.courseNumber > 1) {// -
+            self.courseNumber--;
+        }
+        if (sender.tag == 1 && self.courseNumber < self.maxCourseNumber) {// +
+            self.courseNumber++;
+        }
+    }
+    else{
+        if (sender.tag == 0 && self.courseNumber > self.minCourseNumber && self.courseNumber > 1) {// -
+            self.courseNumber--;
+        }
+        if (sender.tag == 1) {// +
+            self.courseNumber++;
+        }
+    }
+    self.courseNumTF.text = [NSString stringWithFormat:@"%ld", (long)self.courseNumber];
+}
+
+- (void)courseNumTFAct:(UITextField *)sender{
+    if (sender.text.integerValue < self.minCourseNumber) {
+        self.courseNumber = self.minCourseNumber;
+        self.courseNumTF.text = [NSString stringWithFormat:@"%ld", (long)self.minCourseNumber];
+    }
+    else if (sender.text.integerValue >= self.minCourseNumber && sender.text.integerValue <= self.maxCourseNumber) {
+        self.courseNumber = sender.text.integerValue;
+    }
+    else{
+        self.courseNumber = self.maxCourseNumber;
+        self.courseNumTF.text = [NSString stringWithFormat:@"%ld", (long)self.maxCourseNumber];
+    }
+}
+
+#pragma mark - keyboard
+- (void)keyboardFrameChange:(NSNotification *)noti{
+    CGRect keyboardFrame = [noti.userInfo[UIKeyboardFrameEndUserInfoKey] CGRectValue];
+    self.transform = CGAffineTransformMakeTranslation(0, keyboardFrame.origin.y - self.frame.size.height - (ScreenHeight - 510 * ScreenRatio_6) + 157 * ScreenRatio_6);
+}
+
+#pragma mark - table view
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return 2;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return 1;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    UITableViewCell *cell = [[UITableViewCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    if (indexPath.section == 0) {
+        [cell.contentView addSubview:self.valueSelectCV];
+        [self.valueSelectCV reloadData];
+    }
+    if (indexPath.section == 1) {
+        [cell.contentView addSubview:self.locationCV];
+        [self.locationCV reloadData];
+    }
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (indexPath.section == 0) {
+        return [self setValueSelectCollectionViewHeight];
+    }
+    return 150 * ScreenRatio_6;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    if (section == 1) {
+        return 55 * ScreenRatio_6;
+    }
+    return 0;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    if (section == 1) {
+        UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 55 * ScreenRatio_6)];
+        v.backgroundColor = UIColorHex(ffffff);
+        UIView *line = [UIView new];
+        line.backgroundColor = separatorView_color;
+        [v addSubview:self.courseNumLabel];
+        [v addSubview:self.courseSelectBgView];
+        [v addSubview:self.minusButton];
+        [v addSubview:self.addButton];
+        [v addSubview:self.courseNumTF];
+        [v addSubview:line];
+        [self.courseNumLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.left.mas_equalTo(v).offset(10 * ScreenRatio_6);
+            make.centerY.mas_equalTo(v);
+        }];
+        [self.courseSelectBgView mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(115 , 30));
+            make.right.mas_equalTo(v.mas_right).offset(-10 * ScreenRatio_6);
+            make.centerY.mas_equalTo(v);
+        }];
+        [self.minusButton mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(28, 30));
+            make.left.mas_equalTo(self.courseSelectBgView);
+            make.centerY.mas_equalTo(self.courseSelectBgView);
+        }];
+        [self.addButton mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(28, 30));
+            make.right.mas_equalTo(self.courseSelectBgView.mas_right);
+            make.centerY.mas_equalTo(self.courseSelectBgView);
+        }];
+        [self.courseNumTF mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(55, 30));
+            make.center.mas_equalTo(self.courseSelectBgView);
+        }];
+        return v;
+    }
+    return nil;
+}
+
+#pragma mark - collection view
+- (NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)collectionView{
+    if (collectionView == self.valueSelectCV) {
+        int count = 0;
+        if (self.data.price_system.shoufei) {
+            count++;
+        }
+        if (self.data.price_system.banxing) {
+            count++;
+        }
+        if (self.data.price_system.biaozhun) {
+            count++;
+        }
+        return count;
+    }
+    return 1;
+}
+
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    if (collectionView == self.valueSelectCV) {
+        if (section == 0) {
+            return self.data.price_system.shoufei.count;//价格类型
+        }
+        if (section == 1) {
+            return self.data.price_system.banxing.count;//选择班型
+        }
+        if (section == 2) {
+            return self.data.price_system.biaozhun.count;//等级分类
+        }
+    }
+    return self.data.point.count;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+    if (collectionView == self.valueSelectCV) {
+       valueSelectCollectionCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"valueSelectCollectionCell" forIndexPath:indexPath];
+        if (indexPath.section == 0) {
+            if ([self.data.price_system.shoufei[indexPath.item].index isEqualToString:self.priceTypeSelectedId]) {
+                [cell setItemColor:UIColorHex(33c4da)];
+                self.selectedPriceType = self.data.price_system.shoufei[indexPath.item];
+            }
+            cell.itemLabel.text = self.data.price_system.shoufei[indexPath.item].title;
+        }
+        if (indexPath.section == 1) {
+            if ([self.data.price_system.banxing[indexPath.item].index isEqualToString:self.typeSelectedId]) {
+                [cell setItemColor:UIColorHex(33c4da)];
+                self.selectedType = self.data.price_system.banxing[indexPath.item];
+            }
+            cell.itemLabel.text = self.data.price_system.banxing[indexPath.item].title;
+        }
+        if (indexPath.section == 2) {
+            if ([self.data.price_system.biaozhun[indexPath.item].index isEqualToString:self.levelSelectedId]) {
+                [cell setItemColor:UIColorHex(33c4da)];
+                self.selectedLevel = self.data.price_system.biaozhun[indexPath.item];
+            }
+            cell.itemLabel.text = self.data.price_system.biaozhun[indexPath.item].title;
+        }
+        
+        return cell;
+    }
+    locationCollectionCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"locationCollectionCell" forIndexPath:indexPath];
+    cell.data = self.data.point[indexPath.item];
+    if (indexPath.item != 0) {
+        cell.tuijianIV.hidden = YES;
+        cell.tuijianLabel.hidden = YES;
+        cell.distanceTagLabel.hidden = YES;
+    }
+    if (self.data.point[indexPath.item].discount.integerValue == 1) {//无折扣
+        cell.couponTagLabel.hidden = YES;
+    }
+    if (indexPath.item == self.locationSelectedIndex) {
+        [cell setItemColor:UIColorHex(33c4da)];
+        self.selectedLocation = self.data.point[indexPath.item];
+    }
+    cell.itemLabel.text = self.data.point[indexPath.item].name;
+    return cell;
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    if (collectionView == self.valueSelectCV) {
+        if (indexPath.section == 0) {
+            self.priceSelectedIndex = indexPath.item;
+            self.priceTypeSelectedId = self.data.price_system.shoufei[indexPath.item].index;
+        }
+        if (indexPath.section == 1) {
+            self.typeSelectedIndex = indexPath.item;
+            self.typeSelectedId = self.data.price_system.banxing[indexPath.item].index;
+        }
+        if (indexPath.section == 2) {
+            self.levelSelectedIndex = indexPath.item;
+            self.levelSelectedId = self.data.price_system.biaozhun[indexPath.item].index;
+        }
+        [collectionView reloadData];
+    }
+    else{
+        self.locationSelectedIndex = indexPath.item;
+        [collectionView reloadData];
+    }
+    [self updatePrice];
+}
+
+- (UICollectionReusableView *)collectionView:(UICollectionView *)collectionView viewForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath{
+    UICollectionReusableView *reusableview = nil;
+    if (kind == UICollectionElementKindSectionHeader) {
+        UICollectionReusableView *v = [collectionView dequeueReusableSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:@"courseDetailAlertCollectionHeadView" forIndexPath:indexPath];
+        [v removeAllSubviews];
+        UILabel *l = [UILabel new];
+        l.font = [UIFont systemFontOfSize:12];
+        l.textColor = UIColorHex(333333);
+        [v addSubview:l];
+        [l mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.left.mas_equalTo(v).offset(10 * ScreenRatio_6);
+            make.centerY.mas_equalTo(v);
+        }];
+        if (collectionView == self.valueSelectCV) {
+            if (indexPath.section == 0 && self.data.price_system.shoufei) {
+                l.text = @"价格类型";
+            }
+            if (indexPath.section == 1 && self.data.price_system.banxing) {
+                l.text = @"选择班型";
+            }
+            if (indexPath.section == 2 && self.data.price_system.biaozhun) {
+                l.text = @"等级分类";
+            }
+        }
+        else{
+            l.text = @"选择授课点";
+        }
+        reusableview = v;
+    }
+    return reusableview;
+}
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView{
+    [self endEditing:YES];
+}
+
+#pragma mark - make constraints
+- (void)makeConstraints{
+    [self.imgIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(115 * ScreenRatio_6, 85 * ScreenRatio_6));
+        make.top.mas_equalTo(self.contentView).offset(-15 * ScreenRatio_6);
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+    }];
+    [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(240 * ScreenRatio_6, 15));
+        make.left.mas_equalTo(self.imgIV.mas_right).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.contentView).offset(15 * ScreenRatio_6);
+    }];
+    [self.priceLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.imgIV.mas_right).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.titleLabel.mas_bottom).offset(15 * ScreenRatio_6);
+    }];
+    [self.typeLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(33, 15));
+        make.centerY.mas_equalTo(self.priceLabel);
+        make.left.mas_equalTo(self.priceLabel.mas_right).offset(6);
+    }];
+    [self.rawPriceLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.imgIV.mas_right).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.priceLabel.mas_bottom);
+    }];
+    [self.separatorView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 1));
+        make.left.mas_equalTo(self.contentView);
+        make.top.mas_equalTo(self.rawPriceLabel.mas_bottom).offset(5);
+    }];
+    CGFloat h = 375 * ScreenRatio_6;
+//    if (!_data.price_system.shoufei) {
+//        h -= 70 * ScreenRatio_6;
+//    }
+//    if (!_data.price_system.banxing) {
+//        h -= 70 * ScreenRatio_6;
+//    }
+//    if (!_data.price_system.biaozhun) {
+//        h -= 70 * ScreenRatio_6;
+//    }
+    [self.contentTV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, h));
+        make.left.mas_equalTo(self.contentView);
+        make.top.mas_equalTo(self.separatorView.mas_bottom);
+    }];
+    [self.commitBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 55 * ScreenRatio_6));
+        make.left.mas_equalTo(self.contentView);
+        make.bottom.mas_equalTo(self.contentView.mas_bottom);
+    }];
+}
+
+- (CGFloat)setValueSelectCollectionViewHeight{
+    CGFloat h = 240 * ScreenRatio_6;
+    if (!_data.price_system.shoufei) {
+        h -= 70 * ScreenRatio_6;
+    }
+    if (!_data.price_system.banxing) {
+        h -= 70 * ScreenRatio_6;
+    }
+    if (!_data.price_system.biaozhun) {
+        h -= 70 * ScreenRatio_6;
+    }
+    if (_data.price_system.banxing.count && _data.price_system.banxing.count > 3) {
+        h += ((_data.price_system.banxing.count + 2) / 3 - 1) * 50 * ScreenRatio_6;
+    }
+    if (_data.price_system.biaozhun.count && _data.price_system.biaozhun.count > 3) {
+        h += ((_data.price_system.biaozhun.count + 2) / 3 - 1) * 50 * ScreenRatio_6;
+    }
+    return h;
+}
+
+#pragma mark - get
+- (UIView *)tapBgView{
+    if (!_tapBgView) {
+        _tapBgView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+        _tapBgView.userInteractionEnabled = YES;
+        _tapBgView.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.5];
+    }
+    return _tapBgView;
+}
+- (UIView *)contentView{
+    if (!_contentView) {
+        CGFloat h = 510 * ScreenRatio_6;
+//        if (!_data.price_system.shoufei) {
+//            h -= 70 * ScreenRatio_6;
+//        }
+//        if (!_data.price_system.banxing) {
+//            h -= 70 * ScreenRatio_6;
+//        }
+//        if (!_data.price_system.biaozhun) {
+//            h -= 70 * ScreenRatio_6;
+//        }
+        _contentView = [[UIView alloc]initWithFrame:CGRectMake(0, ScreenHeight, ScreenWidth, h)];
+        _contentView.backgroundColor = [UIColor whiteColor];
+    }
+    return _contentView;
+}
+- (UIImageView *)imgIV{
+    if (!_imgIV) {
+        _imgIV = [UIImageView new];
+    }
+    return _imgIV;
+}
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [UILabel new];
+        _titleLabel.font = [UIFont systemFontOfSize:12];
+        _titleLabel.textColor= UIColorHex(333333);
+    }
+    return _titleLabel;
+}
+- (UILabel *)priceLabel{
+    if (!_priceLabel) {
+        _priceLabel = [UILabel new];
+        _priceLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightSemibold];
+        _priceLabel.textColor = [UIColor redColor];
+    }
+    return _priceLabel;
+}
+- (UILabel *)typeLabel{
+    if (!_typeLabel) {
+        _typeLabel = [[UILabel alloc]init];
+        _typeLabel.font = [UIFont systemFontOfSize:9];
+        _typeLabel.textColor = UIColorHex(999999);
+        _typeLabel.backgroundColor = fillViewColor;
+        _typeLabel.textAlignment = NSTextAlignmentCenter;
+    }
+    return _typeLabel;
+}
+- (UILabel *)rawPriceLabel{
+    if (!_rawPriceLabel) {
+        _rawPriceLabel = [[UILabel alloc]init];
+        _rawPriceLabel.textColor = UIColorHex(c0c0c0);
+    }
+    return _rawPriceLabel;
+}
+- (UIView *)separatorView{
+    if (!_separatorView) {
+        _separatorView = [UIView new];
+        _separatorView.backgroundColor = separatorView_color;
+    }
+    return _separatorView;
+}
+- (UITableView *)contentTV{
+    if (!_contentTV) {
+        _contentTV = [[UITableView alloc]initWithFrame:CGRectNull style:UITableViewStylePlain];
+        _contentTV.dataSource = self;
+        _contentTV.delegate = self;
+        _contentTV.separatorStyle = UITableViewCellSeparatorStyleNone;
+        _contentTV.backgroundColor = [UIColor whiteColor];
+        _contentTV.showsVerticalScrollIndicator = NO;
+        _contentTV.bounces = NO;
+    }
+    return _contentTV;
+}
+- (UICollectionView *)valueSelectCV{
+    if (!_valueSelectCV) {
+        
+        _valueSelectCV = [[UICollectionView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, [self setValueSelectCollectionViewHeight]) collectionViewLayout:self.valueSelectLayout];
+        _valueSelectCV.bounces = NO;
+        _valueSelectCV.backgroundColor = [UIColor whiteColor];
+        _valueSelectCV.dataSource = self;
+        _valueSelectCV.delegate = self;
+        _valueSelectCV.scrollEnabled = NO;
+        [_valueSelectCV registerClass:[valueSelectCollectionCell class] forCellWithReuseIdentifier:@"valueSelectCollectionCell"];
+        [_valueSelectCV registerClass:[UICollectionReusableView class] forSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:@"courseDetailAlertCollectionHeadView"];
+    }
+    return _valueSelectCV;
+}
+- (UICollectionViewFlowLayout *)valueSelectLayout{
+    if (!_valueSelectLayout) {
+        _valueSelectLayout = [[UICollectionViewFlowLayout alloc]init];
+        _valueSelectLayout.itemSize = CGSizeMake(110 * ScreenRatio_6, 40 * ScreenRatio_6);
+        _valueSelectLayout.sectionInset = UIEdgeInsetsMake(5 * ScreenRatio_6, 10 * ScreenRatio_6, 5 * ScreenRatio_6, 10 * ScreenRatio_6);
+        _valueSelectLayout.minimumInteritemSpacing = 5;
+        _valueSelectLayout.minimumLineSpacing = 5;
+        _valueSelectLayout.headerReferenceSize = CGSizeMake(ScreenWidth, 20);
+    }
+    return _valueSelectLayout;
+}
+- (UILabel *)courseNumLabel{
+    if (!_courseNumLabel) {
+        _courseNumLabel = [UILabel new];
+        _courseNumLabel.font = [UIFont systemFontOfSize:12];
+        _courseNumLabel.textColor = UIColorHex(333333);
+        _courseNumLabel.text = @"课时数";
+    }
+    return _courseNumLabel;
+}
+- (UIView *)courseSelectBgView{
+    if (!_courseSelectBgView) {
+        _courseSelectBgView = [UIView new];
+        _courseSelectBgView.layer.borderColor = UIColorHex(231812).CGColor;
+        _courseSelectBgView.layer.borderWidth = 0.5;
+        _courseSelectBgView.layer.masksToBounds = YES;
+        _courseSelectBgView.layer.cornerRadius = 2.5;
+        _courseSelectBgView.backgroundColor = [UIColor whiteColor];
+    }
+    return _courseSelectBgView;
+}
+- (UIButton *)minusButton{
+    if (!_minusButton) {
+        _minusButton = [[UIButton alloc]init];
+        [_minusButton setTitle:@"-" forState:UIControlStateNormal];
+        [_minusButton setTitleColor:UIColorHex(333333) forState:UIControlStateNormal];
+        _minusButton.titleLabel.font = [UIFont systemFontOfSize:20];
+        _minusButton.tag = 0;
+        [_minusButton addTarget:self action:@selector(courseNumAct:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _minusButton;
+}
+- (UIButton *)addButton{
+    if (!_addButton) {
+        _addButton = [[UIButton alloc]init];
+        [_addButton setTitle:@"+" forState:UIControlStateNormal];
+        [_addButton setTitleColor:UIColorHex(333333) forState:UIControlStateNormal];
+        _addButton.titleLabel.font = [UIFont systemFontOfSize:18];
+        _addButton.tag = 1;
+        [_addButton addTarget:self action:@selector(courseNumAct:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _addButton;
+}
+- (UITextField *)courseNumTF{
+    if (!_courseNumTF) {
+        _courseNumTF = [[UITextField alloc]init];
+        _courseNumTF.font = [UIFont systemFontOfSize:12];
+        _courseNumTF.textColor = UIColorHex(333333);
+        _courseNumTF.layer.borderColor = UIColorHex(231812).CGColor;
+        _courseNumTF.layer.borderWidth = 0.5;
+        _courseNumTF.textAlignment = NSTextAlignmentCenter;
+        [_courseNumTF addTarget:self action:@selector(courseNumTFAct:) forControlEvents:UIControlEventValueChanged | UIControlEventEditingChanged];
+        _courseNumTF.text = @"1";
+    }
+    return _courseNumTF;
+}
+- (UICollectionView *)locationCV{
+    if (!_locationCV) {
+        _locationCV = [[UICollectionView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 150 * ScreenRatio_6) collectionViewLayout:self.locationLayout];
+        _locationCV.backgroundColor = [UIColor whiteColor];
+        _locationCV.bounces = NO;
+        _locationCV.dataSource = self;
+        _locationCV.delegate = self;
+        [_locationCV registerClass:[locationCollectionCell class] forCellWithReuseIdentifier:@"locationCollectionCell"];
+        [_locationCV registerClass:[UICollectionReusableView class] forSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:@"courseDetailAlertCollectionHeadView"];
+    }
+    return _locationCV;
+}
+- (UICollectionViewFlowLayout *)locationLayout{
+    if (!_locationLayout) {
+        _locationLayout = [[UICollectionViewFlowLayout alloc]init];
+        _locationLayout.itemSize = CGSizeMake(110 * ScreenRatio_6, 70 * ScreenRatio_6);
+        _locationLayout.sectionInset = UIEdgeInsetsMake(10 * ScreenRatio_6, 10 * ScreenRatio_6, 10 * ScreenRatio_6, 10 * ScreenRatio_6);
+        _locationLayout.minimumInteritemSpacing = 5;
+        _locationLayout.minimumLineSpacing = 5;
+        _locationLayout.headerReferenceSize = CGSizeMake(ScreenWidth, 25);
+        
+    }
+    return _locationLayout;
+}
+- (UIButton *)commitBtn{
+    if (!_commitBtn) {
+        _commitBtn = [UIButton new];
+        [_commitBtn setTitle:@"确定" forState:UIControlStateNormal];
+        [_commitBtn setTitleColor:UIColorHex(ffffff) forState:UIControlStateNormal];
+        _commitBtn.backgroundColor = UIColorHex(33c4da);
+        _commitBtn.titleLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightSemibold];
+        [_commitBtn addTarget:self action:@selector(commitBtnAct:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _commitBtn;
+}
+- (WLKTCourseItemData *)selectedType{
+    if (!_selectedType) {
+        _selectedType = [WLKTCourseItemData new];
+    }
+    return _selectedType;
+}
+- (WLKTCourseItemData *)selectedLevel{
+    if (!_selectedLevel) {
+        _selectedLevel = [WLKTCourseItemData new];
+    }
+    return _selectedLevel;
+}
+- (WLKTAddress *)selectedLocation{
+    if (!_selectedLocation) {
+        _selectedLocation = [WLKTAddress new];
+    }
+    return _selectedLocation;
+}
+- (WLKTCoursePriceSublist_3 *)selectedPriceData{
+    if (!_selectedPriceData) {
+        _selectedPriceData = [WLKTCoursePriceSublist_3 new];
+    }
+    return _selectedPriceData;
+}
+
+@end

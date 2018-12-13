@@ -1,0 +1,35 @@
+//
+//  WLKTLocationChange.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/20.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTLocationChange.h"
+
+@implementation WLKTLocationChange
+// GCJ-02 坐标转换成 BD-09 坐标
++ (CLLocationCoordinate2D)MarsGS2BaiduGS:(CLLocationCoordinate2D)coordinate
+{
+    double x_pi = M_PI * 3000.0 / 180.0;
+    double x = coordinate.longitude, y = coordinate.latitude;
+    double z = sqrt(x * x + y * y) + 0.00002 * sin(y * x_pi);
+    double theta = atan2(y, x) + 0.000003 * cos(x * x_pi);
+    double bd_lon = z * cos(theta) + 0.0065;
+    double bd_lat = z * sin(theta) + 0.006;
+    return CLLocationCoordinate2DMake(bd_lat, bd_lon);
+}
+
+// BD-09 坐标转换成 GCJ-02 坐标
++ (CLLocationCoordinate2D)BaiduGS2MarsGS:(CLLocationCoordinate2D)coordinate
+{
+    double x_pi = M_PI * 3000.0 / 180.0;
+    double x = coordinate.longitude - 0.0065, y = coordinate.latitude - 0.006;
+    double z = sqrt(x * x + y * y) - 0.00002 * sin(y * x_pi);
+    double theta = atan2(y, x) - 0.000003 * cos(x * x_pi);
+    double gg_lon = z * cos(theta);
+    double gg_lat = z * sin(theta);
+    return CLLocationCoordinate2DMake(gg_lat, gg_lon);
+}
+@end

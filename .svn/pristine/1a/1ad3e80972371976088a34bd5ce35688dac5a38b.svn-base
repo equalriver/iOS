@@ -1,0 +1,140 @@
+//
+//  WLKTCDMoreEvaluationVC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/3/20.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTCDMoreEvaluationVC.h"
+#import "WLKTCDBottomButtons.h"
+#import "LGPhoto.h"
+#import "WLKTCDMoreEvaluationCell.h"
+
+@interface WLKTCDMoreEvaluationVC ()<CDBottomButtonDelegate, UITableViewDelegate, UITableViewDataSource, LGPhotoPickerBrowserViewControllerDataSource, LGPhotoPickerBrowserViewControllerDelegate>
+@property (strong, nonatomic) UITableView *tableView;
+@property (strong, nonatomic) WLKTCDBottomButtons *bottomBtns;
+
+@property (nonatomic, assign) LGShowImageType showType;
+@property (nonatomic, strong) NSMutableArray *LGPhotoPickerBrowserPhotoArray;
+@end
+
+@implementation WLKTCDMoreEvaluationVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self.view addSubview:self.tableView];
+    [self.view addSubview:self.bottomBtns];
+    
+}
+
+
+#pragma mark - table view
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return 0;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return 0;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 40;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return nil;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+   
+    UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 40)];
+    v.backgroundColor = [UIColor whiteColor];
+    
+    UILabel *titleLabel = [UILabel new];
+    titleLabel.font = [UIFont systemFontOfSize:14 *ScreenRatio_6];
+    titleLabel.textColor = KMainTextColor_3;
+    titleLabel.text = @"全部评价";
+    [v addSubview:titleLabel];
+    [titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.height.mas_equalTo(v);
+        make.left.mas_equalTo(v).offset(15 *ScreenRatio_6);
+    }];
+    
+    UILabel *percent = [UILabel new];
+    percent.font = [UIFont systemFontOfSize:14 *ScreenRatio_6];
+    percent.textColor = kMainTextColor_red;
+    percent.textAlignment = NSTextAlignmentRight;
+    [v addSubview:percent];
+    [percent mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.height.mas_equalTo(v);
+        make.right.mas_equalTo(v).offset(-15 *ScreenRatio_6);
+    }];
+    
+    return v;
+}
+
+#pragma mark - LGPhotoPickerBrowserViewControllerDataSource
+- (void)didSelectedPhotoItem:(NSIndexPath *)indexPath type:(LGShowImageType)type{
+    [self pushPhotoBroswerWithStyle:type seletedIndex:indexPath];
+}
+
+//给照片浏览器传image的时候先包装成LGPhotoPickerBrowserPhoto对象
+- (void)prepareForPhotoBroswerWithImageArray:(NSArray *)imageArray {
+    self.LGPhotoPickerBrowserPhotoArray = [[NSMutableArray alloc] init];
+    for (int i = 0; i < imageArray.count; i++) {
+        LGPhotoPickerBrowserPhoto *photo = [[LGPhotoPickerBrowserPhoto alloc] init];
+        photo.photoURL = [NSURL URLWithString:imageArray[i]];
+        [self.LGPhotoPickerBrowserPhotoArray addObject:photo];
+    }
+}
+//初始化图片浏览器
+- (void)pushPhotoBroswerWithStyle:(LGShowImageType)style seletedIndex:(NSIndexPath *)indexPath{
+    LGPhotoPickerBrowserViewController *BroswerVC = [[LGPhotoPickerBrowserViewController alloc] init];
+    BroswerVC.delegate = self;
+    BroswerVC.dataSource = self;
+    BroswerVC.showType = style;
+    BroswerVC.currentIndexPath = indexPath;
+    BroswerVC.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
+    self.showType = style;
+    [self presentViewController:BroswerVC animated:YES completion:nil];
+}
+
+- (NSInteger)photoBrowser:(LGPhotoPickerBrowserViewController *)photoBrowser numberOfItemsInSection:(NSUInteger)section{
+    if (self.showType == LGShowImageTypeImageBroswer) {
+        return self.LGPhotoPickerBrowserPhotoArray.count;
+    } else {
+        NSLog(@"非法数据源");
+        return 0;
+    }
+}
+
+- (id<LGPhotoPickerBrowserPhoto>)photoBrowser:(LGPhotoPickerBrowserViewController *)pickerBrowser photoAtIndexPath:(NSIndexPath *)indexPath{
+    if (self.showType == LGShowImageTypeImageBroswer) {
+        return [self.LGPhotoPickerBrowserPhotoArray objectAtIndex:indexPath.item];
+    } else{
+        NSLog(@"非法数据源");
+        return nil;
+    }
+}
+
+#pragma mark - get
+-(UITableView *)tableView{
+    if (!_tableView) {
+        _tableView = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight - 70 -50) style:UITableViewStylePlain];
+        _tableView.dataSource = self;
+        _tableView.delegate = self;
+        _tableView.backgroundColor = kMainBackgroundColor;
+        _tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    }
+    return _tableView;
+}
+
+- (WLKTCDBottomButtons *)bottomBtns{
+    if (!_bottomBtns) {
+        _bottomBtns = [[WLKTCDBottomButtons alloc]initWithFrame:CGRectMake(0, ScreenHeight - 70, ScreenWidth, 50)];
+        _bottomBtns.delegate = self;
+    }
+    return _bottomBtns;
+}
+@end

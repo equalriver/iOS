@@ -1,0 +1,333 @@
+//
+//  WLKTSchoolNewsCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/23.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTSchoolNewsCell.h"
+
+@interface SchoolNewsImageCollectionCell: UICollectionViewCell
+@property (strong, nonatomic) UIImageView *imgIV;
+@end
+
+@implementation SchoolNewsImageCollectionCell
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self.contentView addSubview:self.imgIV];
+        [self.imgIV mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(115, 90));
+            make.center.mas_equalTo(self.contentView);
+        }];
+    }
+    return self;
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.imgIV.image = nil;
+}
+
+- (UIImageView *)imgIV{
+    if (!_imgIV) {
+        _imgIV = [UIImageView new];
+    }
+    return _imgIV;
+}
+
+@end
+
+
+//****************************************************************************************
+@interface WLKTSchoolNewsCell ()<UICollectionViewDelegate, UICollectionViewDataSource>
+@property (strong, nonatomic) UILabel *titleLabel;
+@property (strong, nonatomic) UILabel *detailLabel;
+@property (strong, nonatomic) UIImageView *readIV;
+@property (strong, nonatomic) UILabel *readLabel;
+@property (strong, nonatomic) UIImageView *likeIV;
+@property (strong, nonatomic) UILabel *likeLabel;
+@property (strong, nonatomic) UIImageView *commentIV;
+@property (strong, nonatomic) UILabel *commentLabel;
+@property (strong, nonatomic) UILabel *timeLabel;
+@property (strong, nonatomic) UIView *separatorView;
+@property (strong, nonatomic) UIImageView *videoTagIV;
+@property (strong, nonatomic) UIImageView *videoIV;
+@property (strong, nonatomic) UICollectionView *imgCV;
+@property (strong, nonatomic) WLKTSchoolNewsList *data;
+@end
+
+@implementation WLKTSchoolNewsCell
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [self.contentView addSubview:self.titleLabel];
+        [self.contentView addSubview:self.detailLabel];
+        [self.contentView addSubview:self.readIV];
+        [self.contentView addSubview:self.readLabel];
+        [self.contentView addSubview:self.likeIV];
+        [self.contentView addSubview:self.likeLabel];
+        [self.contentView addSubview:self.commentIV];
+        [self.contentView addSubview:self.commentLabel];
+        [self.contentView addSubview:self.timeLabel];
+        [self.contentView addSubview:self.separatorView];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        [self.contentView addSubview:self.titleLabel];
+        [self.contentView addSubview:self.detailLabel];
+        [self.contentView addSubview:self.readIV];
+        [self.contentView addSubview:self.readLabel];
+        [self.contentView addSubview:self.likeIV];
+        [self.contentView addSubview:self.likeLabel];
+        [self.contentView addSubview:self.commentIV];
+        [self.contentView addSubview:self.commentLabel];
+        [self.contentView addSubview:self.timeLabel];
+        [self.contentView addSubview:self.separatorView];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.titleLabel.text = nil;
+    self.detailLabel.text = nil;
+    self.readLabel.text = nil;
+    self.likeLabel.text = nil;
+    self.commentLabel.text = nil;
+    self.timeLabel.text = nil;
+}
+
+- (void)setCellData:(WLKTSchoolNewsList *)data{
+    _data = data;
+    SchoolNewsType type = 0;
+    switch (data.imglist.count) {
+        case 0:
+            type = SchoolNewsContainTextOnly;
+            break;
+        case 1:
+            type = SchoolNewsContainVideo;
+            break;
+        case 3:
+            type = SchoolNewsContainImage;
+        default:
+            break;
+    }
+    if (type == SchoolNewsContainImage) {
+        [self.contentView addSubview:self.imgCV];
+        [self.imgCV mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.top.mas_equalTo(self.titleLabel.mas_bottom).offset(10);
+            make.left.mas_equalTo(self.contentView);
+            make.size.mas_equalTo(CGSizeMake(ScreenWidth, 95));
+        }];
+        self.detailLabel.numberOfLines = 3;
+    }
+    if (type == SchoolNewsContainTextOnly) {
+        self.detailLabel.numberOfLines = 3;
+        
+    }
+    if (type == SchoolNewsContainVideo) {
+        [self.contentView addSubview:self.videoIV];
+        [self.videoIV addSubview:self.videoTagIV];
+        [self.videoIV setImageURL:[NSURL URLWithString:data.imglist.firstObject]];
+        [self.videoIV mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.left.mas_equalTo(self.contentView).offset(10);
+            make.top.mas_equalTo(self.contentView).offset(15);
+            make.size.mas_equalTo(CGSizeMake(120, 80));
+        }];
+        [self.videoTagIV mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.center.mas_equalTo(self.videoIV);
+        }];
+        [self.titleLabel mas_remakeConstraints:^(MASConstraintMaker *make) {
+            make.right.mas_equalTo(self.contentView.mas_right).offset(-10);
+            make.top.mas_equalTo(self.contentView).offset(15);
+            make.left.mas_equalTo(self.videoIV.mas_right).offset(10);
+        }];
+        [self.detailLabel mas_remakeConstraints:^(MASConstraintMaker *make) {
+            make.right.mas_equalTo(self.contentView.mas_right).offset(-10);
+            make.top.mas_equalTo(self.titleLabel.mas_bottom).offset(7);
+            make.left.mas_equalTo(self.videoIV.mas_right).offset(10);
+        }];
+        self.detailLabel.numberOfLines = 2;
+    }
+    self.titleLabel.text = data.title;
+    self.detailLabel.text = data.describe;
+    self.readLabel.text = data.hits_num;
+    self.likeLabel.text = data.love_num;
+    self.commentLabel.text = data.comment_num;
+    self.timeLabel.text = data.create_time;
+}
+
+
+#pragma mark - collection view
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    return self.data.imglist.count;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+    SchoolNewsImageCollectionCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"SchoolNewsImageCollectionCell" forIndexPath:indexPath];
+    [cell.imgIV setImageURL:[NSURL URLWithString:self.data.imglist[indexPath.item]]];
+    return cell;
+}
+
+- (void)makeConstraints{
+    [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10);
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-10);
+        make.top.mas_equalTo(self.contentView).offset(15);
+    }];
+    [self.separatorView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0.5));
+        make.bottom.mas_equalTo(self.contentView.mas_bottom);
+        make.left.mas_equalTo(self.contentView);
+    }];
+    [self.readIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10);
+        make.bottom.mas_equalTo(self.separatorView).offset(-10);
+    }];
+    [self.readLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.readIV.mas_right).offset(5);
+        make.centerY.mas_equalTo(self.readIV);
+    }];
+    [self.likeIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.readLabel.mas_right).offset(15);
+        make.centerY.mas_equalTo(self.readIV);
+    }];
+    [self.likeLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.likeIV.mas_right).offset(5);
+        make.centerY.mas_equalTo(self.readIV);
+    }];
+    [self.commentIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.likeLabel.mas_right).offset(20);
+        make.centerY.mas_equalTo(self.readIV);
+    }];
+    [self.commentLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.commentIV.mas_right).offset(5);
+        make.centerY.mas_equalTo(self.readIV);
+    }];
+    [self.timeLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-10);
+        make.centerY.mas_equalTo(self.readIV);
+    }];
+    [self.detailLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.bottom.mas_equalTo(self.readLabel.mas_top).offset(-10);
+        make.left.mas_equalTo(self.contentView).offset(10);
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-10);
+    }];
+}
+
+#pragma mark - get
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [UILabel new];
+        _titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
+        _titleLabel.textColor = [UIColor blackColor];
+        _titleLabel.numberOfLines = 2;
+    }
+    return _titleLabel;
+}
+- (UILabel *)detailLabel{
+    if (!_detailLabel) {
+        _detailLabel = [UILabel new];
+        _detailLabel.font = [UIFont systemFontOfSize:14];
+        _detailLabel.textColor = UIColorHex(333333);
+    }
+    return _detailLabel;
+}
+- (UIImageView *)readIV{
+    if (!_readIV) {
+        _readIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"阅读"]];
+    }
+    return _readIV;
+}
+- (UILabel *)readLabel{
+    if (!_readLabel) {
+        _readLabel = [UILabel new];
+        _readLabel.font = [UIFont systemFontOfSize:12];
+        _readLabel.textColor = UIColorHex(999999);
+    }
+    return _readLabel;
+}
+- (UIImageView *)likeIV{
+    if (!_likeIV) {
+        _likeIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"点赞列表"]];
+    }
+    return _likeIV;
+}
+- (UILabel *)likeLabel{
+    if (!_likeLabel) {
+        _likeLabel = [UILabel new];
+        _likeLabel.font = [UIFont systemFontOfSize:12];
+        _likeLabel.textColor = UIColorHex(999999);
+    }
+    return _likeLabel;
+    
+}
+- (UIImageView *)commentIV{
+    if (!_commentIV) {
+        _commentIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"编辑"]];
+    }
+    return _commentIV;
+}
+- (UILabel *)commentLabel{
+    if (!_commentLabel) {
+        _commentLabel = [UILabel new];
+        _commentLabel.font = [UIFont systemFontOfSize:12];
+        _commentLabel.textColor = UIColorHex(999999);
+    }
+    return _commentLabel;
+}
+- (UILabel *)timeLabel{
+    if (!_timeLabel) {
+        _timeLabel = [UILabel new];
+        _timeLabel.font = [UIFont systemFontOfSize:12];
+        _timeLabel.textColor = UIColorHex(999999);
+    }
+    return _timeLabel;
+}
+- (UIView *)separatorView{
+    if (!_separatorView) {
+        _separatorView = [UIView new];
+        _separatorView.backgroundColor = separatorView_color;
+    }
+    return _separatorView;
+}
+- (UIImageView *)videoTagIV{
+    if (!_videoTagIV) {
+        _videoTagIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"新闻视频"]];
+    }
+    return _videoTagIV;
+}
+- (UIImageView *)videoIV{
+    if (!_videoIV) {
+        _videoIV = [UIImageView new];
+    }
+    return _videoIV;
+}
+- (UICollectionView *)imgCV{
+    if (!_imgCV) {
+        UICollectionViewFlowLayout *l = [UICollectionViewFlowLayout new];
+        l.itemSize = CGSizeMake(115, 90);
+        l.minimumInteritemSpacing = 5;
+        l.scrollDirection = UICollectionViewScrollDirectionHorizontal;
+        l.sectionInset = UIEdgeInsetsMake(0, 10, 0, 0);
+        _imgCV = [[UICollectionView alloc]initWithFrame:CGRectNull collectionViewLayout:l];
+        _imgCV.dataSource = self;
+        _imgCV.delegate = self;
+        _imgCV.backgroundColor = UIColorHex(ffffff);
+        _imgCV.showsHorizontalScrollIndicator = false;
+        _imgCV.userInteractionEnabled = false;
+        [_imgCV registerClass:[SchoolNewsImageCollectionCell class] forCellWithReuseIdentifier:@"SchoolNewsImageCollectionCell"];
+    }
+    return _imgCV;
+}
+@end

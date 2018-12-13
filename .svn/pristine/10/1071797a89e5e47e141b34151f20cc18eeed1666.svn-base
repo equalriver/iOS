@@ -1,0 +1,104 @@
+//
+//  WLKTCourseDetailCouponCell_1.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/22.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTCourseDetailCouponCell_1.h"
+
+@interface WLKTCourseDetailCouponCell_1 ()
+@property (strong, nonatomic) UILabel *titleLabel;
+@property (strong, nonatomic) UIImageView *rightArrowIV;
+@property (strong, nonatomic) WLKTCourseDetailData *data;
+@end
+
+@implementation WLKTCourseDetailCouponCell_1
+
+- (instancetype)initWithData:(WLKTCourseDetailData *)data
+{
+    self = [super init];
+    if (self) {
+        _data = data;
+        self.contentView.backgroundColor = UIColorHex(f8f8f8);
+        [self.contentView addSubview:self.titleLabel];
+        [self.contentView addSubview:self.rightArrowIV];
+        [self newContainerViewWithData:data];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+
+
+- (void)newContainerViewWithData:(WLKTCourseDetailData *)data{
+    for (WLKTCourseActivityData *obj in data.course_activity) {
+        UIView *bgView = [[UIView alloc]init];
+        
+        UILabel *tagLabel = [[UILabel alloc]init];
+        tagLabel.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+        tagLabel.textColor = [UIColor whiteColor];
+        tagLabel.backgroundColor = UIColorHex(ee402d);
+        tagLabel.layer.cornerRadius = 1.5;
+        tagLabel.layer.masksToBounds = YES;
+        tagLabel.textAlignment = NSTextAlignmentCenter;
+        tagLabel.text = obj.type;
+        
+        UILabel *detailLabel = [[UILabel alloc]init];
+        detailLabel.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+        detailLabel.textColor = KMainTextColor_3;
+        detailLabel.text = obj.content;
+        
+        [bgView addSubview:tagLabel];
+        [bgView addSubview:detailLabel];
+        [self.contentView addSubview:bgView];
+        [tagLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(15, 15));
+            make.left.mas_equalTo(bgView);
+            make.centerY.mas_equalTo(bgView);
+        }];
+        [detailLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(230 * ScreenRatio_6, 15));
+            make.left.mas_equalTo(tagLabel.mas_right).offset(8 * ScreenRatio_6);
+            make.centerY.mas_equalTo(bgView);
+        }];
+        [bgView mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(260, 20));
+            make.left.mas_equalTo(self.titleLabel.mas_right).offset(15 * ScreenRatio_6);
+            make.top.mas_equalTo(self.titleLabel).offset(20 * [data.course_activity indexOfObject:obj] * ScreenRatio_6 + [data.course_activity indexOfObject:obj] * 5);
+        }];
+    }
+}
+
+#pragma mark - make constraints
+- (void)makeConstraints{
+    [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(15 * ScreenRatio_6);
+        make.top.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+    }];
+    [self.rightArrowIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-15 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.contentView);
+    }];
+
+}
+
+#pragma mark - get
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [[UILabel alloc]init];
+        _titleLabel.font = [UIFont systemFontOfSize:14 * ScreenRatio_6];
+        _titleLabel.textColor = KMainTextColor_9;
+        _titleLabel.text = @"促  销";
+    }
+    return _titleLabel;
+}
+- (UIImageView *)rightArrowIV{
+    if (!_rightArrowIV) {
+        _rightArrowIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"课程详情进入"]];
+    }
+    return _rightArrowIV;
+}
+
+@end

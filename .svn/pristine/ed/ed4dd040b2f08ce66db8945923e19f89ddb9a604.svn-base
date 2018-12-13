@@ -1,0 +1,17 @@
+//
+//  WLKTCourseDetailGoEvaluationVC.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/3.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourse.h"
+
+typedef void(^evaluationSuccess)(void);
+
+@interface WLKTCourseDetailGoEvaluationVC : UIViewController
+- (instancetype)initWithCourse:(WLKTCourse *)course;
+@property (copy, nonatomic) evaluationSuccess successBlock;
+@end

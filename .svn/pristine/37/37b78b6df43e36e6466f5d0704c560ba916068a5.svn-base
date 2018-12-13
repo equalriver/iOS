@@ -1,0 +1,402 @@
+//
+//  WLKTClassifySearchAllResult.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/4.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTClassifySearchResult.h"
+#import "WLKTClassifyFliterBtns.h"
+
+@interface ClassifySearchResultCell: UITableViewCell
+@property (strong, nonatomic) UILabel *titleLabel;
+@property (strong, nonatomic) UIView *separatorView;
+@property (strong, nonatomic) UIImageView *selectedIV;
+@end
+
+@implementation ClassifySearchResultCell
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [self.contentView addSubview:self.titleLabel];
+        [self.contentView addSubview:self.separatorView];
+        [self.contentView addSubview:self.selectedIV];
+        [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.left.mas_equalTo(self.contentView).offset(20);
+            make.centerY.mas_equalTo(self.contentView);
+        }];
+        [self.separatorView mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.left.width.bottom.mas_equalTo(self.contentView);
+            make.height.mas_equalTo(0.5);
+        }];
+        [self.selectedIV mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.right.mas_equalTo(self.contentView.mas_right).offset(-20);
+            make.centerY.mas_equalTo(self.contentView);
+        }];
+    }
+    return self;
+}
+
+
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [UILabel new];
+        _titleLabel.font = [UIFont systemFontOfSize:14];
+        _titleLabel.textColor = UIColorHex(333333);
+    }
+    return _titleLabel;
+}
+- (UIView *)separatorView{
+    if (!_separatorView) {
+        _separatorView = [UIView new];
+        _separatorView.backgroundColor = separatorView_color;
+    }
+    return _separatorView;
+}
+- (UIImageView *)selectedIV{
+    if (!_selectedIV) {
+        _selectedIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"对"]];
+        _selectedIV.hidden = YES;
+    }
+    return _selectedIV;
+}
+@end
+
+@interface WLKTClassifySearchResult ()<UITableViewDelegate, UITableViewDataSource>
+@property (strong, nonatomic) UITableView *searchResultTV;
+@property (strong, nonatomic) UITableView *searchAllLevel_1_TV;
+@property (strong, nonatomic) UITableView *searchAllLevel_2_TV;
+@property (strong, nonatomic) UIView *tapView;
+
+@property (strong, nonatomic) WLKTClassifyData *data;
+@property (assign) ClassifySearchType type;
+@property (copy, nonatomic) void(^completion)(void);
+@property (assign) NSInteger searchAllLevel_1_index;
+@property (assign) NSInteger searchAllLevel_2_index;
+@property (strong, nonatomic) NSMutableDictionary<NSNumber *, NSNumber *> *index;
+@property (assign) BOOL isRemovedByButton;
+@end
+
+@implementation WLKTClassifySearchResult
+- (instancetype)initWithSearchType:(ClassifySearchType)type
+                              data:(WLKTClassifyData *)data
+                             index:(NSMutableDictionary *)index
+                        completion:(void(^)(void))completion
+{
+    self = [super init];
+    if (self) {
+        _type = type;
+        _completion = completion;
+        _data = data;
+        _index = [NSMutableDictionary dictionaryWithDictionary:index];
+        self.backgroundColor = [UIColor colorWithWhite:0.3 alpha:0.7];
+        
+        [[NSNotificationCenter defaultCenter]addObserverForName:@"ClassifyFliterViewRemoveByButton" object:nil queue:nil usingBlock:^(NSNotification * _Nonnull note) {
+            self.isRemovedByButton = YES;
+        }];
+        [[NSNotificationCenter defaultCenter]addObserverForName:kClassifyFliterViewRemovedByNaviBarBtnNoti object:nil queue:nil usingBlock:^(NSNotification * _Nonnull note) {
+            self.isRemovedByButton = YES;
+        }];
+        
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]initWithActionBlock:^(id  _Nonnull sender) {
+            completion();
+            [self removeFromSuperview];
+    
+        }];
+        [self addSubview:self.tapView];
+        [self.tapView addGestureRecognizer:tap];
+        [self addSubview:self.searchResultTV];
+        [self.searchResultTV becomeFirstResponder];
+        CGFloat h = 0;
+        switch (type) {
+            case ClassifySearchTypeDistance:
+                h = data.distance.count * 40;
+                break;
+            case ClassifySearchTypeSmartSort:
+                h = data.smartsort.count * 40;
+                break;
+            case ClassifySearchTypeFliter:
+                h = data.filter.count * 40;
+                break;
+            default:
+                h = data.classify.count * 40;
+                break;
+        }
+        [self.searchResultTV setFrame:CGRectMake(0, 0, ScreenWidth, 0)];
+        [UIView animateWithDuration:0.5 animations:^{
+            [self.searchResultTV setFrame:CGRectMake(0, 0, ScreenWidth, h > 400 *ScreenRatio_6 ? 400 *ScreenRatio_6 : h)];
+        }];
+        [self.tapView mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.top.mas_equalTo(self.searchResultTV.mas_bottom);
+            make.width.left.bottom.mas_equalTo(self);
+        }];
+    }
+    return self;
+}
+
+- (instancetype)initWithSearchData:(WLKTClassifyData *)data
+                        searchType:(ClassifySearchType)type
+            searchAllLevel_1_index:(NSInteger)searchAllLevel_1_index
+            searchAllLevel_2_index:(NSInteger)searchAllLevel_2_index
+                        completion:(void(^)(void))completion
+{
+    self = [super init];
+    if (self) {
+        _completion = completion;
+        _data = data;
+        _type = type;
+        _searchAllLevel_1_index = searchAllLevel_1_index;
+        _searchAllLevel_2_index = searchAllLevel_2_index;
+        self.backgroundColor = [UIColor colorWithWhite:0.3 alpha:0.7];
+        
+        [[NSNotificationCenter defaultCenter]addObserverForName:@"ClassifyFliterViewRemoveByButton" object:nil queue:nil usingBlock:^(NSNotification * _Nonnull note) {
+            self.isRemovedByButton = YES;
+        }];
+        [[NSNotificationCenter defaultCenter]addObserverForName:kClassifyFliterViewRemovedByNaviBarBtnNoti object:nil queue:nil usingBlock:^(NSNotification * _Nonnull note) {
+            self.isRemovedByButton = YES;
+        }];
+        
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]initWithActionBlock:^(id  _Nonnull sender) {
+            completion();
+            [self removeFromSuperview];
+            
+        }];
+        [self addSubview:self.tapView];
+        [self.tapView addGestureRecognizer:tap];
+        [self addSubview:self.searchAllLevel_1_TV];
+        [self addSubview:self.searchAllLevel_2_TV];
+        NSInteger i = searchAllLevel_1_index == -1 ? 0 : searchAllLevel_1_index;
+        NSInteger count = data.classify.count > data.classify[i].child.count ? data.classify.count : data.classify[i].child.count;
+        CGFloat h = count * 40 > 400 *ScreenRatio_6 ? 400 *ScreenRatio_6 : count * 40;
+        
+        [self.searchAllLevel_1_TV setFrame:CGRectMake(0, 0, ScreenWidth /2, 0)];
+        [UIView animateWithDuration:0.5 animations:^{
+            [self.searchAllLevel_1_TV setFrame:CGRectMake(0, 0, ScreenWidth /2, h)];
+        }];
+        
+        [self.searchAllLevel_2_TV setFrame:CGRectMake(ScreenWidth /2, 0, ScreenWidth /2, 0)];
+        [UIView animateWithDuration:0.5 animations:^{
+            [self.searchAllLevel_2_TV setFrame:CGRectMake(ScreenWidth /2, 0, ScreenWidth /2, h)];
+        }];
+        
+        [self.tapView mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.top.mas_equalTo(self.searchAllLevel_1_TV.mas_bottom);
+            make.width.left.bottom.mas_equalTo(self);
+        }];
+    }
+    return self;
+}
+
+- (void)removeFromSuperview{
+    if ([self.subviews containsObject:self.searchResultTV]) {
+        CGRect rect = self.searchResultTV.frame;
+        rect.size.height = 0;
+        [UIView animateWithDuration:0.5 animations:^{
+            [self.searchResultTV setFrame:rect];
+        }];
+    }
+    else{
+        CGRect rect_1 = self.searchAllLevel_1_TV.frame;
+        rect_1.size.height = 0;
+        [UIView animateWithDuration:0.5 animations:^{
+            [self.searchAllLevel_1_TV setFrame:rect_1];
+        }];
+        CGRect rect_2 = self.searchAllLevel_2_TV.frame;
+        rect_2.size.height = 0;
+        [UIView animateWithDuration:0.5 animations:^{
+            [self.searchAllLevel_2_TV setFrame:rect_2];
+        }];
+    }
+    float t = 0;
+    if (!self.isRemovedByButton) {
+        t = 0.5;
+    }
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(t * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [super removeFromSuperview];
+    });
+    
+}
+
+- (void)dealloc{
+    [[NSNotificationCenter defaultCenter]removeObserver:self];
+}
+
+#pragma mark - table view
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    if (tableView == self.searchResultTV) {
+        switch (self.type) {
+            case ClassifySearchTypeDistance:
+                return self.data.distance.count;
+            case ClassifySearchTypeSmartSort:
+                return self.data.smartsort.count;
+            case ClassifySearchTypeFliter:
+                return self.data.filter.count;
+            default:
+                return self.data.classify.count;
+                break;
+        }
+    }
+    if (tableView == self.searchAllLevel_1_TV) {
+        return self.data.classify.count;
+    }
+    if (tableView == self.searchAllLevel_2_TV) {
+        NSInteger i = self.searchAllLevel_1_index == -1 ? 0 : self.searchAllLevel_1_index;
+        return self.data.classify[i].child.count;
+    }
+    return 0;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return 40;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    UITableViewCell *cell = [[UITableViewCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:nil];
+    ClassifySearchResultCell *c = [[ClassifySearchResultCell alloc]init];
+    if (tableView == self.searchResultTV) {
+        if (self.index[@(self.type)].integerValue == indexPath.row) {
+            c.titleLabel.textColor = [UIColor redColor];
+            c.selectedIV.hidden = false;
+        }
+        switch (self.type) {
+            case ClassifySearchTypeDistance:
+                c.titleLabel.text = self.data.distance[indexPath.row].title;
+                break;
+            case ClassifySearchTypeSmartSort:
+                c.titleLabel.text = self.data.smartsort[indexPath.row].title;
+                break;
+            case ClassifySearchTypeFliter:
+                c.titleLabel.text = self.data.filter[indexPath.row].title;
+                break;
+            default:
+                c.titleLabel.text = self.data.classify[indexPath.row].title;
+                break;
+        }
+        cell = c;
+    }
+    
+    if (tableView == self.searchAllLevel_1_TV) {
+        cell.backgroundColor = separatorView_color;
+        cell.textLabel.textColor = UIColorHex(333333);
+        cell.textLabel.font = [UIFont systemFontOfSize:14];
+        if (self.searchAllLevel_1_index == indexPath.row) {
+            cell.backgroundColor = [UIColor whiteColor];
+            cell.textLabel.textColor = [UIColor redColor];
+        }
+        cell.textLabel.text = self.data.classify[indexPath.row].title;
+    }
+    if (tableView == self.searchAllLevel_2_TV) {
+        if (self.searchAllLevel_2_index == indexPath.row) {
+            c.titleLabel.textColor = [UIColor redColor];
+        }
+        NSInteger i = self.searchAllLevel_1_index == -1 ? 0 : self.searchAllLevel_1_index;
+        c.titleLabel.text = self.data.classify[i].child[indexPath.row].title;
+        cell = c;
+    }
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (tableView == self.searchResultTV) {
+        self.index[@(self.type)] = @(indexPath.row);
+    }
+    if (tableView == self.searchAllLevel_1_TV) {
+        self.searchAllLevel_1_index = indexPath.row;
+        self.searchAllLevel_2_index = -1;
+        [self.searchAllLevel_2_TV reloadData];
+    }
+    if (tableView == self.searchAllLevel_2_TV) {
+        self.searchAllLevel_2_index = indexPath.row;
+    }
+    [tableView reloadData];
+    if ([self.delegate respondsToSelector:@selector(didSelectedSearchResultType:searchResultIndex:searchAllLevel_1_index:searchAllLevel_2_index:searchValue:completion:)]) {
+        if (tableView != self.searchAllLevel_1_TV) {
+            NSString *v = @"";
+            if (tableView == self.searchResultTV) {
+                switch (self.type) {
+                    case ClassifySearchTypeDistance:
+                        v = self.data.distance[indexPath.row].value;
+                        break;
+                    case ClassifySearchTypeSmartSort:
+                        v = self.data.smartsort[indexPath.row].value;
+                        break;
+                    case ClassifySearchTypeFliter:
+                        v = self.data.filter[indexPath.row].value;
+                        break;
+                    default:
+                        v = self.data.classify[indexPath.row].fid;
+                        break;
+                }
+            }
+            else{
+                if (self.searchAllLevel_2_index >= 0) {
+                    v = self.data.classify[self.searchAllLevel_1_index].child[self.searchAllLevel_2_index].fid;
+                }
+            }
+            [self.delegate didSelectedSearchResultType:self.type searchResultIndex:self.index searchAllLevel_1_index:self.searchAllLevel_1_index searchAllLevel_2_index:self.searchAllLevel_2_index searchValue:v completion:^{
+                !self.completion ?: self.completion();
+
+                [self removeFromSuperview];
+            }];
+        }
+        else{//全部分类
+            NSString *v = @"";
+            if (self.searchAllLevel_1_index == 0) {
+                v = self.data.classify[self.searchAllLevel_1_index].fid;
+                [self.delegate didSelectedSearchResultType:self.type searchResultIndex:self.index searchAllLevel_1_index:self.searchAllLevel_1_index searchAllLevel_2_index:self.searchAllLevel_2_index searchValue:v completion:^{
+                    !self.completion ?: self.completion();
+
+                    [self removeFromSuperview];
+                }];
+            }
+        }
+        
+    }
+}
+
+#pragma mark - get
+- (UITableView *)searchResultTV{
+    if (!_searchResultTV) {
+        _searchResultTV = [[UITableView alloc]initWithFrame:CGRectNull];
+        _searchResultTV.dataSource = self;
+        _searchResultTV.delegate = self;
+        _searchResultTV.separatorStyle = UITableViewCellSeparatorStyleNone;
+//        _searchResultTV.backgroundColor = [UIColor clearColor];
+        _searchResultTV.bounces = false;
+    }
+    return _searchResultTV;
+}
+- (UITableView *)searchAllLevel_1_TV{
+    if (!_searchAllLevel_1_TV) {
+        _searchAllLevel_1_TV = [[UITableView alloc]initWithFrame:CGRectNull];
+        _searchAllLevel_1_TV.dataSource = self;
+        _searchAllLevel_1_TV.delegate = self;
+        _searchAllLevel_1_TV.separatorStyle = UITableViewCellSeparatorStyleNone;
+//        _searchAllLevel_1_TV.backgroundColor = [UIColor clearColor];
+        _searchAllLevel_1_TV.bounces = false;
+    }
+    return _searchAllLevel_1_TV;
+}
+- (UITableView *)searchAllLevel_2_TV{
+    if (!_searchAllLevel_2_TV) {
+        _searchAllLevel_2_TV = [[UITableView alloc]initWithFrame:CGRectNull];
+        _searchAllLevel_2_TV.dataSource = self;
+        _searchAllLevel_2_TV.delegate = self;
+        _searchAllLevel_2_TV.separatorStyle = UITableViewCellSeparatorStyleNone;
+//        _searchAllLevel_2_TV.backgroundColor = [UIColor clearColor];
+        _searchAllLevel_2_TV.bounces = false;
+    }
+    return _searchAllLevel_2_TV;
+}
+-(UIView *)tapView{
+    if (!_tapView) {
+        _tapView = [UIView new];
+        _tapView.backgroundColor = [UIColor clearColor];
+        _tapView.userInteractionEnabled = YES;
+    }
+    return _tapView;
+}
+@end

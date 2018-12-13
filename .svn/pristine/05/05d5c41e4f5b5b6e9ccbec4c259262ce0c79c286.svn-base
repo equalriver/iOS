@@ -1,0 +1,907 @@
+//
+//  WLKTSchoolVC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/21.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTSchoolVC.h"
+#import "WLKTSchoolHeader.h"
+
+
+@interface WLKTSchoolVC ()<UITableViewDelegate, UITableViewDataSource, WLKTSchoolBottomDelegate, SchoolAppointmentDelegate, SchoolHeadIndexesDelegate, LGPhotoPickerBrowserViewControllerDataSource, LGPhotoPickerBrowserViewControllerDelegate, WLKTSchoolPhotoDelegate, WLKTSchoolVRPhotoDelegate, WLKTSchoolVideoDelegate, WLKTSchoolCourseDelegate, WLKTLoginCoordinatorDelegate, CLLocationManagerDelegate, ZFPlayerDelegate, SchoolHeadCellDelegate, WLKTSchoolStudentDelegate>
+@property (strong, nonatomic) UITableView *tableView;
+@property (strong, nonatomic) UIBarButtonItem *phoneBarBtn;
+@property (strong, nonatomic) UIBarButtonItem *shareBarBtn;
+@property (strong, nonatomic) WLKTSchoolBottomBtns *bottomBtns;
+@property (strong, nonatomic) WLKTSchoolHeadIndexes *headIndexes;
+@property (strong, nonatomic) UILabel *tableViewFooterlabel;
+@property (nonatomic, strong) CLLocationManager *locationManager;
+@property (strong, nonatomic) ZFPlayerView *videoPlayerView;
+//@property (copy, nonatomic) NSArray<WLKTCourseDetailNewPhoto *> *photoArray;
+//@property (copy, nonatomic) NSArray<WLKTCourseDetailNewTeacher *> *teacherArr;
+//@property (copy, nonatomic) NSArray<WLKTCourseDetailNewAbout_list *> *about_listArr;
+//@property (copy, nonatomic) NSArray<WLKTCourseDetailNewHot_school *> *hotSchoolArr;
+
+@property (strong, nonatomic) WLKTSchool *school;
+@property (copy, nonatomic) NSString *schoolId;
+@property (nonatomic) BOOL isHidden;
+@property (strong, nonatomic) NSMutableArray *detailImageArr;
+@property (copy, nonatomic) NSArray *sectionTitleArr;
+@property (nonatomic, assign) LGShowImageType showType;
+@property (nonatomic, assign) BOOL isStudentPhotoArray;
+@property (nonatomic, strong) NSMutableArray *LGPhotoPickerBrowserPhotoArray;
+@property (nonatomic, strong) NSMutableArray *LGPhotoPickerBrowserStudentPhotoArray;
+@property (strong, nonatomic) NSMutableArray *childCoordinator;
+@property (copy, nonatomic) void (^loginBlock)(void);
+@property (nonatomic, assign) CLLocationCoordinate2D currentCoordinate;
+@property (nonatomic, assign) CGFloat headIndexInset;
+@end
+
+//static const CGFloat headIndexInset = 50 + NavigationBarAndStatusHeight;
+
+@implementation WLKTSchoolVC
+- (instancetype)initWithSchoolId:(NSString *)schoolId
+{
+    self = [super init];
+    if (self) {
+        _schoolId = schoolId;
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self.view addSubview:self.tableView];
+    [self.view addSubview:self.headIndexes];
+    [self.view addSubview:self.bottomBtns];
+    [self makeConstraints];
+    [self setBarButtonItems];
+    self.hidesBottomBarWhenPushed = YES;
+    self.isHidden = YES;
+    self.title = @"机构主页";
+    self.headIndexInset = 50;
+
+    [self setCLLocation];
+    [self loadData];
+}
+
+- (void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    //启动跟踪定位
+    [self.locationManager startUpdatingLocation];
+    //截屏
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(userDidTakeScreenshot:)
+                                                 name:UIApplicationUserDidTakeScreenshotNotification object:nil];
+}
+
+- (void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+    [[NSNotificationCenter defaultCenter]removeObserver:self name:UIApplicationUserDidTakeScreenshotNotification object:nil];
+}
+
+- (void)dealloc{
+    [[NSNotificationCenter defaultCenter]removeObserver:self];
+}
+
+#pragma mark -
+- (void)makeConstraints{
+    [self.tableView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(self.view);
+        make.width.mas_equalTo(self.view);
+        make.left.mas_equalTo(self.view);
+        make.bottom.mas_equalTo(self.bottomBtns.mas_top);
+    }];
+    [self.bottomBtns mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 50));
+        make.bottom.mas_equalTo(self.view.mas_bottom);
+        make.left.mas_equalTo(self.view);
+    }];
+    [self.headIndexes mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 40));
+        make.left.mas_equalTo(self.view);
+        make.top.mas_equalTo(self.view);
+    }];
+
+}
+
+- (void)setBarButtonItems{
+    UIBarButtonItem *left = [[UIBarButtonItem alloc]initWithImage:[UIImage imageNamed:@"箭头左b"] style:UIBarButtonItemStylePlain target:self action:@selector(backButtonAct)];
+    self.navigationItem.leftBarButtonItem = left;
+    self.navigationItem.rightBarButtonItems = @[self.shareBarBtn];
+}
+
+#pragma mark - network
+- (void)loadData {
+    self.tableView.state = WLKTViewStateLoading;
+//    WLKTSchoolApi *api = [[WLKTSchoolApi alloc] initWithSchoolId:_schoolId];
+    WLKTSchoolApi *api = [[WLKTSchoolApi alloc] initWithSchoolId:_schoolId lat:[NSString stringWithFormat:@"%f",self.currentCoordinate.latitude] lng:[NSString stringWithFormat:@"%f",self.currentCoordinate.longitude]];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        self.tableView.state = WLKTViewStateNormal;
+        self.school = [WLKTSchool modelWithDictionary:request.responseJSONObject[@"result"]];
+        if (self.school.photolist.count) {
+            NSMutableArray *photos = [NSMutableArray array];
+            for (WLKTSchoolPhotoList *obj in self.school.photolist) {
+                [photos addObject:obj.photo];
+            }
+            [self prepareForPhotoBroswerWithImageArray:photos studentImage:nil];
+        }
+        if (self.school.starstulist.count) {
+            NSMutableArray *photos = [NSMutableArray array];
+            for (WLKTSchoolStudentList *obj in self.school.starstulist) {
+                [photos addObject:obj.photo];
+            }
+            [self prepareForPhotoBroswerWithImageArray:nil studentImage:photos];
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (self.school.schoolinfo.isshoucang.intValue == 1) {//已收藏
+                [self.bottomBtns.collectBtn setTitle:@" 已收藏" forState:UIControlStateNormal];
+                [self.bottomBtns.collectBtn setImage:[UIImage imageNamed:@"课程详情已收藏"] forState:UIControlStateNormal];
+            }
+            [self.tableView reloadData];
+        });
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        self.tableView.state = WLKTViewStateError;
+        WS(weakSelf);
+        self.tableView.emptyButtonClickBlock = ^{
+            [weakSelf loadData];
+        };
+    }];
+}
+
+#pragma mark - table view
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    if (self.school) {
+        return self.sectionTitleArr.count;
+    }
+    return 0;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    switch (section) {
+        case 1://上课地点
+            return self.school.schpoint.count;
+        case 7://学校活动
+            return self.school.actlist.count;
+        case 10://学校新闻
+            return self.school.newslist.count;
+        default:
+            return 1;
+    }
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (indexPath.section == 0) {
+        return 250;
+    }
+    if (indexPath.section == 1) {//上课地点
+        return 55;
+    }
+    if (indexPath.section == 2) {//学校介绍
+        CGFloat h = 20;
+        if (self.school.schoolinfo.stime.length) {
+            h += 40;
+        }
+        if (self.school.schoolinfo.businesshours.length) {
+            h += 10 + [self.school.schoolinfo.businesshours getSizeWithWidth:ScreenWidth - 20 Font:13.5].height;
+        }
+        return h + [self.school.schoolinfo.introduce getSizeWithWidth:ScreenWidth - 20 Font:13.5].height;
+    }
+    if (indexPath.section == 3) {//全景校园
+        return 125 *ScreenRatio_6;
+    }
+    if (indexPath.section == 4 && self.school.videolist.count) {//学校视频
+        return 120 *ScreenRatio_6;
+    }
+    if (indexPath.section == 5 && self.school.photolist.count) {//学校相册
+        return 120;
+    }
+    if (indexPath.section == 6 && self.school.courselist.count) {//学校课程
+        return 160 * ((self.school.courselist.count + 1) /2) *ScreenRatio_6;
+    }
+    if (indexPath.section == 7 && self.school.actlist.count) {//学校活动
+        return 130 *ScreenRatio_6;
+    }
+    if (indexPath.section == 8 && self.school.teachlist.count) {//名师
+        return 135;
+    }
+    if (indexPath.section == 9 && self.school.starstulist.count) {//明星学员
+        return 215;
+    }
+    if (indexPath.section == 10) {//学校新闻
+        NSInteger count = self.school.newslist[indexPath.row].imglist.count;
+        if (count == 0) {//无图片
+            return 145 *ScreenRatio_6;
+        }
+        if (count == 1) {//有视频
+            return 130 *ScreenRatio_6;
+        }
+        if (count > 1) {//有图片
+            return 190 *ScreenRatio_6;
+        }
+    }
+    return 0;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    if (section == 0) {
+        return 0.01;
+    }
+    return 44;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    if (section == 6 && self.school.courselist.count > 6) {
+        return 31;
+    }
+    if (section == 7 && self.school.actlist.count > 6) {
+        return 31;
+    }
+    if (section == 10) {
+        return 40;
+    }
+    return 5;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    if (section == 0) {
+        return nil;
+    }
+    UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 44)];
+    UIView *separatorView = [[UIView alloc]initWithFrame:CGRectMake(0, 43.5, ScreenWidth, 0.5)];
+    [v addSubview:separatorView];
+    
+    UILabel *titleLabel = [UILabel new];
+    titleLabel.font = [UIFont systemFontOfSize:14 *ScreenRatio_6];
+    titleLabel.textColor = KMainTextColor_3;
+    titleLabel.text = self.sectionTitleArr[section];
+    [v addSubview:titleLabel];
+    [titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(v).offset(10 *ScreenRatio_6);
+        make.centerY.mas_equalTo(v);
+    }];
+    if (section == 3) {//全景校园
+        UIImageView *icon = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"new"]];
+        [v addSubview:icon];
+        [icon mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.right.mas_equalTo(titleLabel.mas_right).offset(10 *ScreenRatio_6);
+            make.top.mas_equalTo(v).offset(3.5);
+            make.size.mas_equalTo(CGSizeMake(14, 9));
+        }];
+    }
+    if (section == 10) {//新闻
+        WLKTExchangeButton *btn = [WLKTExchangeButton new];
+        [btn setImage:[UIImage imageNamed:@"进入-拷贝"] forState:UIControlStateNormal];
+        [btn setTitle:@"    " forState:UIControlStateNormal];
+        [btn setTitleColor:KMainTextColor_9 forState:UIControlStateNormal];
+        btn.titleLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        btn.tag = section;
+        [btn addTarget:self action:@selector(sectionDetailAct:) forControlEvents:UIControlEventTouchUpInside];
+        [v addSubview:btn];
+        [btn mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.right.mas_equalTo(v.mas_right).offset(-10 *ScreenRatio_6);
+            make.height.centerY.mas_equalTo(v);
+        }];
+    }
+    return v;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section{
+    UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 5)];
+    v.backgroundColor = separatorView_color;
+    if (section == 6 && self.school.courselist.count > 6) {
+        v.backgroundColor = [UIColor whiteColor];
+        [v setFrame:CGRectMake(0, 0, ScreenWidth, 31)];
+        
+        UIView *separatorView = [[UIView alloc]initWithFrame:CGRectMake(0, 30.5, ScreenWidth, 0.5)];
+        separatorView.backgroundColor = separatorView_color;
+        [v addSubview:separatorView];
+        
+        UIButton *b = [UIButton new];
+        b.tag = section;
+        [b setTitle:@"更多" forState:UIControlStateNormal];
+        [b setTitleColor:KMainTextColor_9 forState:UIControlStateNormal];
+        b.titleLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        [b addTarget:self action:@selector(course_activeMoreAct:) forControlEvents:UIControlEventTouchUpInside];
+        [v addSubview:b];
+        [b mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.center.mas_equalTo(v);
+            make.size.mas_equalTo(CGSizeMake(100, 30));
+        }];
+    }
+    if (section == 7 && self.school.actlist.count > 6) {
+        v.backgroundColor = [UIColor whiteColor];
+        [v setFrame:CGRectMake(0, 0, ScreenWidth, 31)];
+        
+        UIView *separatorView = [[UIView alloc]initWithFrame:CGRectMake(0, 30.5, ScreenWidth, 0.5)];
+        separatorView.backgroundColor = separatorView_color;
+        [v addSubview:separatorView];
+        
+        UIButton *b = [UIButton new];
+        b.tag = section;
+        [b setTitle:@"更多" forState:UIControlStateNormal];
+        [b setTitleColor:KMainTextColor_9 forState:UIControlStateNormal];
+        b.titleLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        [b addTarget:self action:@selector(course_activeMoreAct:) forControlEvents:UIControlEventTouchUpInside];
+        [v addSubview:b];
+        [b mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.center.mas_equalTo(v);
+            make.size.mas_equalTo(CGSizeMake(100, 30));
+        }];
+    }
+    if (section == 10) {
+        v.backgroundColor = [UIColor whiteColor];
+        [v setFrame:CGRectMake(0, 0, ScreenWidth, 40)];
+        [v addSubview:self.tableViewFooterlabel];
+
+    }
+    return v;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    UITableViewCell *cell = [UITableViewCell new];
+    if (indexPath.section == 0) {
+        WLKTSchoolHeadCell *hc = [[WLKTSchoolHeadCell alloc]init];
+        hc.delegate = self;
+        [hc setCellData:self.school.schoolinfo];
+        cell = hc;
+    }
+    if (indexPath.section == 1) {//上课地点
+        WLKTSchoolLocationCell *lc = [tableView dequeueReusableCellWithIdentifier:@"WLKTSchoolLocationCell"];
+        if (lc == nil) {
+            lc = [[WLKTSchoolLocationCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"WLKTSchoolLocationCell"];
+        }
+        [lc setCellData:self.school.schpoint[indexPath.row] index:indexPath.row currentCoordinate:self.currentCoordinate];
+        cell = lc;
+    }
+    if (indexPath.section == 2) {//学校介绍
+        WLKTSchoolIntroCell *ic = [[WLKTSchoolIntroCell alloc]init];
+        [ic setCellData:self.school.schoolinfo];
+        cell = ic;
+    }
+    if (indexPath.section == 3) {//全景校园
+        WLKTSchoolVRCell *vc = [[WLKTSchoolVRCell alloc]initWithListArr:self.school.vrlist];
+        vc.delegate = self;
+        
+        cell = vc;
+    }
+    if (indexPath.section == 4 && self.school.videolist.count) {//学校视频
+        WLKTSchoolVideoCell *vc = [[WLKTSchoolVideoCell alloc]initWithData:self.school.videolist];
+        vc.delegate = self;
+        cell = vc;
+    }
+    if (indexPath.section == 5 && self.school.photolist.count) {//学校相册
+        WLKTSchoolPhotoCell *pc = [[WLKTSchoolPhotoCell alloc]initWithData:self.school.photolist];
+        pc.delegate = self;
+        cell = pc;
+    }
+    if (indexPath.section == 6 && self.school.courselist.count) {//学校课程
+        WLKTSchoolCourseCell *cc = [[WLKTSchoolCourseCell alloc]initWithData:self.school.courselist];
+        cc.delegate = self;
+        cell = cc;
+    }
+    if (indexPath.section == 7 && self.school.actlist.count) {//学校活动
+        WLKTSchoolActivityCell *ac = [tableView dequeueReusableCellWithIdentifier:@"WLKTSchoolActivityCell"];
+        if (ac == nil) {
+            ac = [[WLKTSchoolActivityCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"WLKTSchoolActivityCell"];
+        }
+        [ac setCellData:self.school.actlist[indexPath.row]];
+        cell = ac;
+    }
+    if (indexPath.section == 8 && self.school.teachlist.count) {//名师
+        WLKTSchoolTeacherCell *tc = [[WLKTSchoolTeacherCell alloc]initWithTeacherArray:self.school.teachlist];
+        cell = tc;
+    }
+    if (indexPath.section == 9 && self.school.starstulist.count) {//明星学员
+        WLKTSchoolStudentCell *sc = [[WLKTSchoolStudentCell alloc]initWithData:self.school.starstulist];
+        sc.delegate = self;
+        cell = sc;
+    }
+    if (indexPath.section == 10 && self.school.newslist.count) {//学校新闻
+        WLKTSchoolNewsCell *nc = [[WLKTSchoolNewsCell alloc]init];
+        [nc setCellData:self.school.newslist[indexPath.row]];
+        cell = nc;
+    }
+    
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView{
+    if (!self.school) {
+        return;
+    }
+    if (scrollView.contentOffset.y >= [self.tableView rectForSection:1].origin.y) {
+        self.navigationItem.rightBarButtonItems = @[self.shareBarBtn, self.phoneBarBtn];
+    }
+    else{
+        self.navigationItem.rightBarButtonItems = @[self.shareBarBtn];
+    }
+    
+    //set head indexes color
+    if (self.tableView.numberOfSections >= 3) {
+        CGFloat insetY = scrollView.contentOffset.y + self.headIndexInset;
+        if (insetY >= [self.tableView rectForSection:2].origin.y && insetY < [self.tableView rectForSection:3].origin.y) {//学校介绍
+            self.headIndexes.hidden = NO;
+            [self.headIndexes setItemColorAtIndex:0];
+        }
+        if (insetY >= [self.tableView rectForSection:3].origin.y && insetY < [self.tableView rectForSection:6].origin.y) {//vr
+            self.headIndexes.hidden = NO;
+            [self.headIndexes setItemColorAtIndex:1];
+        }
+        if (insetY >= [self.tableView rectForSection:6].origin.y && insetY < [self.tableView rectForSection:8].origin.y) {//课程
+            self.headIndexes.hidden = NO;
+            [self.headIndexes setItemColorAtIndex:2];
+        }
+        if (insetY >= [self.tableView rectForSection:8].origin.y) {//名师
+            self.headIndexes.hidden = NO;
+            [self.headIndexes setItemColorAtIndex:3];
+        }
+        if (insetY < [self.tableView rectForSection:2].origin.y){
+            self.headIndexes.hidden = YES;
+        }
+
+    }
+    
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (indexPath.section == 1) {//上课地点
+        WLKTCourseDetailMapVC *vc = [[WLKTCourseDetailMapVC alloc]initWithAddress:self.school.schpoint[indexPath.row].address schoolName:self.school.schpoint[indexPath.row].name];
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+    if (indexPath.section == 7) {//学校活动
+        WLKTActivityDetailVC *vc = [[WLKTActivityDetailVC alloc]initWithActivityId:self.school.actlist[indexPath.row].aid];
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+    if (indexPath.section == 10) {//学校新闻
+        WLKTSchoolNewsListTVC *vc = [[WLKTSchoolNewsListTVC alloc]initWithSchoolId:self.schoolId];
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+}
+
+#pragma mark - head indexes delegete
+- (void)SchoolHeadIndexesDidClick:(NSInteger)tag{
+    CGPoint offset = CGPointMake(0, 0);
+    if (tag == 0) {//学校介绍
+        offset = CGPointMake([self.tableView rectForSection:2].origin.x, [self.tableView rectForSection:2].origin.y - self.headIndexInset + 2);
+    }
+    if (tag == 1) {//全景校园
+        offset = CGPointMake([self.tableView rectForSection:3].origin.x, [self.tableView rectForSection:3].origin.y - self.headIndexInset + 2);
+    }
+    if (tag == 2) {//课程/活动
+        offset = CGPointMake([self.tableView rectForSection:6].origin.x, [self.tableView rectForSection:6].origin.y - self.headIndexInset + 2);
+    }
+    if (tag == 3) {//名师/新闻
+        offset = CGPointMake([self.tableView rectForSection:8].origin.x, [self.tableView rectForSection:8].origin.y - self.headIndexInset + 2);
+    }
+    [self.tableView setContentOffset:offset animated:YES];
+}
+
+#pragma mark - bottom buttons delegate
+- (void)schoolBottomButtonDidSelectedButton:(UIButton *)button{
+    if (button.tag == 0) {//咨询电话
+        [self phoneButtonAct:button];
+    }
+    if (button.tag == 1) {//在线咨询
+        WLKTOnlineServiceVC *vc = [[WLKTOnlineServiceVC alloc]init];
+        vc.url = self.school.schoolinfo.kftokenjs;
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+    if (button.tag == 2) {//收藏
+        [self collectBtnAct:button];
+    }
+    if (button.tag == 3) {//预约试听
+        WLKTSchoolAppointment *appoint = [[WLKTSchoolAppointment alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+        appoint.delegate = self;
+        [self.view addSubview:appoint];
+    }
+
+}
+
+#pragma mark - 预约试听 delegate
+- (void)schoolAppointmentConfirmPhone:(NSString *)phone detail:(NSString *)detail success:(void (^)(void))success{
+    if (!self.school) {
+        return;
+    }
+    WLKTCourseDetailListenApi *api = [[WLKTCourseDetailListenApi alloc]initWithSchoolId:self.school.schoolinfo.suid phone:phone content:detail courseId:@""];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        [SVProgressHUD showSuccessWithStatus:@"预约成功!"];
+        success();
+    } failure:^(__kindof YTKBaseRequest *request) {
+        ShowApiError
+    }];
+}
+
+#pragma mark - CoreLocation 代理
+-(void)locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray *)locations{
+    CLLocation *location = [locations firstObject];//取出第一个位置
+    self.currentCoordinate = location.coordinate;//位置坐标
+//    NSDictionary* testdic = BMKConvertBaiduCoorFrom(location.coordinate,BMK_COORDTYPE_GPS);
+//    self.currentCoordinate = BMKCoorDictionaryDecode(testdic);
+    self.currentCoordinate = [WLKTLocationChange wgs84ToGCJ_02:location.coordinate];
+    [self loadData];
+    //如果不需要实时定位，使用完即关闭定位服务
+    [_locationManager stopUpdatingLocation];
+}
+
+- (void)setCLLocation{
+    if(![CLLocationManager locationServicesEnabled]){
+        UIAlertController *al = [UIAlertController alertControllerWithTitle:@"打开[定位服务]来允许[未来课堂]确定您的位置" message:@"请在系统设置中开启定位服务(设置>隐私>定位服务>开启)" preferredStyle:UIAlertControllerStyleAlert];
+        UIAlertAction *cancel = [UIAlertAction actionWithTitle:@"否" style:UIAlertActionStyleCancel handler:nil];
+        [al addAction:cancel];
+        UIAlertAction *def = [UIAlertAction actionWithTitle:@"是" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            //跳转到定位权限页面
+            NSURL *url = [NSURL URLWithString:UIApplicationOpenSettingsURLString];
+            if( [[UIApplication sharedApplication]canOpenURL:url] ) {
+                [[UIApplication sharedApplication] openURL:url];
+            }
+        }];
+        [al addAction:def];
+        [self presentViewController:al animated:YES completion:nil];
+    }
+}
+
+#pragma mark - LGPhotoPickerBrowserViewControllerDataSource
+//学校相册
+- (void)didSelectedPhotoItem:(NSIndexPath *)indexPath type:(LGShowImageType)type{
+    self.isStudentPhotoArray = false;
+    [self pushPhotoBroswerWithStyle:type seletedIndex:indexPath];
+}
+
+//给照片浏览器传image的时候先包装成LGPhotoPickerBrowserPhoto对象
+- (void)prepareForPhotoBroswerWithImageArray:(NSArray *)imageArray studentImage:(NSArray *)studentImgArr{
+    
+    if (imageArray) {
+        self.LGPhotoPickerBrowserPhotoArray = [[NSMutableArray alloc] init];
+        for (int i = 0; i < imageArray.count; i++) {
+            LGPhotoPickerBrowserPhoto *photo = [[LGPhotoPickerBrowserPhoto alloc] init];
+            photo.photoURL = [NSURL URLWithString:imageArray[i]];
+            [self.LGPhotoPickerBrowserPhotoArray addObject:photo];
+        }
+    }
+    if (studentImgArr){
+        self.LGPhotoPickerBrowserStudentPhotoArray = [[NSMutableArray alloc] init];
+        for (int i = 0; i < studentImgArr.count; i++) {
+            LGPhotoPickerBrowserPhoto *photo = [[LGPhotoPickerBrowserPhoto alloc] init];
+            photo.photoURL = [NSURL URLWithString:studentImgArr[i]];
+            [self.LGPhotoPickerBrowserStudentPhotoArray addObject:photo];
+        }
+    }
+    
+}
+//初始化图片浏览器
+- (void)pushPhotoBroswerWithStyle:(LGShowImageType)style seletedIndex:(NSIndexPath *)indexPath{
+    LGPhotoPickerBrowserViewController *BroswerVC = [[LGPhotoPickerBrowserViewController alloc] init];
+    BroswerVC.delegate = self;
+    BroswerVC.dataSource = self;
+    BroswerVC.showType = style;
+    BroswerVC.currentIndexPath = indexPath;
+    BroswerVC.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
+    self.showType = style;
+    [self presentViewController:BroswerVC animated:YES completion:nil];
+}
+
+- (NSInteger)photoBrowser:(LGPhotoPickerBrowserViewController *)photoBrowser numberOfItemsInSection:(NSUInteger)section{
+    if (self.showType == LGShowImageTypeImageBroswer) {
+        if (self.isStudentPhotoArray) {
+            return self.LGPhotoPickerBrowserStudentPhotoArray.count;
+        }
+        return self.LGPhotoPickerBrowserPhotoArray.count;
+    } else {
+        NSLog(@"非法数据源");
+        return 0;
+    }
+}
+
+- (id<LGPhotoPickerBrowserPhoto>)photoBrowser:(LGPhotoPickerBrowserViewController *)pickerBrowser photoAtIndexPath:(NSIndexPath *)indexPath{
+    if (self.showType == LGShowImageTypeImageBroswer) {
+        if (self.isStudentPhotoArray) {
+            return [self.LGPhotoPickerBrowserStudentPhotoArray objectAtIndex:indexPath.item];
+        }
+        return [self.LGPhotoPickerBrowserPhotoArray objectAtIndex:indexPath.item];
+    } else{
+        NSLog(@"非法数据源");
+        return nil;
+    }
+}
+
+#pragma mark - head cell delegate
+- (void)didSelectedPhoneButton{
+    if (self.school.schoolinfo.suid.length) {
+        [WLKTPolicyPhone policyPhoneWithType:WLKTPolicyPhoneTypeSchool typeId:self.school.schoolinfo.suid target:self];
+    }
+    
+}
+
+#pragma mark - VR delegate
+- (void)didSelectedVRPhotoWithIndex:(NSIndexPath *)indexPath{
+    if (indexPath.item >= self.school.vrlist.count) {
+        return;
+    }
+    WLKTSchoolVRPlayVC *vc = [[WLKTSchoolVRPlayVC alloc]initWithVRListData:self.school.vrlist[indexPath.item]];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+#pragma mark - video delegate
+- (void)didSelectedVideoItem:(NSIndexPath *)indexPath{
+    WLKTSchoolVideoPlayVC *vc = [[WLKTSchoolVideoPlayVC alloc]initWithVideoId:self.school.videolist[indexPath.item].video];
+    [self presentViewController:vc animated:YES completion:nil];
+//    self.videoPlayerView = [[ZFPlayerView alloc] init];
+//    [self.view addSubview:self.videoPlayerView];
+//    [self.videoPlayerView mas_makeConstraints:^(MASConstraintMaker *make) {
+//        make.top.equalTo(self.view).offset(20);
+//        make.left.right.equalTo(self.view);
+//        // 这里宽高比16：9，可以自定义视频宽高比
+//        make.height.equalTo(self.videoPlayerView.mas_width).multipliedBy(9.0f/16.0f);
+//    }];
+//
+//    // 初始化控制层view(可自定义)
+//    ZFPlayerControlView *controlView = [[ZFPlayerControlView alloc] init];
+//    // 初始化播放模型
+//    ZFPlayerModel *playerModel = [[ZFPlayerModel alloc]init];
+//    playerModel.fatherView = [UIApplication sharedApplication].keyWindow;
+//    playerModel.videoURL = [NSURL URLWithString:self.school.videolist[indexPath.item].video];
+//    playerModel.title = self.school.videolist[indexPath.item].title;
+//    [self.videoPlayerView playerControlView:controlView playerModel:playerModel];
+//
+//    // 设置代理
+//    self.videoPlayerView.delegate = self;
+//    // 自动播放
+//    [self.videoPlayerView autoPlayTheVideo];
+}
+
+#pragma mark - ZFPlayerDelegate
+- (void)zf_playerBackAction{
+    NSLog(@"player back");
+    [self.videoPlayerView removeFromSuperview];
+}
+
+#pragma mark - other course delegate
+- (void)didSelectedOtherCourseCollectionViewItem:(NSIndexPath *)indexPath{
+    WLKTCDPageController *vc = [[WLKTCDPageController alloc]initWithCourseId:self.school.courselist[indexPath.item].cid];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+#pragma mark - student cell delegate
+- (void)didSelectedStudentItem:(NSIndexPath *)indexPath type:(LGShowImageType)type{
+    self.isStudentPhotoArray = YES;
+    [self pushPhotoBroswerWithStyle:type seletedIndex:indexPath];
+}
+
+#pragma mark - LSGLoginCoordinatorDelegate
+- (void)loginCoordinatorDidFinishLogin:(WLKTLoginCoordinator *)loginCoordinator {
+    if (_loginBlock) {
+        _loginBlock();
+    }
+    
+    [_childCoordinator removeObject:loginCoordinator];
+}
+
+- (void)loginCoordinatorDidFinishLogin:(WLKTLoginCoordinator *)coordinator handler:(void (^)(UIViewController *))handler{
+    if (_loginBlock) {
+        _loginBlock();
+        handler(self);
+    }
+    
+    [_childCoordinator removeObject:coordinator];
+}
+
+- (void)loginCoordinatorDidRequestDismissal:(WLKTLoginCoordinator *)loginCoordinator {
+    [self.navigationController dismissViewControllerAnimated:YES completion:^{
+        [self.childCoordinator removeObject:loginCoordinator];
+    }];
+}
+
+- (void)loginWithComepletion:(void (^)(void))completion {
+    WLKTLoginCoordinator *cr = [WLKTLoginCoordinator new];
+    cr.delegate = self;
+    [self.childCoordinator addObject:cr];
+    self.loginBlock = completion;
+    [self.navigationController presentViewController:cr.navigationController animated:YES completion:nil];
+}
+
+#pragma mark - Action
+- (void)backButtonAct{
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (void)shareButtonAct:(id)sender{//分享
+    if (self.school.schoolinfo.shareappurl) {
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"isSNSPush"];
+        for (UIView *v in self.view.subviews) {
+            if ([v isKindOfClass:[WLKTCustomShare class]]) {
+                [v removeFromSuperview];
+            }
+        }
+        WLKTCustomShare *v = [[WLKTCustomShare alloc]initWithTitle:self.school.schoolinfo.schoolname detail:nil urlImage:self.school.schoolinfo.showpic url:self.school.schoolinfo.shareappurl taget:self height:ScreenHeight - NavigationBarAndStatusHeight];
+        [self.view addSubview:v];
+    }
+}
+
+- (void)phoneButtonAct:(id)sender{
+    [self didSelectedPhoneButton];
+    
+}
+
+- (void)course_activeMoreAct:(UIButton *)sender{
+    if (sender.tag == 6) {//课程
+        WLKTSchoolCourseCVC *vc = [[WLKTSchoolCourseCVC alloc]initWithSchoolId:self.schoolId];
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+    if (sender.tag == 7) {//活动
+        WLKTSchoolActiveTVC *vc = [[WLKTSchoolActiveTVC alloc]initWithSchoolId:self.schoolId];
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+}
+
+- (void)sectionDetailAct:(UIButton *)sender{//新闻
+    if (!self.school.newslist.count) {
+        return;
+    }
+    WLKTSchoolNewsListTVC *vc = [[WLKTSchoolNewsListTVC alloc]initWithSchoolId:self.schoolId];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+//截屏响应
+- (void)userDidTakeScreenshot:(NSNotification *)notification{
+    //人为截屏, 模拟用户截屏行为, 获取所截图片
+    UIImage *image_ = [WLKTQRShare imageWithScreenshot];
+    UIWindow *keyWindow = [[UIApplication sharedApplication]keyWindow];
+    if (_isHidden) {
+        WLKTScreenshotsPopView *popView = [WLKTScreenshotsPopView initWithScreenShots:image_ selectSheetBlock:^(SelectSheetType type) {
+            if (type == WeiXinSelectSheetType){
+                [WLKTQRShare shareImageAndTextToPlatformType:UMSocialPlatformType_WechatSession image:[WLKTQRShare combineScreenshotsImage:image_ URLString:self.school.schoolinfo.shareappurl]];
+            }
+            if (type == WeiXinCircleSelectSheetType){
+                [WLKTQRShare shareImageAndTextToPlatformType:UMSocialPlatformType_WechatTimeLine image:[WLKTQRShare combineScreenshotsImage:image_ URLString:self.school.schoolinfo.shareappurl]];
+            }
+            if (type == QQSelectSheetType) {
+                [WLKTQRShare shareImageAndTextToPlatformType:UMSocialPlatformType_QQ image:[WLKTQRShare combineScreenshotsImage:image_ URLString:self.school.schoolinfo.shareappurl]];
+            }
+            if (type == SinaSelectSheetType) {
+                [WLKTQRShare shareImageAndTextToPlatformType:UMSocialPlatformType_Sina image:[WLKTQRShare combineScreenshotsImage:image_ URLString:self.school.schoolinfo.shareappurl]];
+            }
+        }];
+        [popView show];
+
+        [keyWindow addSubview:popView];
+        _isHidden = NO;
+        popView.hiddenBlock = ^{
+            self.isHidden = YES;
+        };
+    }else{
+
+    }
+}
+//收藏
+- (void)collectBtnAct:(UIButton *)sender{
+    if (!TheCurUser) {
+        [SVProgressHUD showInfoWithStatus:@"请先登录"];
+        return;
+    }
+    [SVProgressHUD show];
+    if ([sender.titleLabel.text isEqualToString:@"收 藏"]) {
+        WLKTSchoolCollectApi *api = [[WLKTSchoolCollectApi alloc]initWithSchoolId:self.schoolId];
+        [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [SVProgressHUD dismiss];
+                [sender setTitle:@"已收藏" forState:UIControlStateNormal];
+                [sender setImage:[UIImage imageNamed:@"课程详情已收藏"] forState:UIControlStateNormal];
+            });
+        } failure:^(__kindof YTKBaseRequest *request) {
+            ShowApiError
+        }];
+    }
+    else{//取消收藏
+        WLKTSchoolCollectCancelApi *api = [[WLKTSchoolCollectCancelApi alloc]initWithSchoolId:self.schoolId];
+        [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [SVProgressHUD dismiss];
+                [sender setTitle:@"收 藏" forState:UIControlStateNormal];
+                [sender setImage:[UIImage imageNamed:@"课程详情未收藏"] forState:UIControlStateNormal];
+            });
+        } failure:^(__kindof YTKBaseRequest *request) {
+            ShowApiError
+        }];
+    }
+    
+}
+
+#pragma mark - get
+- (CLLocationManager *)locationManager{
+    if (!_locationManager) {
+        _locationManager = [[CLLocationManager alloc] init];
+        // 版本适配
+        if ([[UIDevice currentDevice].systemVersion floatValue] >= 8.0) {
+            [_locationManager requestWhenInUseAuthorization];
+        }
+        //设置代理
+        _locationManager.delegate = self;
+        //设置定位精度
+        _locationManager.desiredAccuracy = kCLLocationAccuracyBest;
+        //定位频率,每隔多少米定位一次
+        _locationManager.distanceFilter = 10.0;//十米定位一次
+    }
+    return _locationManager;
+}
+- (UITableView *)tableView{
+    if (!_tableView) {
+        _tableView = [[UITableView alloc]initWithFrame:CGRectNull style:UITableViewStyleGrouped];
+        _tableView.delegate = self;
+        _tableView.dataSource = self;
+        _tableView.backgroundColor = [UIColor whiteColor];
+        _tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    }
+    return _tableView;
+}
+- (UIBarButtonItem *)phoneBarBtn{
+    if (!_phoneBarBtn) {
+        UIButton *p = [UIButton buttonWithType:UIButtonTypeCustom];
+        [p setFrame:CGRectMake(0, 0, 30, 30)];
+        [p setImage:[UIImage imageNamed:@"电话b"] forState:UIControlStateNormal];
+        [p addTarget:self action:@selector(phoneButtonAct:) forControlEvents:UIControlEventTouchUpInside];
+        _phoneBarBtn = [[UIBarButtonItem alloc]initWithCustomView:p];
+    }
+    return _phoneBarBtn;
+}
+- (UIBarButtonItem *)shareBarBtn{
+    if (!_shareBarBtn) {
+        UIButton *s = [UIButton buttonWithType:UIButtonTypeCustom];
+        [s setFrame:CGRectMake(0, 0, 30, 30)];
+        [s setImage:[UIImage imageNamed:@"分享"] forState:UIControlStateNormal];
+        [s addTarget:self action:@selector(shareButtonAct:) forControlEvents:UIControlEventTouchUpInside];
+        _shareBarBtn = [[UIBarButtonItem alloc]initWithCustomView:s];
+    }
+    return _shareBarBtn;
+}
+- (WLKTSchoolBottomBtns *)bottomBtns{
+    if (!_bottomBtns) {
+        _bottomBtns = [[WLKTSchoolBottomBtns alloc]initWithFrame:CGRectNull];
+        _bottomBtns.delegate = self;
+    }
+    return _bottomBtns;
+}
+- (WLKTSchoolHeadIndexes *)headIndexes{
+    if (!_headIndexes) {
+        _headIndexes = [[WLKTSchoolHeadIndexes alloc]initWithFrame:CGRectNull];
+        _headIndexes.delegate = self;
+        _headIndexes.hidden = YES;
+    }
+    return _headIndexes;
+}
+- (UILabel *)tableViewFooterlabel{
+    if (!_tableViewFooterlabel) {
+        _tableViewFooterlabel = [[UILabel alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 40)];
+        _tableViewFooterlabel.font = [UIFont systemFontOfSize:11];
+        _tableViewFooterlabel.textColor = KMainTextColor_9;
+        _tableViewFooterlabel.textAlignment = NSTextAlignmentCenter;
+        _tableViewFooterlabel.backgroundColor = separatorView_color;
+        _tableViewFooterlabel.text = @"已经到底啦～";
+    }
+    return _tableViewFooterlabel;
+}
+- (NSArray *)sectionTitleArr{
+    if (!_sectionTitleArr) {
+        _sectionTitleArr = @[@"", @"上课地点", @"学校介绍", @"全景校园", @"学校视频", @"学校相册", @"学校课程", @"学校活动", @"名师", @"明星学员", @"学校新闻"];
+    }
+    return _sectionTitleArr;
+}
+- (NSMutableArray *)detailImageArr{
+    if (!_detailImageArr) {
+        _detailImageArr = [NSMutableArray arrayWithCapacity:5];
+    }
+    return _detailImageArr;
+}
+- (NSMutableArray *)childCoordinator {
+    if (!_childCoordinator) {
+        _childCoordinator = [NSMutableArray array];
+    }
+    return _childCoordinator;
+}
+
+@end
+

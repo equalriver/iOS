@@ -1,0 +1,183 @@
+//
+//  WLKTNewsVideoTVC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/25.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTNewsVideoTVC.h"
+#import "WLKTNewsVideoCell.h"
+#import "WLKTNewsApi.h"
+#import "WLKTTableviewRefresh.h"
+#import "WLKTNewsVideoList.h"
+#import <ZFPlayer.h>
+#import "WLKTNewsVideoDetailVC.h"
+#import "WLKTNewsAddVideoHitsApi.h"
+
+@interface WLKTNewsVideoTVC ()<ZFPlayerDelegate>
+@property (strong, nonatomic) ZFPlayerView *videoPlayerView;
+
+@property (nonatomic) NSInteger page;
+@property (strong, nonatomic) NSMutableArray<WLKTNewsVideoList *> *dataArr;
+@end
+
+@implementation WLKTNewsVideoTVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.page = 1;
+    [self setRefresh];
+    [self loadVideoDataWithPage:self.page];
+}
+
+#pragma mark - network
+- (void)loadVideoDataWithPage:(NSInteger)page{
+    self.tableView.state = WLKTViewStateLoading;
+    WLKTNewsApi *api = [[WLKTNewsApi alloc]initWithType:WLKTNewsTypeVideo page:page];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        self.tableView.state = WLKTViewStateNormal;
+        NSArray *arr = [NSArray modelArrayWithClass:[WLKTNewsVideoList class] json:request.responseJSONObject[@"result"]];
+        if (arr.count == 0) {
+            if (page > 1) {
+                [self.tableView.mj_footer endRefreshingWithNoMoreData];
+            }
+            else{
+                [self.tableView.mj_footer endRefreshing];
+                self.tableView.state = WLKTViewStateEmpty;
+                self.tableView.imageForStateEmpty = [UIImage imageNamed:@"无内容"];
+                self.tableView.titleForStateEmpty = @"无内容";
+            }
+        }
+        else{
+            if (page == 1) {
+                [self.dataArr removeAllObjects];
+            }
+            [self.dataArr addObjectsFromArray:arr];
+            [self.tableView.mj_footer endRefreshing];
+        }
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView reloadData];
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView.mj_footer endRefreshing];
+        self.tableView.state = WLKTViewStateError;
+        WS(weakSelf);
+        self.tableView.emptyButtonClickBlock = ^{
+            [weakSelf loadVideoDataWithPage:weakSelf.page];
+        };
+    }];
+}
+
+- (void)setRefresh{
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^{
+        weakSelf.page = 1;
+        [weakSelf loadVideoDataWithPage:1];
+    }];
+    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableView block:^{
+        weakSelf.page++;
+        [weakSelf loadVideoDataWithPage:weakSelf.page];
+    }];
+}
+
+- (void)addVideoHitsWithIndex:(NSInteger)index{
+    WLKTNewsAddVideoHitsApi *api = [[WLKTNewsAddVideoHitsApi alloc]initWithNewsId:self.dataArr[index].nid];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        
+    }];
+}
+
+#pragma mark - Table view data source
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return self.dataArr.count;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    CGFloat h = 250;
+    CGFloat hh = [self.dataArr[indexPath.row].title getSizeWithWidth:ScreenWidth - 20 Font:18.5].height;
+    h += hh > 45 ? 40 : hh;
+    return h;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    WLKTNewsVideoCell *cell = [tableView dequeueReusableCellWithIdentifier:@"WLKTNewsVideoCell"];
+    if (cell == nil) {
+        cell = [[WLKTNewsVideoCell alloc]init];
+    }
+//    [cell setCellData:self.dataArr[indexPath.row] videoTapHandle:^{
+////        [self didSelectedVideoItem:indexPath];
+//        [self addVideoHitsWithIndex:indexPath.row];
+//        WLKTNewsVideoDetailVC *vc = [[WLKTNewsVideoDetailVC alloc]initWithNewsId:self.dataArr[indexPath.row].nid];
+//        vc.hidesBottomBarWhenPushed = YES;
+//        [self.navigationController pushViewController:vc animated:YES];
+//    }];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [self addVideoHitsWithIndex:indexPath.row];
+    WLKTNewsVideoDetailVC *vc = [[WLKTNewsVideoDetailVC alloc]initWithNewsId:self.dataArr[indexPath.row].nid];
+    vc.hidesBottomBarWhenPushed = YES;
+    [self presentViewController:vc animated:YES completion:nil];
+}
+/*
+#pragma mark - video action
+- (void)didSelectedVideoItem:(NSIndexPath *)indexPath{
+    [self addVideoHitsWithIndex:indexPath.row];
+    self.videoPlayerView = [[ZFPlayerView alloc] init];
+    [self.view addSubview:self.videoPlayerView];
+    [self.videoPlayerView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(self.view).offset(20);
+        make.left.right.equalTo(self.view);
+        // 这里宽高比16：9，可以自定义视频宽高比
+        make.height.equalTo(self.videoPlayerView.mas_width).multipliedBy(9.0f/16.0f);
+    }];
+    
+    // 初始化控制层view(可自定义)
+    ZFPlayerControlView *controlView = [[ZFPlayerControlView alloc] init];
+    // 初始化播放模型
+    ZFPlayerModel *playerModel = [[ZFPlayerModel alloc]init];
+    playerModel.fatherView = [UIApplication sharedApplication].keyWindow;
+    playerModel.videoURL = [NSURL URLWithString:self.dataArr[indexPath.row].video];
+    playerModel.title = self.dataArr[indexPath.row].title;
+    [self.videoPlayerView playerControlView:controlView playerModel:playerModel];
+    
+    // 设置代理
+    self.videoPlayerView.delegate = self;
+    // 自动播放
+    [self.videoPlayerView autoPlayTheVideo];
+}*/
+
+#pragma mark - ZFPlayerDelegate
+- (void)zf_playerBackAction{
+    NSLog(@"player back");
+    [self.videoPlayerView removeFromSuperview];
+}
+
+#pragma mark - UIScrollViewDelegate
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView{
+    [[UIApplication sharedApplication].keyWindow endEditing:YES];
+    
+    if (scrollView.contentOffset.y > ScreenHeight) {
+        [[NSNotificationCenter defaultCenter]postNotificationName:@"NewsGoTopShowNoti" object:nil];
+    }
+    else{
+        [[NSNotificationCenter defaultCenter]postNotificationName:@"NewsGoTopDismissNoti" object:nil];
+    }
+}
+
+#pragma mark -
+- (NSMutableArray<WLKTNewsVideoList *> *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray arrayWithCapacity:10];
+    }
+    return _dataArr;
+}
+
+@end

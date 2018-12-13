@@ -1,0 +1,353 @@
+//
+//  WLKTGetCouponVC.m
+//  wlkt
+//
+//  Created by 尹平江 on 2017/8/16.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTGetCouponVC.h"
+#import "WLKTGetCouponCell.h"
+#import "WLKTCouponCenterApi.h"
+#import "WLKTCouponCenterData.h"
+#import "WLKTGetCouponApi.h"
+#import "WLKTMyCouponVC.h"
+#import "WLKTGetCouponAlertView.h"
+#import "WLKTGoCouponShopTVC.h"
+#import "WLKTLogin.h"
+
+@interface WLKTGetCouponVC ()<UITableViewDelegate, UITableViewDataSource>
+@property (strong, nonatomic) UITableView *getCouponTableView;
+@property (strong, nonatomic) UIImageView *headBgIV;
+@property (strong, nonatomic) UIButton *goMyCouponBtn;
+@property (strong, nonatomic) CAGradientLayer *gradientLayer;
+@property (strong, nonatomic) WLKTGetCouponAlertView *alertView;
+@property (strong, nonatomic) UIButton *backButton;
+
+@property (strong, nonatomic) NSMutableArray<WLKTCouponCenterData *> *dataArr;
+@property (nonatomic) CGFloat currentAlpha;
+@end
+
+@implementation WLKTGetCouponVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"领券中心";
+    [self.view.layer addSublayer:self.gradientLayer];
+    self.navigationController.navigationBar.barTintColor = [UIColor clearColor];
+    self.view.backgroundColor = [UIColor whiteColor];
+    [self.view addSubview:self.getCouponTableView];
+    [self.getCouponTableView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.width.mas_equalTo(self.view);
+        make.centerX.mas_equalTo(self.view);
+        make.top.mas_equalTo(self.view).offset(-NavigationBarAndStatusHeight);
+        make.bottom.mas_equalTo(self.view.mas_bottom);
+    }];
+    [self.view addSubview:self.backButton];
+    [self request];
+    
+    
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]initWithImage:[UIImage imageNamed:@"领券中心返回"] style:UIBarButtonItemStylePlain target:self action:@selector(backBarButtonItemAct:)];
+    [self.alertView.shutDownBtn addTarget:self action:@selector(alertViewShutdownAct:) forControlEvents:UIControlEventTouchUpInside];
+    [self.alertView.goMyCouponBtn addTarget:self action:@selector(alertViewGoCouponAct:) forControlEvents:UIControlEventTouchUpInside];
+    
+}
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+
+    if (IsIOS_11_Later) {
+        self.getCouponTableView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+    }
+    else{
+        self.automaticallyAdjustsScrollViewInsets = NO;
+    }
+    [self.navigationController.navigationBar setBackgroundImage:[UIImage imageWithColor:[UIColor colorWithRed:51/255.0 green:196/255.0 blue:218/255.0 alpha:self.currentAlpha >= 1 ? 0.99 : self.currentAlpha]] forBarMetrics:UIBarMetricsDefault];
+    [self.navigationController.navigationBar setShadowImage:[UIImage imageWithColor:[UIColor colorWithRed:51/255.0 green:196/255.0 blue:218/255.0 alpha:self.currentAlpha >= 1 ? 0.99 : self.currentAlpha]]];
+    self.navigationController.navigationBar.titleTextAttributes = @{NSForegroundColorAttributeName: [UIColor colorWithWhite:1.0 alpha:self.currentAlpha]};
+    
+}
+
+- (void)viewDidAppear:(BOOL)animated{
+    [super viewDidAppear:animated];
+    if (self.getCouponTableView.contentOffset.y < 1) {
+        [self.navigationController setNavigationBarHidden:YES animated:NO];
+    }
+}
+
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    self.navigationController.navigationBar.titleTextAttributes = @{NSForegroundColorAttributeName: [UIColor colorWithWhite:1.0 alpha:1.0]};
+    [self.navigationController.navigationBar setBackgroundImage:[UIImage imageWithColor:kNavBarBackgroundColor] forBarMetrics:UIBarMetricsDefault];
+    [self.navigationController.navigationBar setShadowImage:[UIImage imageWithColor:kNavBarBackgroundColor]];
+    [self.navigationController setNavigationBarHidden:NO animated:NO];
+}
+
+#pragma mark - network
+- (void)request{
+    [SVProgressHUD show];
+    WLKTCouponCenterApi *api = [[WLKTCouponCenterApi alloc]init];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        [SVProgressHUD dismiss];
+        if (request.responseJSONObject[@"result"]) {
+            NSArray *listArr = [NSArray modelArrayWithClass:[WLKTCouponCenterData class] json:request.responseJSONObject[@"result"][@"list"]];
+            self.dataArr = listArr.mutableCopy;
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self.getCouponTableView reloadData];
+            });
+        }
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        self.getCouponTableView.state = WLKTViewStateError;
+        WS(weakSelf);
+        self.getCouponTableView.emptyButtonClickBlock = ^{
+            [weakSelf request];
+        };
+    }];
+}
+
+- (void)requestWithMcid:(NSString *)mcid success:(void(^)(void))success{
+    [SVProgressHUD show];
+    WLKTGetCouponApi *api = [[WLKTGetCouponApi alloc]initWithMcid:mcid];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        NSString *msg = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"message"]];
+        if (![msg containsString:@"null"]) {
+            [SVProgressHUD showInfoWithStatus:msg];
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [SVProgressHUD dismiss];
+            success();
+        });
+    } failure:^(__kindof YTKBaseRequest *request) {
+        ShowApiError
+    }];
+}
+
+#pragma mark - button action
+- (void)goMyCouponAct:(UIButton *)sender{
+    if (!TheCurUser.username) {
+        [SVProgressHUD showInfoWithStatus:@"未登录"];
+        return;
+    }
+    WLKTMyCouponVC *vc = [[WLKTMyCouponVC alloc]init];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+- (void)backBarButtonItemAct:(UIBarButtonItem *)sender{
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (void)backButtonAct{
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (void)alertViewShutdownAct:(UIButton *)sender{
+    [self.alertView removeFromSuperview];
+}
+
+- (void)alertViewGoCouponAct:(UIButton *)sender{
+    NSIndexPath *indexPath = [self.getCouponTableView indexPathForSelectedRow];
+    WLKTGoCouponShopTVC *vc = [[WLKTGoCouponShopTVC alloc]initWithCouponId:self.dataArr[indexPath.row].mcid];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+#pragma mark - table view
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return 3;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    if (section == 1) {
+        return self.dataArr.count;
+    }
+    return 1;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (indexPath.section == 1) {
+        WLKTGetCouponCell *couponCell = [tableView dequeueReusableCellWithIdentifier:@"getCouponCell"];
+        if (couponCell == nil) {
+            couponCell = [[WLKTGetCouponCell alloc]init];
+        }
+        couponCell.selectionStyle = UITableViewCellSelectionStyleNone;
+        if (self.dataArr.count > 0) {
+            [couponCell setCellData:self.dataArr[indexPath.row]];
+        }
+        return couponCell;
+    }
+    else{
+        UITableViewCell *cell = [[UITableViewCell alloc]init];
+        if (indexPath.section == 0) {
+            [cell.contentView addSubview:self.headBgIV];
+        }
+        if (indexPath.section == 2) {
+            [cell.contentView addSubview:self.goMyCouponBtn];
+        }
+        cell.backgroundColor = [UIColor clearColor];
+        return cell;
+    }
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (indexPath.section == 1) {
+        WLKTGetCouponCell *cell = [tableView cellForRowAtIndexPath:indexPath];
+        if ([cell.getCouponLabel.text isEqualToString:@"立即领取"]) {
+            [self requestWithMcid:self.dataArr[indexPath.row].mcid success:^{
+                cell.getCouponLabel.text = @"马上逛逛";
+                [self.view addSubview:self.alertView];
+            }];
+        }
+        else{
+            WLKTGoCouponShopTVC *vc = [[WLKTGoCouponShopTVC alloc]initWithCouponId:self.dataArr[indexPath.row].mcid];
+            [self.navigationController pushViewController:vc animated:YES];
+        }
+    }
+    
+}
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView{
+    self.backButton.alpha = 1 - self.currentAlpha;
+    if (self.currentAlpha > 0.1) {
+        [self.navigationController setNavigationBarHidden:NO animated:NO];
+    }
+    else{
+        [self.navigationController setNavigationBarHidden:YES animated:NO];
+    }
+    self.navigationController.navigationBar.titleTextAttributes = @{NSForegroundColorAttributeName: [UIColor colorWithWhite:1.0 alpha:self.currentAlpha]};
+    [self.navigationController.navigationBar setBackgroundImage:[UIImage imageWithColor:[UIColor colorWithRed:51/255.0 green:196/255.0 blue:218/255.0 alpha:self.currentAlpha >= 1 ? 0.99 : self.currentAlpha]] forBarMetrics:UIBarMetricsDefault];
+    [self.navigationController.navigationBar setShadowImage:[UIImage imageWithColor:[UIColor colorWithRed:51/255.0 green:196/255.0 blue:218/255.0 alpha:self.currentAlpha >= 1 ? 0.99 : self.currentAlpha]]];
+    self.currentAlpha = scrollView.contentOffset.y / 200.0 >= 1.0 ? 1 : scrollView.contentOffset.y / 200.0;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (indexPath.section == 0) {
+        return ScreenWidth;
+    }
+    if (indexPath.section == 1) {
+        return 90;
+    }
+    if (indexPath.section == 2) {
+        return 50;
+    }
+    return 80;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    if (section == 1) {
+        return 5;
+    }
+    if (section == 2) {
+        return 30;
+    }
+    return 0;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    if (section == 2) {
+        return 50;
+    }
+    return 0;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    if (section == 1) {
+        UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 5)];
+        v.backgroundColor = [UIColor clearColor];
+        return v;
+    }
+    UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 30)];
+    v.backgroundColor = [UIColor clearColor];
+    return v;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section{
+    UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 50)];
+    v.backgroundColor = [UIColor clearColor];
+    return v;
+}
+
+#pragma mark - makeConstraints
+//- (void)makeConstraints{
+//    [self.headBgIV mas_makeConstraints:^(MASConstraintMaker *make) {
+//        make.size.mas_equalTo(CGSizeMake(ScreenWidth, ScreenWidth));
+//        make.top.mas_equalTo(self.view).offset(-64);
+//        make.left.mas_equalTo(self.view);
+//    }];
+//    [self.getCouponTableView mas_makeConstraints:^(MASConstraintMaker *make) {
+//        make.size.mas_equalTo(CGSizeMake(ScreenWidth - 20, 450 * ScreenRatio_6));
+//        make.top.mas_equalTo(self.headBgIV.mas_bottom).offset(14 * ScreenRatio_6);
+//        make.centerX.mas_equalTo(self.view);
+//    }];
+//    [self.goMyCouponBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+//        make.size.mas_equalTo(CGSizeMake(275 * ScreenRatio_6, 50 * ScreenRatio_6));
+//        make.centerX.mas_equalTo(self.view);
+//        make.top.mas_equalTo(self.getCouponTableView.mas_bottom).offset(34 * ScreenRatio_6);
+//    }];
+//}
+
+#pragma mark - get
+- (UITableView *)getCouponTableView{
+    if (!_getCouponTableView) {
+        _getCouponTableView = [[UITableView alloc]init];
+        _getCouponTableView.backgroundColor = [UIColor clearColor];
+        _getCouponTableView.delegate = self;
+        _getCouponTableView.dataSource = self;
+        _getCouponTableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+        _getCouponTableView.bounces = NO;
+    }
+    return _getCouponTableView;
+}
+- (UIImageView *)headBgIV{
+    if (!_headBgIV) {
+        _headBgIV = [[UIImageView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenWidth)];
+        _headBgIV.image = [UIImage imageNamed:@"领券中心底板"];
+    }
+    return _headBgIV;
+}
+- (UIButton *)goMyCouponBtn{
+    if (!_goMyCouponBtn) {
+        _goMyCouponBtn = [[UIButton alloc]initWithFrame:CGRectMake((ScreenWidth - 275 * ScreenRatio_6) /2, 0, 275 * ScreenRatio_6, 50)];
+        [_goMyCouponBtn setTitle:@"查看我的卡券" forState:UIControlStateNormal];
+        [_goMyCouponBtn setTitleColor:[UIColor colorWithHexString:@"#ffffff"] forState:UIControlStateNormal];
+        _goMyCouponBtn.titleLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightSemibold];
+        _goMyCouponBtn.layer.masksToBounds = YES;
+        _goMyCouponBtn.layer.cornerRadius = 20;
+        _goMyCouponBtn.backgroundColor = [UIColor colorWithHexString:@"#f85f54"];
+        [_goMyCouponBtn addTarget:self action:@selector(goMyCouponAct:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _goMyCouponBtn;
+}
+- (CAGradientLayer *)gradientLayer{
+    if (!_gradientLayer) {
+        _gradientLayer = [CAGradientLayer layer];
+        _gradientLayer.colors = @[(__bridge id)kMainTextColor_red.CGColor, (__bridge id)[UIColor colorWithRed:1.0 green:180/255.0 blue:110/255.0 alpha:1.0].CGColor];
+        _gradientLayer.locations = @[@0.1];
+        _gradientLayer.startPoint = CGPointMake(0, 0);
+        _gradientLayer.endPoint = CGPointMake(0, 1.0);
+        _gradientLayer.frame = CGRectMake(0, 0, ScreenWidth, ScreenHeight -IphoneXBottomInsetHeight);
+
+    }
+    return _gradientLayer;
+}
+- (WLKTGetCouponAlertView *)alertView{
+    if (!_alertView) {
+        _alertView = [[WLKTGetCouponAlertView alloc]initWithFrame:CGRectMake(0, -NavigationBarAndStatusHeight, ScreenWidth, ScreenHeight -IphoneXBottomInsetHeight)];
+    }
+    return _alertView;
+}
+- (UIButton *)backButton{
+    if (!_backButton) {
+        _backButton = [[UIButton alloc]initWithFrame:CGRectMake(10, 25 + IphoneXBottomInsetHeight, 30, 30)];
+        [_backButton setImage:[UIImage imageNamed:@"领券中心返回"] forState:UIControlStateNormal];
+        [_backButton addTarget:self action:@selector(backButtonAct) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _backButton;
+}
+- (NSMutableArray<WLKTCouponCenterData *> *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray array];
+    }
+    return _dataArr;
+}
+@end

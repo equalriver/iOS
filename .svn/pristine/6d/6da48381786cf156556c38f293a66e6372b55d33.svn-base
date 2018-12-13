@@ -1,0 +1,466 @@
+//
+//  WLKTActiveRegisterCell.m
+//  wlkt
+//
+//  Created by 尹平江 on 2017/7/10.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTActiveRegisterCell.h"
+
+@implementation WLKTActiveRegisterCell
+
+#pragma mark - init
+
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        [self.contentView addSubview:self.headView];
+        [self.contentView addSubview:self.schoolIconIV];
+        [self.contentView addSubview:self.schoolTitleLabel];
+        [self.contentView addSubview:self.schoolDetailIconIV];
+        [self.contentView addSubview:self.payStateLabel];
+        [self.contentView addSubview:self.separatorView_one];
+        [self.contentView addSubview:self.activeImgIV];
+        [self.contentView addSubview:self.activeNameLabel];
+        [self.contentView addSubview:self.priceLabel];
+        [self.contentView addSubview:self.activeStateLabel];
+        [self.contentView addSubview:self.activeNumLabel];
+        [self.contentView addSubview:self.separatorView_two];
+        [self.contentView addSubview:self.registerIcon];
+        [self.contentView addSubview:self.registerLabel];
+        [self.contentView addSubview:self.dealIcon];
+        [self.contentView addSubview:self.dealLabel];
+        [self.contentView addSubview:self.separatorView_three];
+        [self.contentView addSubview:self.activeTimeIcon];
+        [self.contentView addSubview:self.activeTimeLabel];
+        [self.contentView addSubview:self.locationIcon];
+        [self.contentView addSubview:self.locationLabel];
+        [self.contentView addSubview:self.separatorView_four];
+        [self.contentView addSubview:self.totalPriceLabel];
+    }
+    
+    
+    [self setNeedsUpdateConstraints];
+    [self updateConstraintsIfNeeded];
+    return self;
+}
+
+#pragma mark - set data
+- (void)setCellContent:(WLKTActiveRegisterData *)data{
+    if (data) {
+        self.schoolTitleLabel.text = data.schoolname;
+        [self.activeImgIV setImageURL:[NSURL URLWithString:data.img]];
+        self.activeNameLabel.text = data.title;
+        self.activeNumLabel.text = [NSString stringWithFormat:@"X%@", data.keshi];
+        self.registerLabel.text = [NSString stringWithFormat:@"报名编号：%@", data.orderid.length > 0 ? data.orderid : @"暂无"];
+        self.dealLabel.text = [NSString stringWithFormat:@"交易号：%@", data.payment_trade_no.length > 0 ? data.payment_trade_no : @"暂无"];
+        self.activeTimeLabel.text = [NSString stringWithFormat:@"时间：%@", data.asctime.length > 0 ? data.asctime : @"暂无"];
+        self.locationLabel.text = [NSString stringWithFormat:@"地点：%@", data.address.length > 0 ? data.address : @"暂无"];
+        if ([data.actstatus containsString:@"进行中"]) {
+            self.activeStateLabel.textColor = [UIColor colorWithHexString:@"#ff5a4a"];
+            self.activeStateLabel.layer.borderColor = [UIColor colorWithHexString:@"#ff5a4a"].CGColor;
+            self.activeStateLabel.text = @"进行中";
+        }
+        if ([data.actstatus containsString:@"即将开始"]) {
+            self.activeStateLabel.textColor = [UIColor colorWithRed:1.0 green:220/255.0 blue:167/255.0 alpha:1.0];
+            self.activeStateLabel.layer.borderColor = [UIColor colorWithRed:1.0 green:220/255.0 blue:167/255.0 alpha:1.0].CGColor;
+            self.activeStateLabel.text = @"即将开始";
+        }
+        if ([data.actstatus containsString:@"结束"]) {
+            self.activeStateLabel.textColor = [UIColor colorWithWhite:182/255.0 alpha:1.0];
+            self.activeStateLabel.layer.borderColor = [UIColor colorWithWhite:182/255.0 alpha:1.0].CGColor;
+            self.activeStateLabel.text = @"已结束";
+        }
+        if ([data.price containsString:@"免费"]) {
+            self.priceLabel.text = data.price;
+        }
+        else{
+            NSMutableAttributedString *priceStr = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"%@元", data.price]];
+            [priceStr setAttributes:@{NSForegroundColorAttributeName : [UIColor colorWithHexString:@"#333333"], NSFontAttributeName : [UIFont systemFontOfSize:12]} range:NSMakeRange(priceStr.length - 1, 1)];
+            [priceStr setAttributes:@{NSForegroundColorAttributeName : [UIColor colorWithHexString:@"#333333"], NSFontAttributeName : [UIFont systemFontOfSize:16]} range:NSMakeRange(0, priceStr.length - 1)];
+            self.priceLabel.attributedText = priceStr;
+        }
+        
+        NSMutableAttributedString *str = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"共%@人报名 合计:%@元", data.keshi, data.money]];
+        NSUInteger len = data.keshi.length + data.money.length + 9;
+        [str setAttributes:@{NSForegroundColorAttributeName : [UIColor colorWithHexString:@"#333333"], NSFontAttributeName : [UIFont systemFontOfSize:12]} range:NSMakeRange(len - 1, 1)];
+        [str setAttributes:@{NSForegroundColorAttributeName : [UIColor colorWithHexString:@"#333333"], NSFontAttributeName : [UIFont systemFontOfSize:12]} range:NSMakeRange(0, 8 + data.keshi.length)];
+        [str setAttributes:@{NSForegroundColorAttributeName : [UIColor colorWithHexString:@"#333333"], NSFontAttributeName : [UIFont systemFontOfSize:16]} range:NSMakeRange(data.keshi.length + 8, data.money.length)];
+        self.totalPriceLabel.attributedText = str;
+        
+        [self.schoolTitleLabel mas_updateConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo([self getSizeWithStr:data.schoolname Height:25 * ScreenRatio_6 Font:13]);
+        }];
+        [self.activeNameLabel mas_updateConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo([self getSizeWithStr:data.title Width:150 * ScreenRatio_6 Font:14]);
+        }];
+        
+    }
+}
+
+- (CGSize) getSizeWithStr:(NSString *) str Width:(float)width Font:(float)fontSize
+{
+    NSDictionary * attribute = @{NSFontAttributeName:[UIFont systemFontOfSize:fontSize]};
+    CGSize tempSize = [str boundingRectWithSize:CGSizeMake(width, MAXFLOAT)
+                                        options:NSStringDrawingUsesLineFragmentOrigin
+                                     attributes:attribute
+                                        context:nil].size;
+    return tempSize;
+}
+
+- (CGSize) getSizeWithStr:(NSString *) str Height:(float)height Font:(float)fontSize
+{
+    NSDictionary * attribute = @{NSFontAttributeName :[UIFont systemFontOfSize:fontSize] };
+    CGSize tempSize=[str boundingRectWithSize:CGSizeMake(MAXFLOAT, height)
+                                      options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading
+                                   attributes:attribute
+                                      context:nil].size;
+    return tempSize;
+}
+
+#pragma mark - Reuse
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.schoolTitleLabel.text = nil;
+    self.activeImgIV.image = nil;
+    self.activeNameLabel.text = nil;
+    self.activeNumLabel.text = nil;
+    self.registerLabel.text = nil;
+    self.dealLabel.text = nil;
+    self.activeTimeLabel.text = nil;
+    self.locationLabel.text = nil;
+    self.totalPriceLabel.text = nil;
+    self.activeStateLabel.text = nil;
+    self.priceLabel.text = nil;
+}
+
+#pragma mark - updateConstraints
+
+- (void)updateConstraints{
+    //头部填充view
+    [self.headView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 5));
+        make.top.mas_equalTo(self.contentView);
+        make.left.mas_equalTo(self.contentView);
+    }];
+    //学校icon
+    [self.schoolIconIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(15 * ScreenRatio_6, 13.5 * ScreenRatio_6));
+        make.left.mas_equalTo(self.contentView).offset(15 * ScreenRatio_6);
+        make.top.mas_equalTo(self.headView.mas_bottom).offset(10 * ScreenRatio_6);
+    }];
+    //学校title
+    [self.schoolTitleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth / 2, 25 * ScreenRatio_6));
+        make.centerY.mas_equalTo(self.schoolIconIV);
+        make.left.mas_equalTo(self.schoolIconIV.mas_right).offset(5);
+    }];
+    //进入学校icon
+    [self.schoolDetailIconIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(5, 10));
+        make.left.mas_equalTo(self.schoolTitleLabel.mas_right).offset(3);
+        make.centerY.mas_equalTo(self.schoolIconIV);
+    }];
+    //支付状态
+    [self.payStateLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(100 * ScreenRatio_6, 25 * ScreenRatio_6));
+        make.centerY.mas_equalTo(self.schoolIconIV);
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-15 * ScreenRatio_6);
+    }];
+    //分割线1
+    [self.separatorView_one mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 1));
+        make.top.mas_equalTo(self.schoolTitleLabel.mas_bottom).offset(10 * ScreenRatio_6);
+        make.left.mas_equalTo(self.contentView);
+    }];
+    //详情图
+    [self.activeImgIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(90 * ScreenRatio_6, 65 * ScreenRatio_6));
+        make.top.mas_equalTo(self.separatorView_one.mas_bottom).offset(10 * ScreenRatio_6);
+        make.left.mas_equalTo(self.contentView).offset(15 * ScreenRatio_6);
+    }];
+    //活动名称
+    [self.activeNameLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(150 * ScreenRatio_6, 20 * ScreenRatio_6));
+        make.top.mas_equalTo(self.activeImgIV);
+        make.left.mas_equalTo(self.activeImgIV.mas_right).offset(10 * ScreenRatio_6);
+    }];
+    //单价
+    [self.priceLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(110 * ScreenRatio_6, 20 * ScreenRatio_6));
+        make.top.mas_equalTo(self.activeImgIV);
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-15 * ScreenRatio_6);
+    }];
+    //活动状态
+    [self.activeStateLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(50 * ScreenRatio_6, 20 *ScreenRatio_6));
+        make.left.mas_equalTo(self.activeImgIV.mas_right).offset(10 * ScreenRatio_6);
+        make.bottom.mas_equalTo(self.activeImgIV.mas_bottom).offset(-2);
+    }];
+    //购买数量
+    [self.activeNumLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(20 * ScreenRatio_6, 12 * ScreenRatio_6));
+        make.centerY.mas_equalTo(self.activeStateLabel);
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-15 * ScreenRatio_6);
+    }];
+    //分割线2
+    [self.separatorView_two mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 1));
+        make.top.mas_equalTo(self.activeImgIV.mas_bottom).offset(10 * ScreenRatio_6);
+        make.left.mas_equalTo(self.contentView);
+    }];
+    //报名编号icon
+    [self.registerIcon mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(15 * ScreenRatio_6, 15 *ScreenRatio_6));
+        make.top.mas_equalTo(self.separatorView_two.mas_bottom).offset(10 * ScreenRatio_6);
+        make.left.mas_equalTo(self.contentView).offset(15 * ScreenRatio_6);
+    }];
+    //报名编号
+    [self.registerLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(330 * ScreenRatio_6, 15 * ScreenRatio_6));
+        make.centerY.mas_equalTo(self.registerIcon);
+        make.left.mas_equalTo(self.registerIcon.mas_right).offset(10 * ScreenRatio_6);
+    }];
+    //交易号icon
+    [self.dealIcon mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(15 * ScreenRatio_6, 15 *ScreenRatio_6));
+        make.top.mas_equalTo(self.registerIcon.mas_bottom).offset(12 * ScreenRatio_6);
+        make.left.mas_equalTo(self.contentView).offset(15 * ScreenRatio_6);
+    }];
+    //交易号
+    [self.dealLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(330 * ScreenRatio_6, 15 * ScreenRatio_6));
+        make.centerY.mas_equalTo(self.dealIcon);
+        make.left.mas_equalTo(self.dealIcon.mas_right).offset(10 * ScreenRatio_6);
+    }];
+    //分割线3
+    [self.separatorView_three mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 1));
+        make.top.mas_equalTo(self.dealLabel.mas_bottom).offset(10 * ScreenRatio_6);
+        make.left.mas_equalTo(self.contentView);
+    }];
+    //活动时间icon
+    [self.activeTimeIcon mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(15 * ScreenRatio_6, 15 *ScreenRatio_6));
+        make.top.mas_equalTo(self.separatorView_three.mas_bottom).offset(10 * ScreenRatio_6);
+        make.left.mas_equalTo(self.contentView).offset(15 * ScreenRatio_6);
+    }];
+    //活动时间
+    [self.activeTimeLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(330 * ScreenRatio_6, 15 * ScreenRatio_6));
+        make.centerY.mas_equalTo(self.activeTimeIcon);
+        make.left.mas_equalTo(self.activeTimeIcon.mas_right).offset(10 * ScreenRatio_6);
+    }];
+    //地址icon
+    [self.locationIcon mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(14 * ScreenRatio_6, 17 *ScreenRatio_6));
+        make.top.mas_equalTo(self.activeTimeIcon.mas_bottom).offset(10 * ScreenRatio_6);
+        make.left.mas_equalTo(self.contentView).offset(15 * ScreenRatio_6);
+    }];
+    //详细地址
+    [self.locationLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(330 * ScreenRatio_6, 15 * ScreenRatio_6));
+        make.centerY.mas_equalTo(self.locationIcon);
+        make.left.mas_equalTo(self.locationIcon.mas_right).offset(10 * ScreenRatio_6);
+    }];
+    //分割线4
+    [self.separatorView_four mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 1));
+        make.top.mas_equalTo(self.locationLabel.mas_bottom).offset(10 * ScreenRatio_6);
+        make.left.mas_equalTo(self.contentView);
+    }];
+    //总价
+    [self.totalPriceLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(300 * ScreenRatio_6, 30 * ScreenRatio_6));
+        make.top.mas_equalTo(self.separatorView_four.mas_bottom).offset(10 * ScreenRatio_6);
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-15 * ScreenRatio_6);
+    }];
+
+    
+    [super updateConstraints];
+}
+
+#pragma mark - get
+
+- (UIView *)headView{
+    if (!_headView) {
+        _headView = [[UIView alloc]init];
+        _headView.backgroundColor = fillViewColor;
+    }
+    return _headView;
+}
+- (UIView *)separatorView_one{
+    if (!_separatorView_one) {
+        _separatorView_one = [[UIView alloc]init];
+        _separatorView_one.backgroundColor = separatorView_color;
+    }
+    return _separatorView_one;
+}
+- (UIView *)separatorView_two{
+    if (!_separatorView_two) {
+        _separatorView_two = [[UIView alloc]init];
+        _separatorView_two.backgroundColor = separatorView_color;
+    }
+    return _separatorView_two;
+}
+- (UIView *)separatorView_three{
+    if (!_separatorView_three) {
+        _separatorView_three = [[UIView alloc]init];
+        _separatorView_three.backgroundColor = separatorView_color;
+    }
+    return _separatorView_three;
+}
+- (UIView *)separatorView_four{
+    if (!_separatorView_four) {
+        _separatorView_four = [[UIView alloc]init];
+        _separatorView_four.backgroundColor = separatorView_color;
+    }
+    return _separatorView_four;
+}
+- (UIImageView *)schoolIconIV{
+    if (!_schoolIconIV) {
+        _schoolIconIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"我报名的_学校"]];
+    }
+    return _schoolIconIV;
+}
+- (UILabel *)schoolTitleLabel{
+    if (!_schoolTitleLabel) {
+        _schoolTitleLabel = [[UILabel alloc]init];
+        _schoolTitleLabel.textColor = [UIColor colorWithHexString:@"#6c6c6c"];
+        _schoolTitleLabel.font = [UIFont systemFontOfSize:12];
+    }
+    return _schoolTitleLabel;
+}
+- (UIImageView *)schoolDetailIconIV{
+    if (!_schoolDetailIconIV) {
+        _schoolDetailIconIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"我报名的_进入"]];
+    }
+    return _schoolDetailIconIV;
+}
+- (UILabel *)payStateLabel{
+    if (!_payStateLabel) {
+        _payStateLabel = [[UILabel alloc]init];
+        _payStateLabel.text = @"已支付";
+        _payStateLabel.textColor = [UIColor colorWithHexString:@"#ff5a4a"];
+        _payStateLabel.font = [UIFont systemFontOfSize:13];
+        _payStateLabel.textAlignment = NSTextAlignmentRight;
+    }
+    return _payStateLabel;
+}
+- (UIImageView *)activeImgIV{
+    if (!_activeImgIV) {
+        _activeImgIV = [[UIImageView alloc]init];
+        //_activeImgIV.backgroundColor = [UIColor blueColor];
+    }
+    return _activeImgIV;
+}
+- (UILabel *)activeNameLabel{
+    if (!_activeNameLabel) {
+        _activeNameLabel = [[UILabel alloc]init];
+        _activeNameLabel.textColor = [UIColor colorWithHexString:@"#333333"];
+        _activeNameLabel.font = [UIFont systemFontOfSize:13];
+        _activeNameLabel.numberOfLines = ScreenRatio_6 < 1.0 ? 2 : 3;
+    }
+    return _activeNameLabel;
+}
+- (UILabel *)priceLabel{
+    if (!_priceLabel) {
+        _priceLabel = [[UILabel alloc]init];
+        _priceLabel.font = [UIFont systemFontOfSize:16];
+        _priceLabel.textAlignment = NSTextAlignmentRight;
+    }
+    return _priceLabel;
+}
+- (UILabel *)activeStateLabel{
+    if (!_activeStateLabel) {
+        _activeStateLabel = [[UILabel alloc]init];
+        _activeStateLabel.layer.borderWidth = 1;
+        _activeStateLabel.font = [UIFont systemFontOfSize:10];
+        _activeStateLabel.textAlignment = NSTextAlignmentCenter;
+    }
+    return _activeStateLabel;
+
+}
+- (UILabel *)activeNumLabel{
+    if (!_activeNumLabel) {
+        _activeNumLabel = [[UILabel alloc]init];
+        _activeNumLabel.font = [UIFont systemFontOfSize:11];
+        _activeNumLabel.textColor = [UIColor colorWithHexString:@"#999999"];
+    }
+    return _activeNumLabel;
+}
+- (UIImageView *)registerIcon{
+    if (!_registerIcon) {
+        _registerIcon = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"我报名的_报名"]];
+    }
+    return _registerIcon;
+}
+- (UILabel *)registerLabel{
+    if (!_registerLabel) {
+        _registerLabel = [[UILabel alloc]init];
+        _registerLabel.font = [UIFont systemFontOfSize:12];
+        _registerLabel.text = [NSString stringWithFormat:@"报名编号：%@", @"暂无"];
+        _registerLabel.textColor = [UIColor colorWithHexString:@"#333333"];
+    }
+    return _registerLabel;
+}
+- (UIImageView *)dealIcon{
+    if (!_dealIcon) {
+        _dealIcon = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"我报名的_交易"]];
+    }
+    return _dealIcon;
+}
+- (UILabel *)dealLabel{
+    if (!_dealLabel) {
+        _dealLabel = [[UILabel alloc]init];
+        _dealLabel.font = [UIFont systemFontOfSize:12];
+        _dealLabel.text = [NSString stringWithFormat:@"交易号：%@", @"暂无"];
+        _dealLabel.textColor = [UIColor colorWithHexString:@"#333333"];
+    }
+    return _dealLabel;
+}
+- (UIImageView *)activeTimeIcon{
+    if (!_activeTimeIcon) {
+        _activeTimeIcon = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"我报名的_日历"]];
+    }
+    return _activeTimeIcon;
+}
+- (UILabel *)activeTimeLabel{
+    if (!_activeTimeLabel) {
+        _activeTimeLabel = [[UILabel alloc]init];
+        _activeTimeLabel.textColor = [UIColor colorWithHexString:@"#333333"];
+        _activeTimeLabel.font = [UIFont systemFontOfSize:12];
+    }
+    return _activeTimeLabel;
+}
+- (UIImageView *)locationIcon{
+    if (!_locationIcon) {
+        _locationIcon = [[UIImageView alloc]init];
+        _locationIcon.image = [UIImage imageNamed:@"定位"];
+    }
+    return _locationIcon;
+}
+- (UILabel *)locationLabel{
+    if (!_locationLabel) {
+        _locationLabel = [[UILabel alloc]init];
+        _locationLabel.font = [UIFont systemFontOfSize:12];
+        _locationLabel.numberOfLines = 0;
+        _locationLabel.textColor = [UIColor colorWithHexString:@"#333333"];
+    }
+    return _locationLabel;
+}
+- (UILabel *)totalPriceLabel{
+    if (!_totalPriceLabel) {
+        _totalPriceLabel = [[UILabel alloc]init];
+        _totalPriceLabel.textColor = [UIColor colorWithHexString:@"#333333"];
+        _totalPriceLabel.font = [UIFont systemFontOfSize:12];
+        _totalPriceLabel.textAlignment = NSTextAlignmentRight;
+    }
+    return _totalPriceLabel;
+}
+
+
+
+@end

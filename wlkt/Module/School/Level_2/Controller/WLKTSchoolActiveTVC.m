@@ -1,0 +1,125 @@
+//
+//  WLKTSchoolActiveTVC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/21.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTSchoolActiveTVC.h"
+#import "WLKTSchoolActivityCell.h"
+#import "WLKTActivityDetailVC.h"
+#import "WLKTSchoolActiveApi.h"
+#import "WLKTTableviewRefresh.h"
+
+@interface WLKTSchoolActiveTVC ()
+@property (copy, nonatomic) NSString *suid;
+@property (assign) NSInteger page;
+@property (strong, nonatomic) NSMutableArray<WLKTActivity *> *dataArr;
+@end
+
+@implementation WLKTSchoolActiveTVC
+- (instancetype)initWithSchoolId:(NSString *)suid
+{
+    self = [super init];
+    if (self) {
+        _suid = suid;
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"学校活动";
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    [self setRefresh];
+}
+
+#pragma mark - network
+- (void)loadData{
+    WLKTSchoolActiveApi *api = [[WLKTSchoolActiveApi alloc]initWithSchoolId:self.suid page:self.page];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        if (self.page == 1) {
+            [self.dataArr removeAllObjects];
+            [self.tableView.mj_footer resetNoMoreData];
+        }
+        NSArray *arr = [NSArray modelArrayWithClass:[WLKTActivity class] json:request.responseJSONObject[@"result"][@"list"]];
+        if (self.page == 1) {
+
+            if (!arr.count) {
+                self.tableView.state = WLKTViewStateEmpty;
+                self.tableView.imageForStateEmpty = [UIImage imageNamed:@"message_bg"];
+            }
+        }
+        else{
+            if (arr.count) {
+                [self.tableView.mj_footer endRefreshing];
+            }
+            else{
+                [self.tableView.mj_footer endRefreshingWithNoMoreData];
+            }
+        }
+        [self.dataArr addObjectsFromArray:arr];
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView reloadData];
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView.mj_footer endRefreshing];
+
+    }];
+}
+
+- (void)setRefresh{
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^{
+        weakSelf.page = 1;
+ 
+        [weakSelf loadData];
+    }];
+    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableView block:^{
+        if (weakSelf.dataArr.count) {
+            weakSelf.page++;
+            [weakSelf loadData];
+        }
+        else{
+            weakSelf.tableView.mj_footer = nil;
+        }
+    }];
+    [self.tableView.mj_header beginRefreshing];
+}
+
+
+#pragma mark - Table view data source
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return self.dataArr.count;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return 130;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    WLKTSchoolActivityCell *cell = [tableView dequeueReusableCellWithIdentifier:@"WLKTSchoolActivityCell"];
+    if (cell == nil) {
+        cell = [[WLKTSchoolActivityCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"WLKTSchoolActivityCell"];
+    }
+    [cell setCellData:self.dataArr[indexPath.row]];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTActivityDetailVC *vc = [[WLKTActivityDetailVC alloc]initWithActivityId:self.dataArr[indexPath.row].aid];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+#pragma mark - get
+- (NSMutableArray<WLKTActivity *> *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray arrayWithCapacity:10];
+    }
+    return _dataArr;
+}
+
+@end

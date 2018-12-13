@@ -1,0 +1,258 @@
+//
+//  WLKTCourseClassificationViewController.m
+//  wlkt
+//
+//  Created by slovelys on 17/3/30.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTCourseClassificationViewController.h"
+#import "WLKTRectangleTagView.h"
+#import "WLKTCourseCell.h"
+#import "WLKTCourseClassificationApi.h"
+#import "WLKTCourse.h"
+#import <SVPullToRefresh.h>
+#import "WLKTCDPageController.h"
+#import "WLKTTableviewRefresh.h"
+#import "WLKTSchoolCourseLoadMoreApi.h"
+
+@interface WLKTCourseClassificationViewController () <WLKTCourseCellDelegate>
+
+@property (copy, nonatomic) NSString *classificationStr;
+@property (strong, nonatomic) NSMutableArray *dataSource;
+@property (strong, nonatomic) NSMutableArray *courseAry;
+@property (assign, nonatomic) int page;
+@property (copy, nonatomic) NSString *schoolid;
+
+@end
+
+@implementation WLKTCourseClassificationViewController
+
+- (instancetype)initWithClassificationStr:(NSString *)str {
+    WLKT_INIT(
+              _classificationStr = [str copy];
+    )
+}
+
+- (instancetype)initWithCourseArray:(NSArray <WLKTCourse *> *)array schoolId:(NSString *)schoolid {
+    WLKT_INIT(
+              _dataSource = [NSMutableArray arrayWithArray:array];
+              _courseAry = [NSMutableArray arrayWithArray:array];
+              _schoolid = [schoolid copy];
+              )
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    _page = 1;
+    [self setupTableView];
+    if (self.schoolid.length > 0) {
+        [self schoolCourseRefresh];
+        [self setupSchoolCourseRefresh];
+    } else {
+        [self loadData];
+        [self setupRefresh];
+    }
+//    if (!_dataSource.count) {
+//        
+//    } else {
+//        
+//    }
+}
+
+- (void)setupTableView {
+    self.tableView.tableHeaderView.backgroundColor = [UIColor whiteColor];
+//    self.tableView.state = WLKTViewStateLoading;
+    self.tableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kScreenWidth, 0.1)];
+    self.tableView.tableFooterView.backgroundColor = UIColorHex(f5f5f5);
+    [self.tableView registerNib:[UINib nibWithNibName:NSStringFromClass([WLKTCourseCell class]) bundle:nil] forCellReuseIdentifier:@"WLKTCourseCell"];
+}
+
+- (void)setupRefresh {
+    @weakify(self)
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^() {
+        @strongify(self)
+        _page = 1;
+        [self loadData];
+    }];
+    
+    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableView block:^() {
+        @strongify(self)
+        _page += 1;
+        [self loadMore];
+    }];
+}
+
+- (void)setupSchoolCourseRefresh {
+    @weakify(self)
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^() {
+        @strongify(self)
+        _page = 1;
+        [self schoolCourseRefresh];
+    }];
+    
+    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableView block:^() {
+        @strongify(self)
+        _page += 1;
+        [self schoolCourseLoadMore];
+    }];
+}
+
+- (void)schoolCourseRefresh {
+    WLKTSchoolCourseLoadMoreApi *api = [[WLKTSchoolCourseLoadMoreApi alloc] initWithSchoolId:_schoolid page:_page];
+    @weakify(self)
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        @strongify(self)
+        [self.dataSource removeAllObjects];
+        NSArray *array = [NSArray modelArrayWithClass:[WLKTCourse class] json:request.responseJSONObject[@"result"][@"list"]];
+        [self.dataSource addObjectsFromArray:array];
+        if (!self.dataSource.count) {
+            self.tableView.state = WLKTViewStateEmpty;
+            self.tableView.descriptionForStateEmpty = @"暂无数据";
+            self.tableView.emptyButtonClickBlock = ^{
+                @strongify(self)
+                [self loadData];
+            };
+        }
+        [self.tableView reloadData];
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView.mj_footer resetNoMoreData];
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView.mj_footer resetNoMoreData];
+        self.tableView.state = WLKTViewStateError;
+    }];
+}
+
+- (void)schoolCourseLoadMore {
+    WLKTSchoolCourseLoadMoreApi *api = [[WLKTSchoolCourseLoadMoreApi alloc] initWithSchoolId:_schoolid page:_page];
+    @weakify(self)
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        @strongify(self)
+        NSArray *array = [NSArray modelArrayWithClass:[WLKTCourse class] json:request.responseJSONObject[@"result"][@"list"]];
+        [self.dataSource addObjectsFromArray:array];
+        if (!self.dataSource.count) {
+            self.tableView.state = WLKTViewStateEmpty;
+            self.tableView.descriptionForStateEmpty = @"暂无数据";
+            self.tableView.emptyButtonClickBlock = ^{
+                @strongify(self)
+                [self loadData];
+            };
+        }
+        [self.tableView reloadData];
+        if (!array.count) {
+            [self.tableView.mj_footer endRefreshingWithNoMoreData];
+        } else {
+            [self.tableView.mj_footer endRefreshing];
+        }
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_footer endRefreshing];
+        [self.tableView.mj_footer resetNoMoreData];
+        self.tableView.state = WLKTViewStateError;
+    }];
+}
+
+- (void)loadData {
+    self.tableView.state = WLKTViewStateLoading;
+    WLKTCourseClassificationApi *api = [[WLKTCourseClassificationApi alloc] initWithCourseClassification:_classificationStr page:_page];
+    @weakify(self)
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        self.tableView.state = WLKTViewStateNormal;
+        @strongify(self)
+        [self.dataSource removeAllObjects];
+        NSArray *array = [NSArray modelArrayWithClass:[WLKTCourse class] json:request.responseJSONObject[@"result"][@"list"]];
+        [self.dataSource addObjectsFromArray:array];
+        if (!self.dataSource.count) {
+            self.tableView.state = WLKTViewStateEmpty;
+            self.tableView.descriptionForStateEmpty = @"暂无数据";
+            self.tableView.emptyButtonClickBlock = ^{
+                @strongify(self)
+                [self loadData];
+            };
+        }
+        [self.tableView reloadData];
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView.mj_footer resetNoMoreData];
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_header endRefreshing];
+        self.tableView.state = WLKTViewStateError;
+    }];
+}
+
+- (void)loadMore {
+    self.tableView.state = WLKTViewStateLoading;
+    WLKTCourseClassificationApi *api = [[WLKTCourseClassificationApi alloc] initWithCourseClassification:_classificationStr page:_page];
+    @weakify(self)
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        self.tableView.state = WLKTViewStateNormal;
+        @strongify(self)
+        NSArray *array = [NSArray modelArrayWithClass:[WLKTCourse class] json:request.responseJSONObject[@"result"][@"list"]];
+        [self.dataSource addObjectsFromArray:array];
+        if (!self.dataSource.count) {
+            self.tableView.state = WLKTViewStateEmpty;
+            self.tableView.descriptionForStateEmpty = @"暂无数据";
+            self.tableView.emptyButtonClickBlock = ^{
+                @strongify(self)
+                [self loadData];
+            };
+        }
+        [self.tableView reloadData];
+        if (!array.count) {
+            [self.tableView.mj_footer endRefreshingWithNoMoreData];
+        } else {
+            [self.tableView.mj_footer endRefreshing];
+        }
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_footer endRefreshing];
+        self.tableView.state = WLKTViewStateError;
+    }];
+}
+
+#pragma mark - Table view data source
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return self.dataSource.count ? 1 : 0;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return 1;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    WLKTCourseCell *cell = [tableView dequeueReusableCellWithIdentifier:@"WLKTCourseCell" forIndexPath:indexPath];
+    cell.model = self.dataSource;
+    cell.delegate = self;
+    return cell;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+    CGFloat height = kHomepageCellHeight;
+    return (self.dataSource.count + 1) / 2 * height + 15;
+}
+
+#pragma mark - WLKTCourseCellDelegate
+
+- (void)courseCell:(WLKTCourseCell *)cell didSelectItem:(WLKTCourse *)course atIndexPath:(NSIndexPath *)indexPath {
+    WLKTCDPageController *vc = [[WLKTCDPageController alloc] initWithCourseId:course.uid];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+#pragma mark - Setters & Getters
+
+- (NSMutableArray *)dataSource {
+    if (!_dataSource) {
+        _dataSource = [NSMutableArray array];
+    }
+    return _dataSource;
+}
+
+- (NSMutableArray *)courseAry {
+    if (!_courseAry) {
+        _courseAry = [NSMutableArray array];
+    }
+    return _courseAry;
+}
+
+@end

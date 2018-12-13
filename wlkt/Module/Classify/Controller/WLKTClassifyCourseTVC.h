@@ -1,0 +1,14 @@
+//
+//  WLKTClassifyCourseTVC.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/4.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTClassifyCourseListApi.h"
+
+@interface WLKTClassifyCourseTVC : UIViewController
+@property (strong, nonatomic) UITableView *tableView;
+@end

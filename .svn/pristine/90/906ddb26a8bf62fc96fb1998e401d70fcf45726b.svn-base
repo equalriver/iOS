@@ -1,0 +1,384 @@
+//
+//  WLKTActivityDetailGoEvaluationView.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/13.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTActivityDetailGoEvaluationView.h"
+#import "PlaceholderTextView.h"
+
+#define numberItemDefColor UIColorHex(999999)
+#define numberItemSelColor [UIColor colorWithWhite:1.0 alpha:1.0]
+#define numberBgDefColor UIColorHex(ffffff)
+#define numberBgSelColor UIColorHex(f6c447)
+#define numberBorderDefColor [UIColor colorWithWhite:0.7 alpha:0.7]
+#define numberBorderSelColor [UIColor colorWithWhite:0.9 alpha:1.0]
+
+@interface WLKTActivityDetailGoEvaluationView ()<UITextViewDelegate>
+@property (strong, nonatomic) UILabel *schoolNameLabel;
+@property (strong, nonatomic) UILabel *schoolTagLabel;
+@property (strong, nonatomic) UIView *separatorView;
+@property (strong, nonatomic) UIView *pingjiaStarView;
+@property (strong, nonatomic) UIView *xiaoguoView;
+@property (strong, nonatomic) UIView *shiziView;
+@property (strong, nonatomic) UIView *huanjingView;
+@property (strong, nonatomic) UILabel *pingjiaLabel;
+@property (strong, nonatomic) PlaceholderTextView *pingjiaTV;
+
+@property (strong, nonatomic) NSMutableArray *starBtnArr;
+@property (strong, nonatomic) NSMutableArray *xiaoguoBtnArr;
+@property (strong, nonatomic) NSMutableArray *shiziBtnArr;
+@property (strong, nonatomic) NSMutableArray *huanjingBtnArr;
+@property (copy, nonatomic) NSString *schoolName;
+@end
+
+@implementation WLKTActivityDetailGoEvaluationView
+- (instancetype)initWithSchoolName:(NSString *)schoolName
+{
+    self = [super init];
+    if (self) {
+        _schoolName = schoolName;
+        self.backgroundColor = [UIColor whiteColor];
+        [self addSubview:self.schoolNameLabel];
+        [self addSubview:self.schoolTagLabel];
+        [self addSubview:self.separatorView];
+        [self addSubview:self.pingjiaStarView];
+        [self addSubview:self.xiaoguoView];
+        [self addSubview:self.shiziView];
+        [self addSubview:self.huanjingView];
+        [self addSubview:self.pingjiaLabel];
+        [self addSubview:self.pingjiaTV];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (UIView *)createViewWithTitle:(NSString *)title{
+    UIView *v = [[UIView alloc]init];
+    UILabel *titleLabel = [UILabel new];
+    titleLabel.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+    titleLabel.textAlignment = NSTextAlignmentRight;
+    NSString *ts = [NSString stringWithFormat:@"%@：*", title];
+    NSMutableAttributedString *str = [[NSMutableAttributedString alloc]initWithString:ts];
+    [str setAttributes:@{NSForegroundColorAttributeName: UIColorHex(333333)} range:NSMakeRange(0, ts.length - 1)];
+    [str setAttributes:@{NSForegroundColorAttributeName: UIColorHex(37becc)} range:NSMakeRange(ts.length - 1, 1)];
+    titleLabel.attributedText = str;
+    [v addSubview:titleLabel];
+    [titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(v).offset(10 * ScreenRatio_6);
+        make.size.mas_equalTo(CGSizeMake(70 *ScreenRatio_6, 20 *ScreenRatio_6));
+        make.centerY.mas_equalTo(v);
+    }];
+    
+    UILabel *footLabel = [UILabel new];
+    footLabel.textColor = UIColorHex(999999);
+    footLabel.font = [UIFont systemFontOfSize:11 * ScreenRatio_6];
+    UIView *borderView = [UIView new];
+    [v addSubview:borderView];
+    [v addSubview:footLabel];
+    if ([title isEqualToString:@"总体评价"]) {
+        borderView.layer.borderColor = UIColorHex(f6c447).CGColor;
+        borderView.layer.borderWidth = 0.5;
+        footLabel.text = [NSString stringWithFormat:@"为%@打分", @"机构"];
+        //创建🌟按钮
+        for (int i = 0; i < 5; i++) {
+            UIButton *b = [UIButton new];
+            [b setImage:[UIImage imageNamed:@"星44"] forState:UIControlStateNormal];
+            b.tag = i;
+            [b addTarget:self action:@selector(pingjiaStarAct:) forControlEvents:UIControlEventTouchUpInside];
+            [borderView addSubview:b];
+            [self.starBtnArr addObject:b];
+        }
+        [self.starBtnArr mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(180 *ScreenRatio_6, 40 *ScreenRatio_6));
+            make.top.mas_equalTo(borderView);
+        }];
+        [self.starBtnArr mas_distributeViewsAlongAxis:MASAxisTypeHorizontal withFixedItemLength:35 leadSpacing:0 tailSpacing:0];
+        
+    }
+    else{
+        footLabel.text = [NSString stringWithFormat:@"给%@打分", title];
+        for (int i = 0; i < 5; i++) {
+            UIButton *b = [UIButton new];
+            b.layer.borderColor = numberBorderSelColor.CGColor;
+            b.layer.borderWidth = 0.5;
+            [b setTitle:[NSString stringWithFormat:@"%d", i + 1] forState:UIControlStateNormal];
+            [b setTitleColor:numberItemSelColor forState:UIControlStateNormal];
+            [b setBackgroundImage:[UIImage imageWithColor:numberBgSelColor] forState:UIControlStateNormal];
+            b.tag = i;
+            if ([title isEqualToString:@"效果"]) {
+                [b addTarget:self action:@selector(xiaoguoBtnAct:) forControlEvents:UIControlEventTouchUpInside];
+                [borderView addSubview:b];
+                [self.xiaoguoBtnArr addObject:b];
+            }
+            else if ([title isEqualToString:@"师资"]){
+                [b addTarget:self action:@selector(shiziBtnAct:) forControlEvents:UIControlEventTouchUpInside];
+                [borderView addSubview:b];
+                [self.shiziBtnArr addObject:b];
+            }
+            else{
+                [b addTarget:self action:@selector(huanjingBtnAct:) forControlEvents:UIControlEventTouchUpInside];
+                [borderView addSubview:b];
+                [self.huanjingBtnArr addObject:b];
+            }
+        }
+        if (self.xiaoguoBtnArr.count == 5) {
+            [self.xiaoguoBtnArr mas_makeConstraints:^(MASConstraintMaker *make) {
+                make.size.mas_equalTo(CGSizeMake(180 *ScreenRatio_6, 40 *ScreenRatio_6));
+                make.top.mas_equalTo(((UIView *)self.xiaoguoBtnArr.firstObject).superview);
+            }];
+            [self.xiaoguoBtnArr mas_distributeViewsAlongAxis:MASAxisTypeHorizontal withFixedItemLength:36 leadSpacing:0 tailSpacing:0];
+        }
+        if (self.shiziBtnArr.count == 5) {
+            [self.shiziBtnArr mas_makeConstraints:^(MASConstraintMaker *make) {
+                make.size.mas_equalTo(CGSizeMake(180 *ScreenRatio_6, 40 *ScreenRatio_6));
+                make.top.mas_equalTo(((UIView *)self.shiziBtnArr.firstObject).superview);
+            }];
+            [self.shiziBtnArr mas_distributeViewsAlongAxis:MASAxisTypeHorizontal withFixedItemLength:36 leadSpacing:0 tailSpacing:0];
+        }
+        if (self.huanjingBtnArr.count == 5) {
+            [self.huanjingBtnArr mas_makeConstraints:^(MASConstraintMaker *make) {
+                make.size.mas_equalTo(CGSizeMake(180 *ScreenRatio_6, 40 *ScreenRatio_6));
+                make.top.mas_equalTo(((UIView *)self.huanjingBtnArr.firstObject).superview);
+            }];
+            [self.huanjingBtnArr mas_distributeViewsAlongAxis:MASAxisTypeHorizontal withFixedItemLength:36 leadSpacing:0 tailSpacing:0];
+        }
+    }
+    [footLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(borderView.mas_right).offset(5);
+        make.centerY.mas_equalTo(v);
+    }];
+    [borderView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(180 *ScreenRatio_6, 40 *ScreenRatio_6));
+        make.top.mas_equalTo(v);
+        make.left.mas_equalTo(titleLabel.mas_right).offset(15 * ScreenRatio_6);
+    }];
+    return v;
+}
+
+#pragma mark - action
+- (void)pingjiaStarAct:(UIButton *)sender{
+    for (UIButton *obj in self.starBtnArr) {
+        if (obj.tag <= sender.tag) {
+            [obj setImage:[UIImage imageNamed:@"星44"] forState:UIControlStateNormal];
+        }
+        else{
+            [obj setImage:[UIImage imageNamed:@"星44b"] forState:UIControlStateNormal];
+        }
+    }
+    if ([self.delegate respondsToSelector:@selector(didSelectedPingjiaStar:)]) {
+        [self.delegate didSelectedPingjiaStar:sender.tag];
+    }
+}
+
+- (void)xiaoguoBtnAct:(UIButton *)sender{
+    for (UIButton *obj in self.xiaoguoBtnArr) {
+        if (obj.tag <= sender.tag) {
+            obj.layer.borderColor = numberBorderSelColor.CGColor;
+            [obj setTitleColor:numberItemSelColor forState:UIControlStateNormal];
+            [obj setBackgroundImage:[UIImage imageWithColor:numberBgSelColor] forState:UIControlStateNormal];
+        }
+        else{
+            obj.layer.borderColor = numberBorderDefColor.CGColor;
+            [obj setTitleColor:numberItemDefColor forState:UIControlStateNormal];
+            [obj setBackgroundImage:[UIImage imageWithColor:numberBgDefColor] forState:UIControlStateNormal];
+        }
+    }
+    if ([self.delegate respondsToSelector:@selector(didSelectedXiaoguoNumber:)]) {
+        [self.delegate didSelectedXiaoguoNumber:sender.tag];
+    }
+}
+
+- (void)shiziBtnAct:(UIButton *)sender{
+    for (UIButton *obj in self.shiziBtnArr) {
+        if (obj.tag <= sender.tag) {
+            obj.layer.borderColor = numberBorderSelColor.CGColor;
+            [obj setTitleColor:numberItemSelColor forState:UIControlStateNormal];
+            [obj setBackgroundImage:[UIImage imageWithColor:numberBgSelColor] forState:UIControlStateNormal];
+        }
+        else{
+            obj.layer.borderColor = numberBorderDefColor.CGColor;
+            [obj setTitleColor:numberItemDefColor forState:UIControlStateNormal];
+            [obj setBackgroundImage:[UIImage imageWithColor:numberBgDefColor] forState:UIControlStateNormal];
+        }
+    }
+    if ([self.delegate respondsToSelector:@selector(didSelectedShiziNumber:)]) {
+        [self.delegate didSelectedShiziNumber:sender.tag];
+    }
+}
+
+- (void)huanjingBtnAct:(UIButton *)sender{
+    for (UIButton *obj in self.huanjingBtnArr) {
+        if (obj.tag <= sender.tag) {
+            obj.layer.borderColor = numberBorderSelColor.CGColor;
+            [obj setTitleColor:numberItemSelColor forState:UIControlStateNormal];
+            [obj setBackgroundImage:[UIImage imageWithColor:numberBgSelColor] forState:UIControlStateNormal];
+        }
+        else{
+            obj.layer.borderColor = numberBorderDefColor.CGColor;
+            [obj setTitleColor:numberItemDefColor forState:UIControlStateNormal];
+            [obj setBackgroundImage:[UIImage imageWithColor:numberBgDefColor] forState:UIControlStateNormal];
+        }
+    }
+    if ([self.delegate respondsToSelector:@selector(didSelectedHuanjingNumber:)]) {
+        [self.delegate didSelectedHuanjingNumber:sender.tag];
+    }
+}
+
+#pragma mark - text view delegate
+- (void)textViewDidChange:(UITextView *)textView{
+    if ([self.delegate respondsToSelector:@selector(didEnterPingjia:)]) {
+        [self.delegate didEnterPingjia:textView.text];
+    }
+}
+
+#pragma mark - make constarints
+- (void)makeConstraints{
+    [self.schoolNameLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(15 * ScreenRatio_6);
+    }];
+    [self.schoolTagLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.schoolNameLabel.mas_right).offset(3);
+        make.bottom.mas_equalTo(self.schoolNameLabel.mas_bottom);
+    }];
+    [self.separatorView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0.5));
+        make.top.mas_equalTo(self.schoolNameLabel.mas_bottom).offset(15 * ScreenRatio_6);
+    }];
+    [self.pingjiaStarView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(self.separatorView.mas_bottom).offset(15 * ScreenRatio_6);
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 40 *ScreenRatio_6));
+    }];
+    [self.xiaoguoView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(self.pingjiaStarView.mas_bottom);
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 40 *ScreenRatio_6));
+    }];
+    [self.shiziView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(self.xiaoguoView.mas_bottom);
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 40 *ScreenRatio_6));
+    }];
+    [self.huanjingView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(self.shiziView.mas_bottom);
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 40 *ScreenRatio_6));
+    }];
+    [self.pingjiaLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(70 *ScreenRatio_6, 20 *ScreenRatio_6));
+        make.left.mas_equalTo(self).offset(10);
+        make.top.mas_equalTo(self.huanjingView.mas_bottom).offset(20 * ScreenRatio_6);
+    }];
+    [self.pingjiaTV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(275 * ScreenRatio_6, 100 * ScreenRatio_6));
+        make.top.mas_equalTo(self.huanjingView.mas_bottom).offset(10 * ScreenRatio_6);
+        make.left.mas_equalTo(self.pingjiaLabel.mas_right).offset(15 * ScreenRatio_6);
+    }];
+}
+
+#pragma mark - get
+- (UILabel *)schoolNameLabel{
+    if (!_schoolNameLabel) {
+        _schoolNameLabel = [UILabel new];
+        _schoolNameLabel.font = [UIFont systemFontOfSize:14 * ScreenRatio_6];
+        _schoolNameLabel.textColor = UIColorHex(37becc);
+        _schoolNameLabel.text = _schoolName;
+    }
+    return _schoolNameLabel;
+}
+- (UILabel *)schoolTagLabel{
+    if (!_schoolTagLabel) {
+        _schoolTagLabel = [UILabel new];
+        _schoolTagLabel.font = [UIFont systemFontOfSize:11 * ScreenRatio_6];
+        NSString *s = @"(*为必填项目)";
+        NSMutableAttributedString *str = [[NSMutableAttributedString alloc]initWithString:s];
+        [str setAttributes:@{NSForegroundColorAttributeName: UIColorHex(999999)} range:NSMakeRange(0, 1)];
+        [str setAttributes:@{NSForegroundColorAttributeName: UIColorHex(37becc)} range:NSMakeRange(1, 1)];
+        [str setAttributes:@{NSForegroundColorAttributeName: UIColorHex(999999)} range:NSMakeRange(2, s.length - 2)];
+        _schoolTagLabel.attributedText = str;
+    }
+    return _schoolTagLabel;
+}
+- (UIView *)separatorView{
+    if (!_separatorView) {
+        _separatorView = [UIView new];
+        _separatorView.backgroundColor = separatorView_color;
+    }
+    return _separatorView;
+}
+- (UIView *)pingjiaStarView{
+    if (!_pingjiaStarView) {
+        _pingjiaStarView = [self createViewWithTitle:@"总体评价"];
+    }
+    return _pingjiaStarView;
+}
+- (UIView *)xiaoguoView{
+    if (!_xiaoguoView) {
+        _xiaoguoView = [self createViewWithTitle:@"效果"];
+    }
+    return _xiaoguoView;
+}
+- (UIView *)shiziView{
+    if (!_shiziView) {
+        _shiziView = [self createViewWithTitle:@"师资"];
+    }
+    return _shiziView;
+}
+- (UIView *)huanjingView{
+    if (!_huanjingView) {
+        _huanjingView = [self createViewWithTitle:@"环境"];
+    }
+    return _huanjingView;
+}
+- (UILabel *)pingjiaLabel{
+    if (!_pingjiaLabel) {
+        _pingjiaLabel = [UILabel new];
+        _pingjiaLabel.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+        _pingjiaLabel.textAlignment = NSTextAlignmentRight;
+        NSString *ts = [NSString stringWithFormat:@"评价：*"];
+        NSMutableAttributedString *str = [[NSMutableAttributedString alloc]initWithString:ts];
+        [str setAttributes:@{NSForegroundColorAttributeName: UIColorHex(333333)} range:NSMakeRange(0, ts.length - 1)];
+        [str setAttributes:@{NSForegroundColorAttributeName: UIColorHex(37becc)} range:NSMakeRange(ts.length - 1, 1)];
+        _pingjiaLabel.attributedText = str;
+    }
+    return _pingjiaLabel;
+}
+- (PlaceholderTextView *)pingjiaTV{
+    if (!_pingjiaTV) {
+        _pingjiaTV = [[PlaceholderTextView alloc]initWithPlaceholderColor:UIColorHex(999999) font:11 * ScreenRatio_6];
+        _pingjiaTV.myPlaceholder = @"活动怎么样？环境如何？还满意吗？(5~200个字)";
+        _pingjiaTV.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+        _pingjiaTV.textColor = UIColorHex(333333);
+        _pingjiaTV.layer.borderColor = UIColorHex(999999).CGColor;
+        _pingjiaTV.layer.borderWidth = 0.5;
+        _pingjiaTV.delegate = self;
+    }
+    return _pingjiaTV;
+}
+- (NSMutableArray *)starBtnArr{
+    if (!_starBtnArr) {
+        _starBtnArr = [NSMutableArray arrayWithCapacity:5];
+    }
+    return _starBtnArr;
+}
+- (NSMutableArray *)xiaoguoBtnArr{
+    if (!_xiaoguoBtnArr) {
+        _xiaoguoBtnArr = [NSMutableArray arrayWithCapacity:5];
+    }
+    return _xiaoguoBtnArr;
+}
+- (NSMutableArray *)shiziBtnArr{
+    if (!_shiziBtnArr) {
+        _shiziBtnArr = [NSMutableArray arrayWithCapacity:5];
+    }
+    return _shiziBtnArr;
+}
+- (NSMutableArray *)huanjingBtnArr{
+    if (!_huanjingBtnArr) {
+        _huanjingBtnArr = [NSMutableArray arrayWithCapacity:5];
+    }
+    return _huanjingBtnArr;
+}
+
+@end
+

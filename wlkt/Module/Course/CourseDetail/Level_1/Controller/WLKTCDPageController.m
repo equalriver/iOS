@@ -1,0 +1,243 @@
+//
+//  WLKTCDPageController.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/3/30.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTCDPageController.h"
+#import "WLKTCDViewController.h"
+#import "WLKTCDMoreIntroVC.h"
+#import "WLKTCDMore_QA_VC.h"
+#import "WLKTCDMoreEvaluationVC.h"
+#import "WLKTCustomShare.h"
+#import "WLKTCDData.h"
+
+@interface WLKTCDPageController ()
+@property (copy, nonatomic) NSString *courseId;
+@property (strong, nonatomic) WLKTCDData *data;
+@property (strong, nonatomic) WLKTCDMoreIntroVC *introVC;
+@property (strong, nonatomic) WMMenuView *wmMenuView;
+
+@property (assign, nonatomic) CGFloat currentAlpha;
+@property (assign, nonatomic) BOOL isShowIntro;
+@end
+
+@implementation WLKTCDPageController
+- (instancetype)initWithCourseId:(NSString *)courseId;
+{
+    self = [super init];
+    if (self) {
+        _courseId = courseId;
+        self.menuItemWidth = 40 *ScreenRatio_6;
+        self.titleColorNormal = KMainTextColor_3;
+        self.titleColorSelected = kMainTextColor_red;
+        self.titleSizeSelected = 18 *ScreenRatio_6;
+        self.titleSizeNormal = 18 *ScreenRatio_6;
+        self.showOnNavigationBar = YES;
+        self.scrollEnable = false;
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(courseDetailScrollNoti:) name:@"kCourseDetailScrollNoti" object:nil];
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(courseShowIntroNoti:) name:@"kCourseShowIntroNoti" object:nil];
+}
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    
+    if (IsIOS_11_Later) {
+        
+    }
+    else{
+        self.automaticallyAdjustsScrollViewInsets = NO;
+    }
+    if (self.selectIndex == 0) {
+        if (self.currentAlpha > 0.1) {
+            [self.navigationController setNavigationBarHidden:NO animated:NO];
+        }
+        else{
+            [self.navigationController setNavigationBarHidden:YES animated:NO];
+        }
+    }
+    else{
+        [self.navigationController.navigationBar setBackgroundImage:[UIImage imageWithColor:[UIColor colorWithWhite:1.0 alpha:0.99]] forBarMetrics:UIBarMetricsDefault];
+        [self.navigationController.navigationBar setShadowImage:[UIImage imageWithColor:kMainBackgroundColor]];
+    }
+
+}
+
+- (void)viewDidAppear:(BOOL)animated{
+    [super viewDidAppear:animated];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        NSArray *arr = @[@"课程", @"介绍", @"问答", @"评价"];
+        for (int i = 0; i < arr.count; i++) {
+            [self updateTitle:arr[i] atIndex:i];
+        }
+        self.wmMenuView = self.menuView;
+    });
+}
+
+- (void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+    
+    self.navigationController.navigationBar.titleTextAttributes = @{NSForegroundColorAttributeName: KMainTextColor_3};
+    [self.navigationController.navigationBar setBackgroundImage:[UIImage imageWithColor:kNavBarBackgroundColor] forBarMetrics:UIBarMetricsDefault];
+    [self.navigationController.navigationBar setShadowImage:[UIImage imageWithColor:kNavBarShadowImageColor]];
+    [self.navigationController setNavigationBarHidden:NO animated:NO];
+    
+}
+
+- (void)dealloc{
+    [[NSNotificationCenter defaultCenter]removeObserver:self];
+}
+
+#pragma mark - action
+- (void)courseDetailScrollNoti:(NSNotification *)sender{
+    if (sender.userInfo && sender.userInfo[@"isShowBarItem"]) {
+        BOOL isShowBarItem = ((NSNumber *)(sender.userInfo[@"isShowBarItem"])).boolValue;
+        if (isShowBarItem) {
+            [self setBarButtonItems];
+        }
+        else{
+            [self hiddenBarButtonItems];
+        }
+        self.data = sender.userInfo[@"data"];
+        self.currentAlpha = ((NSNumber *)(sender.userInfo[@"alpha"])).floatValue;
+    }
+}
+
+- (void)courseShowIntroNoti:(NSNotification *)sender{
+    if (sender.userInfo && sender.userInfo[@"isShowIntro"]) {
+        self.isShowIntro = ((NSNumber *)(sender.userInfo[@"isShowIntro"])).boolValue;
+        
+        UILabel *l = [[UILabel alloc]initWithFrame:CGRectMake(0, 0, 100, 40)];
+        l.text = @"介绍";
+        l.font = [UIFont systemFontOfSize:18 *ScreenRatio_6];
+        l.textColor = KMainTextColor_3;
+        l.textAlignment = NSTextAlignmentCenter;
+        self.navigationItem.titleView = self.isShowIntro ? l : self.wmMenuView;
+        
+    }
+}
+
+- (void)backButtonAct{
+    if (self.isShowIntro) {
+        [[NSNotificationCenter defaultCenter]postNotificationName:@"kCourseIntroBackToDetailNoti" object:nil];
+    }
+    else{
+        [self.navigationController popViewControllerAnimated:YES];
+    }
+}
+
+- (void)shareButtonAct:(id)sender{//分享
+    if (!self.data) {
+        return;
+    }
+    if (self.data.courseinfo.shareappurl) {
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"isSNSPush"];
+        for (UIView *v in self.view.subviews) {
+            if ([v isKindOfClass:[WLKTCustomShare class]]) {
+                [v removeFromSuperview];
+            }
+        }
+        WLKTCustomShare *v = [[WLKTCustomShare alloc]initWithTitle:self.data.courseinfo.coursename detail:nil urlImage:self.data.courseinfo.img url:self.data.courseinfo.shareappurl taget:self height:ScreenHeight];
+        [self.view addSubview:v];
+    }
+}
+
+#pragma mark - bar button
+- (void)setBarButtonItems{
+    UIBarButtonItem *left = [[UIBarButtonItem alloc]initWithImage:[UIImage imageNamed:@"箭头_左"] style:UIBarButtonItemStylePlain target:self action:@selector(backButtonAct)];
+    self.navigationItem.leftBarButtonItem = left;
+    
+    UIView *content = [[UIView alloc]initWithFrame:CGRectMake(0, 0, 30, 30)];
+    UIButton *r = [UIButton buttonWithType:UIButtonTypeCustom];
+    [r setFrame:CGRectMake(0, 0, 30, 30)];
+    [r setImage:[UIImage imageNamed:@"更多h"] forState:UIControlStateNormal];
+    [r addTarget:self action:@selector(shareButtonAct:) forControlEvents:UIControlEventTouchUpInside];
+    [content addSubview:r];
+    UIBarButtonItem *right = [[UIBarButtonItem alloc]initWithCustomView:content];
+    
+    
+    //    UIButton *s = [UIButton buttonWithType:UIButtonTypeCustom];
+    //    [s setFrame:CGRectMake(0, 0, 30, 30)];
+    //    [s setImage:[UIImage imageNamed:@"分享"] forState:UIControlStateNormal];
+    //    [s addTarget:self action:@selector(shareButtonAct:) forControlEvents:UIControlEventTouchUpInside];
+    //    UIBarButtonItem *share = [[UIBarButtonItem alloc]initWithCustomView:s];
+ 
+    self.navigationItem.rightBarButtonItems = @[right];
+}
+
+- (void)hiddenBarButtonItems{
+    self.navigationItem.leftBarButtonItem = nil;
+    self.navigationItem.rightBarButtonItems = nil;
+}
+
+#pragma mark - page controller delegate
+- (void)pageController:(WMPageController *)pageController didEnterViewController:(__kindof UIViewController *)viewController withInfo:(NSDictionary *)info{
+    NSInteger index = ((NSNumber *)(info[@"index"])).integerValue;
+    if (index != 0) {
+        [self setBarButtonItems];
+    }
+    if (index == 1) {
+        WLKTCDMoreIntroVC *vc = viewController;
+        vc.data = self.data;
+        vc.bottomBtns.hidden = false;
+        [vc.view setOrigin:CGPointMake(ScreenWidth, 0)];
+    }
+    if (index == 3) {
+        WLKTCDMoreEvaluationVC *vc = viewController;
+        vc.data = self.data;
+    }
+}
+
+- (NSInteger)numbersOfChildControllersInPageController:(WMPageController *)pageController{
+    return 4;
+}
+
+- (NSString *)pageController:(WMPageController *)pageController titleAtIndex:(NSInteger)index{
+//    return @[@"课程", @"介绍", @"问答", @"评价"][index];
+    return @"";
+}
+
+- (UIViewController *)pageController:(WMPageController *)pageController viewControllerAtIndex:(NSInteger)index{
+    
+    if (index == 0) {//课程
+        WLKTCDViewController *vc = [[WLKTCDViewController alloc]initWithCourseId:self.courseId];
+        self.introVC = [[WLKTCDMoreIntroVC alloc]initWithCourseId:self.courseId];
+        vc.introVC = self.introVC;
+        return vc;
+    }
+    
+    if (index == 1) {//介绍
+//        WLKTCDMoreIntroVC *vc = [[WLKTCDMoreIntroVC alloc]initWithCourseId:self.courseId];
+        return self.introVC;
+    }
+    
+    if (index == 2) {//问答
+        WLKTCDMore_QA_VC *vc = [[WLKTCDMore_QA_VC alloc]initWithCourseId:self.courseId];
+        return vc;
+    }
+    
+    if (index == 3) {//评价
+        WLKTCDMoreEvaluationVC *vc = [[WLKTCDMoreEvaluationVC alloc]initWithCourseId:self.courseId];
+        return vc;
+    }
+    
+    return [UIViewController new];
+}
+
+- (CGRect)pageController:(WMPageController *)pageController preferredFrameForMenuView:(WMMenuView *)menuView{
+    return CGRectMake(0, 0, kScreenWidth * 0.6, 44);
+}
+
+- (CGRect)pageController:(WMPageController *)pageController preferredFrameForContentView:(WMScrollView *)contentView{
+    return CGRectMake(0, 0, kScreenWidth, kScreenHeight);
+}
+
+@end

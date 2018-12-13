@@ -1,0 +1,19 @@
+//
+//  WLKTCourseDetailEvaluationStarBtnCell.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/10/31.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourseDetailNewCourse_commentStar.h"
+
+@protocol WLKTCourseDetailEvaluationStarDelegate <NSObject>
+- (void)didSelectedStarItem:(NSInteger)index;
+@end
+
+@interface WLKTCourseDetailEvaluationStarBtnCell : UITableViewCell
+- (instancetype)initWithStar:(WLKTCourseDetailNewCourse_commentStar *)data;
+@property (weak, nonatomic) id<WLKTCourseDetailEvaluationStarDelegate> delegate;
+@end

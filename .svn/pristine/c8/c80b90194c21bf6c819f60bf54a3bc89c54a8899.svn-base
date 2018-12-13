@@ -1,0 +1,144 @@
+//
+//  WLKTCourseDetailIntroCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/22.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTCourseDetailIntroCell.h"
+#import "WLKTHTMLString.h"
+
+@interface WLKTCourseDetailIntroCell ()<UIWebViewDelegate>
+@property (strong, nonatomic) UIImageView *iconIV;
+@property (strong, nonatomic) UILabel *titleLabel;
+@property (strong, nonatomic) UIWebView *webView;
+@property (strong, nonatomic) UILabel *moreLabel;
+@property (nonatomic) NSInteger index;
+@property (nonatomic) NSInteger webViewHeight;
+@property (nonatomic) BOOL isMore;
+@end
+
+@implementation WLKTCourseDetailIntroCell
+
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        _webViewHeight = COURSE_DETAIL_INTRO_HEIGHT;
+        [self.contentView addSubview:self.iconIV];
+        [self.contentView addSubview:self.titleLabel];
+        [self.contentView addSubview:self.webView];
+        [self.contentView addSubview:self.moreLabel];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    [self.webView loadHTMLString:@"" baseURL:nil];
+    self.iconIV.image = nil;
+    self.titleLabel.text = nil;
+}
+
+- (void)setCellData:(WLKTCourse *)data image:(NSString *)image titleColor:(NSString *)color title:(NSString *)title detail:(NSString *)detail index:(NSInteger)index isMore:(BOOL)isMore{
+    self.index = index;
+    self.isMore = isMore;
+    [self.webView loadHTMLString:detail baseURL:nil];
+    
+    self.iconIV.image = [UIImage imageNamed:image];
+    self.titleLabel.textColor = [UIColor colorWithHexString:color];
+    self.titleLabel.text = title;
+    if (isMore) {
+        self.moreLabel.hidden = YES;
+//        [self.webView mas_updateConstraints:^(MASConstraintMaker *make) {
+//            make.size.mas_equalTo(CGSizeMake(315 * ScreenRatio_6, self.webViewHeight));
+//        }];
+    }
+    
+}
+
+#pragma mark - web view
+- (void)webViewDidFinishLoad:(UIWebView *)webView{
+    CGFloat height = [[webView stringByEvaluatingJavaScriptFromString:@"document.body.scrollHeight"] floatValue];
+    self.webViewHeight = height;
+    if ([self.delegate respondsToSelector:@selector(didLoadHtmlStringWithHeight:index:)]) {
+        [self.delegate didLoadHtmlStringWithHeight:height index:self.index];
+    }
+}
+
+#pragma mark - make constraints
+- (void)makeConstraints{
+    [self.iconIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.contentView).offset(15 * ScreenRatio_6);
+    }];
+    [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.iconIV.mas_right).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.contentView).offset(15 * ScreenRatio_6);
+    }];
+    [self.webView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.width.mas_equalTo(315 * ScreenRatio_6);
+//        make.size.mas_equalTo(CGSizeMake(315 * ScreenRatio_6, COURSE_DETAIL_INTRO_HEIGHT));
+        make.top.mas_equalTo(self.titleLabel.mas_bottom).offset(5);
+        make.left.mas_equalTo(self.titleLabel);
+        make.bottom.mas_equalTo(self.contentView.mas_bottom).offset(-25 * ScreenRatio_6);
+    }];
+    [self.moreLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerX.mas_equalTo(self.contentView);
+        make.top.mas_equalTo(self.webView.mas_bottom).offset(5);
+        make.bottom.mas_equalTo(self.contentView.mas_bottom).offset(-5);
+    }];
+}
+
+#pragma mark - set
+//- (void)setWebViewHeight:(NSInteger)webViewHeight{
+//    _webViewHeight = webViewHeight;
+//    if (self.isMore) {
+//        [self.webView mas_updateConstraints:^(MASConstraintMaker *make) {
+//            make.size.mas_equalTo(CGSizeMake(315 * ScreenRatio_6, webViewHeight));
+//        }];
+//    }
+//}
+
+#pragma mark - get
+- (UIImageView *)iconIV{
+    if (!_iconIV) {
+        _iconIV = [UIImageView new];
+    }
+    return _iconIV;
+}
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [UILabel new];
+        _titleLabel.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+    }
+    return _titleLabel;
+}
+- (UIWebView *)webView{
+    if (!_webView) {
+        _webView = [[UIWebView alloc]init];
+        _webView.scrollView.scrollEnabled = NO;
+        _webView.scrollView.showsHorizontalScrollIndicator = NO;
+        _webView.scrollView.showsVerticalScrollIndicator = NO;
+        _webView.scrollView.bounces = false;
+        _webView.backgroundColor = [UIColor whiteColor];
+        _webView.opaque = NO;
+        if (IsIOS_11_Later) {
+            _webView.scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+        }
+        _webView.delegate = self;
+    }
+    return _webView;
+}
+- (UILabel *)moreLabel{
+    if (!_moreLabel) {
+        _moreLabel = [UILabel new];
+        _moreLabel.textColor = KMainTextColor_9;
+        _moreLabel.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+        _moreLabel.text = @"点击显示更多";
+    }
+    return _moreLabel;
+}
+@end

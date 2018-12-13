@@ -1,0 +1,27 @@
+//
+//  WLKTCouponOverdueCell.m
+//  wlkt
+//
+//  Created by 尹平江 on 2017/8/11.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTCouponOverdueCell.h"
+
+@implementation WLKTCouponOverdueCell
+
+- (void)setCellData:(WLKTMycouponListData *)data{
+    self.usedIV.image = [UIImage imageNamed:@"4 已失效"];
+    self.titleLabel.text = data.name;
+    self.discountLabel.text = data.rule;
+    self.conditionLabel.text = [NSString stringWithFormat:@"优惠限制：%@", data.title];
+    self.useTimeLabel.text = [NSString stringWithFormat:@"有效时间：%@ 至 %@", data.starttime, data.endtime];
+    
+    NSMutableAttributedString *str = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"¥%@", data.money]];
+    [str setAttributes:@{NSFontAttributeName : [UIFont systemFontOfSize:12], NSForegroundColorAttributeName : KMainTextColor_3} range:NSMakeRange(0, 1)];
+    [str setAttributes:@{NSFontAttributeName : [UIFont systemFontOfSize:18], NSForegroundColorAttributeName : KMainTextColor_3} range:NSMakeRange(1, data.money.length)];
+    self.priceLabel.attributedText = str;
+
+}
+
+@end

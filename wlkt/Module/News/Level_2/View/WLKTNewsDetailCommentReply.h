@@ -1,0 +1,18 @@
+//
+//  WLKTNewsDetailCommentReply.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/26.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@protocol NewsDetailCommentReplyDelegate <NSObject>
+- (void)didFinishWithReply:(NSString *)reply index:(NSInteger)index completion:(void(^)(BOOL finished))completion;
+@end
+
+@interface WLKTNewsDetailCommentReply : UIView
+@property (weak, nonatomic) id<NewsDetailCommentReplyDelegate> delegate;
+- (instancetype)initWithFrame:(CGRect)frame placeholder:(NSString *)placeholder index:(NSInteger)index isPushVC:(BOOL)isPush;
+@end

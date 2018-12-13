@@ -1,0 +1,20 @@
+//
+//  WLKTCourseDetailBottomButtons.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/10/30.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "ZFButton.h"
+
+@protocol CourseDetailBottomButtonDelegate <NSObject>
+- (void)CourseDetailBottomButtonDidSelectedButton:(UIButton *)button;
+
+@end
+
+@interface WLKTCourseDetailBottomButtons : UIView
+@property (strong, nonatomic) ZFButton *collectBtn;
+@property (weak, nonatomic) id<CourseDetailBottomButtonDelegate> delegate;
+@end

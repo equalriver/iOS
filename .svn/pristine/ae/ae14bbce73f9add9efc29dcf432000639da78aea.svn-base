@@ -1,0 +1,15 @@
+//
+//  WLKTCourseDetailCouponCell_1.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/22.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourseDetailData.h"
+
+@interface WLKTCourseDetailCouponCell_1 : UITableViewCell
+- (instancetype)initWithData:(WLKTCourseDetailData *)data;
+
+@end

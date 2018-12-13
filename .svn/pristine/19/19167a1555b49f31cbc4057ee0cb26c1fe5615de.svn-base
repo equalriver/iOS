@@ -1,0 +1,113 @@
+//
+//  WLKTSearchResultCourseVC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/30.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTSearchResultCourseVC.h"
+#import "WLKTCourseCollectionCell.h"
+#import "WLKTSearchCourseApi.h"
+#import "WLKTTableviewRefresh.h"
+#import "WLKTCourseDetailVC.h"
+
+@interface WLKTSearchResultCourseVC ()
+@property (strong, nonatomic) WLKTCourse *course;
+@property (strong, nonatomic) NSMutableArray<WLKTCourse *> *dataArr;
+@property (assign, nonatomic) int page;
+@end
+
+@implementation WLKTSearchResultCourseVC
+
+static NSString * const searchResultCourseCell = @"searchResultCourseCell";
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor = [UIColor whiteColor];
+    self.collectionView.backgroundColor = [UIColor whiteColor];
+    [self.collectionView registerClass:[WLKTCourseCollectionCell class] forCellWithReuseIdentifier:searchResultCourseCell];
+    [self setRefresh];
+
+}
+
+#pragma mark - network
+- (void)requestWithSearchText:(NSString *)searchText page:(int)page{
+    [SVProgressHUD show];
+    WLKTSearchCourseApi *api = [[WLKTSearchCourseApi alloc]initWithSearchText:searchText page:page];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        [SVProgressHUD dismiss];
+        NSArray *arr = [NSArray modelArrayWithClass:[WLKTCourse class] json:request.responseJSONObject[@"result"][@"list"]];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (page > 1) {
+                if (arr.count == 0) {
+                    [self.collectionView.mj_footer endRefreshingWithNoMoreData];
+                }
+                else{
+                    [self.collectionView.mj_footer endRefreshing];
+                }
+                [self.dataArr addObjectsFromArray:arr];
+            }
+            else{
+                [self.dataArr removeAllObjects];
+                [self.dataArr addObjectsFromArray:arr];
+                [self.collectionView.mj_header endRefreshing];
+                [self.collectionView.mj_footer endRefreshing];
+            }
+            [self.collectionView reloadData];
+        });
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.collectionView.mj_header endRefreshing];
+        [self.collectionView.mj_footer endRefreshing];
+        ShowApiError
+    }];
+}
+
+- (void)setRefresh{
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.collectionView request:^{
+        weakSelf.page = 1;
+        [weakSelf requestWithSearchText:weakSelf.searchText page:weakSelf.page];
+    }];
+    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.collectionView block:^{
+        if (weakSelf.dataArr.count) {
+            weakSelf.page++;
+            [weakSelf requestWithSearchText:weakSelf.searchText page:weakSelf.page];
+        }
+        else{
+            weakSelf.collectionView.mj_footer = nil;
+        }
+    }];
+    [self.collectionView.mj_header beginRefreshing];
+}
+
+#pragma mark <UICollectionViewDataSource>
+
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section {
+    return self.dataArr.count;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath {
+    WLKTCourseCollectionCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:searchResultCourseCell forIndexPath:indexPath];
+    cell.course = self.dataArr[indexPath.row];
+    return cell;
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTCourseDetailVC *vc = [[WLKTCourseDetailVC alloc]initWithCourseId:self.dataArr[indexPath.row].uid];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView{
+    [[UIApplication sharedApplication].keyWindow endEditing:YES];
+}
+
+#pragma mark - get
+- (NSMutableArray<WLKTCourse *> *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray array];
+    }
+    return _dataArr;
+}
+
+@end

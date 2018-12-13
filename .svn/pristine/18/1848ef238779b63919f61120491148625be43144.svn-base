@@ -1,0 +1,329 @@
+//
+//  WLKTNewsCommentSectionView.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/25.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTNewsCommentSectionView.h"
+
+@interface CommentImageCollectionCell: UICollectionViewCell
+@property (strong, nonatomic) UIImageView *imgIV;
+@end
+
+@implementation CommentImageCollectionCell
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self addSubview:self.imgIV];
+        [self.imgIV mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(115, 90));
+            make.center.mas_equalTo(self);
+        }];
+    }
+    return self;
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.imgIV.image = nil;
+}
+
+- (UIImageView *)imgIV{
+    if (!_imgIV) {
+        _imgIV = [UIImageView new];
+        _imgIV.contentMode = UIViewContentModeScaleAspectFill;
+        _imgIV.layer.masksToBounds = YES;
+    }
+    return _imgIV;
+}
+
+@end
+
+
+//****************************************************************************************
+@interface WLKTNewsCommentSectionView ()<UICollectionViewDelegate, UICollectionViewDataSource>
+@property (strong, nonatomic) UILabel *titleLabel;
+@property (strong, nonatomic) UILabel *classifyLabel;
+@property (strong, nonatomic) UILabel *sourseLabel;
+@property (strong, nonatomic) UIImageView *commentIV;
+@property (strong, nonatomic) UILabel *commentLabel;
+
+@property (strong, nonatomic) UIView *separatorView;
+@property (strong, nonatomic) UIImageView *videoTagIV;
+@property (strong, nonatomic) UIImageView *videoIV;
+@property (strong, nonatomic) UICollectionView *imgCV;
+
+@property (strong, nonatomic) id data;
+@property (nonatomic) NewsSectionViewType type;
+@property (copy, nonatomic) void(^clickHandle)(void);
+@end
+
+@implementation WLKTNewsCommentSectionView
+- (instancetype)initWithFrame:(CGRect)frame type:(NewsSectionViewType)type data:(id)data clickHandle:(void(^)(void))clickHandle
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        _data = data;
+        _type = type;
+        _clickHandle = clickHandle;
+        self.backgroundColor = [UIColor whiteColor];
+        [self addSubview:self.titleLabel];
+        [self addSubview:self.classifyLabel];
+        [self addSubview:self.sourseLabel];
+        [self addSubview:self.commentIV];
+        [self addSubview:self.commentLabel];
+        [self addSubview:self.separatorView];
+        [self makeConstraints];
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]initWithActionBlock:^(id  _Nonnull sender) {
+            !clickHandle ?: clickHandle();
+        }];
+        [self addGestureRecognizer:tap];
+        
+        if (type == NewsSectionViewTypeComment) {
+            WLKTNewsCommentList *model = data;
+            self.titleLabel.text = model.title;
+            self.classifyLabel.text = model.tag;
+            self.classifyLabel.textColor = [UIColor colorWithHexString:model.tagcolor];
+            self.classifyLabel.layer.borderColor = [UIColor colorWithHexString:model.tagcolor].CGColor;
+            self.sourseLabel.text = [NSString stringWithFormat:@"%@·%@", model.schoolname, model.displaytime];
+            self.commentLabel.text = [NSString stringWithFormat:@"评论 %@", model.comment_num];
+            if (model.imglist.count) {
+                [self addSubview:self.imgCV];
+                [self.imgCV mas_makeConstraints:^(MASConstraintMaker *make) {
+                    make.left.mas_equalTo(self);
+                    make.size.mas_equalTo(CGSizeMake(ScreenWidth, 90 *ScreenRatio_6));
+                    make.top.mas_equalTo(self.titleLabel.mas_bottom).offset(10);
+                }];
+            }
+        }
+        if (type == NewsSectionViewTypeComplaint) {
+            self.commentIV.image = [UIImage imageNamed:@"新闻投诉"];
+            WLKTNewsComplaintList *model = data;
+            self.titleLabel.text = model.title;
+            self.classifyLabel.text = model.tag;
+            self.classifyLabel.textColor = [UIColor colorWithHexString:model.tagcolor];
+            self.classifyLabel.layer.borderColor = [UIColor colorWithHexString:model.tagcolor].CGColor;
+            [self.classifyLabel mas_updateConstraints:^(MASConstraintMaker *make) {
+                make.size.mas_equalTo(CGSizeMake(model.tag.length * 15, 15));
+            }];
+            self.sourseLabel.text = [NSString stringWithFormat:@"%@·%@", model.schoolname, model.displaytime];
+            self.commentLabel.text = [NSString stringWithFormat:@"投诉 %@", model.tousutimes];
+            if (model.imglist.count) {
+                [self addSubview:self.imgCV];
+                [self.imgCV mas_makeConstraints:^(MASConstraintMaker *make) {
+                    make.left.mas_equalTo(self);
+                    make.size.mas_equalTo(CGSizeMake(ScreenWidth, 90 *ScreenRatio_6));
+                    make.top.mas_equalTo(self.titleLabel.mas_bottom).offset(10);
+                }];
+            }
+        }
+        if (type == NewsSectionViewType_Q_A) {
+            self.commentIV.image = [UIImage imageNamed:@"新闻问答"];
+            WLKTNews_Q_A_list *model = data;
+            self.titleLabel.text = model.title;
+            self.classifyLabel.text = model.tag;
+            self.classifyLabel.textColor = [UIColor colorWithHexString:model.tagcolor];
+            self.classifyLabel.layer.borderColor = [UIColor colorWithHexString:model.tagcolor].CGColor;
+            if ([model.linktype isEqualToString:@"3"]) {
+                self.sourseLabel.text = [NSString stringWithFormat:@"%@·%@", model.username, model.displaytime];
+            }
+            else{
+                self.sourseLabel.text = [NSString stringWithFormat:@"%@·%@", model.schoolname, model.displaytime];
+            }
+            
+            self.commentLabel.text = [NSString stringWithFormat:@"问答 %@", model.asknums];
+            if (model.imglist.count) {
+                [self addSubview:self.imgCV];
+                [self.imgCV mas_makeConstraints:^(MASConstraintMaker *make) {
+                    make.left.mas_equalTo(self);
+                    make.size.mas_equalTo(CGSizeMake(ScreenWidth, 90 *ScreenRatio_6));
+                    make.top.mas_equalTo(self.titleLabel.mas_bottom).offset(10);
+                }];
+            }
+        }
+        if (type == NewsSectionViewType_Q_A_detail) {
+            self.commentIV.hidden = YES;
+            WLKTNews_Q_A_detailData *model = data;
+            self.titleLabel.text = model.question;
+            self.classifyLabel.text = model.asktype;
+            self.classifyLabel.textColor = [UIColor colorWithHexString:model.tagcolor];
+            self.classifyLabel.layer.borderColor = [UIColor colorWithHexString:model.tagcolor].CGColor;
+            self.sourseLabel.text = [NSString stringWithFormat:@"%@(用户名)·%@", model.username, model.displaytime];
+            if (model.thumb_picture.count) {
+                [self addSubview:self.imgCV];
+                [self.imgCV mas_makeConstraints:^(MASConstraintMaker *make) {
+                    make.left.mas_equalTo(self);
+                    make.size.mas_equalTo(CGSizeMake(ScreenWidth, 90 *ScreenRatio_6));
+                    make.top.mas_equalTo(self.titleLabel.mas_bottom).offset(10);
+                }];
+            }
+        }
+        [self.imgCV reloadData];
+    }
+    return self;
+}
+
+
+#pragma mark - collection view
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    switch (self.type) {
+        case NewsSectionViewTypeComment:
+            return ((WLKTNewsCommentList *)self.data).imglist.count > 3 ? 3 : ((WLKTNewsCommentList *)self.data).imglist.count;
+            
+        case NewsSectionViewTypeComplaint:
+            return ((WLKTNewsComplaintList *)self.data).imglist.count > 3 ? 3 : ((WLKTNewsComplaintList *)self.data).imglist.count;
+            
+        case NewsSectionViewType_Q_A:
+            return ((WLKTNews_Q_A_list *)self.data).imglist.count > 3 ? 3 : ((WLKTNews_Q_A_list *)self.data).imglist.count;
+            
+        case NewsSectionViewType_Q_A_detail:
+            return ((WLKTNews_Q_A_detailData *)self.data).thumb_picture.count;
+        default:
+            break;
+    }
+    return 0;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+    CommentImageCollectionCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"newsCommentImageCollectionCell" forIndexPath:indexPath];
+    switch (self.type) {
+        case NewsSectionViewTypeComment:
+            [cell.imgIV setImageURL:[NSURL URLWithString:((WLKTNewsCommentList *)self.data).imglist[indexPath.item]]];
+            break;
+        case NewsSectionViewTypeComplaint:
+            [cell.imgIV setImageURL:[NSURL URLWithString:((WLKTNewsComplaintList *)self.data).imglist[indexPath.item]]];
+            break;
+        case NewsSectionViewType_Q_A:
+            [cell.imgIV setImageURL:[NSURL URLWithString:((WLKTNews_Q_A_list *)self.data).imglist[indexPath.item]]];
+            break;
+        case NewsSectionViewType_Q_A_detail:
+            [cell.imgIV setImageURL:[NSURL URLWithString:((WLKTNews_Q_A_detailData *)self.data).thumb_picture[indexPath.item]]];
+            break;
+        default:
+            break;
+    }
+    
+    return cell;
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    !self.clickHandle ?: self.clickHandle();
+}
+
+- (void)makeConstraints{
+    [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self).offset(10);
+        make.right.mas_equalTo(self.mas_right).offset(-10);
+        make.top.mas_equalTo(self).offset(15);
+    }];
+    [self.separatorView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0.5));
+        make.bottom.mas_equalTo(self.mas_bottom);
+        make.left.mas_equalTo(self);
+    }];
+    [self.classifyLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self).offset(10);
+        make.size.mas_equalTo(CGSizeMake(30, 15));
+        make.bottom.mas_equalTo(self.mas_bottom).offset(-10);
+    }];
+    [self.sourseLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.classifyLabel.mas_right).offset(5);
+        make.centerY.mas_equalTo(self.classifyLabel);
+    }];
+    [self.commentIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.sourseLabel.mas_right).offset(20);
+        make.centerY.mas_equalTo(self.classifyLabel);
+    }];
+    [self.commentLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.commentIV.mas_right).offset(5);
+        make.centerY.mas_equalTo(self.classifyLabel);
+    }];
+}
+
+#pragma mark - get
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [UILabel new];
+        _titleLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightSemibold];
+        _titleLabel.textColor = [UIColor blackColor];
+        _titleLabel.numberOfLines = 2;
+    }
+    return _titleLabel;
+}
+- (UILabel *)classifyLabel{
+    if (!_classifyLabel) {
+        _classifyLabel = [UILabel new];
+        _classifyLabel.font = [UIFont systemFontOfSize:12];
+        _classifyLabel.textColor = UIColorHex(999999);
+        _classifyLabel.layer.borderWidth = 0.5;
+        _classifyLabel.layer.cornerRadius = 3;
+        _classifyLabel.layer.masksToBounds = YES;
+        _classifyLabel.textAlignment = NSTextAlignmentCenter;
+    }
+    return _classifyLabel;
+}
+- (UILabel *)sourseLabel{
+    if (!_sourseLabel) {
+        _sourseLabel = [UILabel new];
+        _sourseLabel.font = [UIFont systemFontOfSize:12];
+        _sourseLabel.textColor = UIColorHex(999999);
+    }
+    return _sourseLabel;
+    
+}
+- (UIImageView *)commentIV{
+    if (!_commentIV) {
+        _commentIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"编辑"]];
+    }
+    return _commentIV;
+}
+- (UILabel *)commentLabel{
+    if (!_commentLabel) {
+        _commentLabel = [UILabel new];
+        _commentLabel.font = [UIFont systemFontOfSize:12];
+        _commentLabel.textColor = UIColorHex(999999);
+    }
+    return _commentLabel;
+}
+- (UIView *)separatorView{
+    if (!_separatorView) {
+        _separatorView = [UIView new];
+        _separatorView.backgroundColor = separatorView_color;
+    }
+    return _separatorView;
+}
+- (UIImageView *)videoTagIV{
+    if (!_videoTagIV) {
+        _videoTagIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"新闻视频"]];
+    }
+    return _videoTagIV;
+}
+- (UIImageView *)videoIV{
+    if (!_videoIV) {
+        _videoIV = [UIImageView new];
+    }
+    return _videoIV;
+}
+- (UICollectionView *)imgCV{
+    if (!_imgCV) {
+        UICollectionViewFlowLayout *l = [UICollectionViewFlowLayout new];
+        l.itemSize = CGSizeMake(115 * ScreenRatio_6, 90 * ScreenRatio_6);
+        l.minimumInteritemSpacing = 1;
+        l.scrollDirection = UICollectionViewScrollDirectionHorizontal;
+        l.sectionInset = UIEdgeInsetsMake(0, 10, 0, 0);
+        _imgCV = [[UICollectionView alloc]initWithFrame:CGRectNull collectionViewLayout:l];
+        _imgCV.dataSource = self;
+        _imgCV.delegate = self;
+        _imgCV.backgroundColor = UIColorHex(ffffff);
+        _imgCV.showsHorizontalScrollIndicator = false;
+        _imgCV.scrollEnabled = false;
+        [_imgCV registerClass:[CommentImageCollectionCell class] forCellWithReuseIdentifier:@"newsCommentImageCollectionCell"];
+    }
+    return _imgCV;
+}
+@end
+
+

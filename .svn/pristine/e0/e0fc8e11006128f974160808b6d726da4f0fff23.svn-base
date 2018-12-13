@@ -1,0 +1,19 @@
+//
+//  WLKTCourseDetailMapVC.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/24.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourse.h"
+
+@interface WLKTCourseDetailMapVC : UIViewController
+- (instancetype)initWithLocation:(WLKTAddress *)location;
+- (instancetype)initWithAddress:(NSString *)address;
+
++(void)getCoordinateByAddress:(NSString *)address completion:(void(^)(CLLocationCoordinate2D coordinate, NSError *error))completion;
++(void)getAddressByLatitude:(CLLocationDegrees)latitude longitude:(CLLocationDegrees)longitude completion:(void(^)(NSString *address, NSError *error))completion;
+
+@end

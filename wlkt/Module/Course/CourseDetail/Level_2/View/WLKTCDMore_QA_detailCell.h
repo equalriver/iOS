@@ -1,0 +1,20 @@
+//
+//  WLKTCDMore_QA_detailCell.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/3/20.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCDQuestionDetail.h"
+
+@protocol CDMore_QA_detailDelegate<NSObject>
+- (void)didClickReportWithIndex:(NSIndexPath *)indexPath;
+@end
+
+@interface WLKTCDMore_QA_detailCell : UITableViewCell
+@property (assign, nonatomic) BOOL isQuestion;
+@property (weak, nonatomic) id<CDMore_QA_detailDelegate> delegate;
+- (void)setCellData:(id)data indexPath:(NSIndexPath *)indexPath;
+@end

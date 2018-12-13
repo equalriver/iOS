@@ -1,0 +1,19 @@
+//
+//  WLKTCourseDetailIntroCell.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/22.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourse.h"
+
+@protocol WLKTCourseDetailIntroDelegate <NSObject>
+- (void)didLoadHtmlStringWithHeight:(CGFloat)height index:(NSInteger)index;
+@end
+
+@interface WLKTCourseDetailIntroCell : UITableViewCell
+- (void)setCellData:(WLKTCourse *)data image:(NSString *)image titleColor:(NSString *)color title:(NSString *)title detail:(NSString *)detail index:(NSInteger)index isMore:(BOOL)isMore;
+@property (weak, nonatomic) id<WLKTCourseDetailIntroDelegate> delegate;
+@end

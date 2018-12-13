@@ -1,0 +1,482 @@
+//
+//  WLKTCDMoreIntroVC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/3/20.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTCDMoreIntroVC.h"
+#import "WLKTCDIntroduce.h"
+#import "WLKTCDIntroduceApi.h"
+#import "WLKTTableviewRefresh.h"
+#import <SDWebImageDownloader.h>
+#import "WLKTPolicyPhone.h"
+#import "WLKTOnlineServiceVC.h"
+#import "WLKTCourseDetailListenApi.h"
+#import "WLKTLogin.h"
+#import "WLKTLoginCoordinator.h"
+#import "WLKTCDPayAlertView.h"
+#import "WLKTPolicyPhoneApi.h"
+#import "WLKTCDAppointmentStateAlert.h"
+
+@interface WLKTCDMoreIntroVC ()<CDBottomButtonDelegate, UITableViewDelegate, UITableViewDataSource, UIWebViewDelegate, WLKTLoginCoordinatorDelegate>
+
+@property (copy, nonatomic) NSArray<WLKTCDIntroduce *> *dataArr;
+@property (strong, nonatomic) NSMutableDictionary<NSNumber *, NSNumber *> *stateDic;
+@property (copy, nonatomic) NSString *courseId;
+@property (strong, nonatomic) NSMutableDictionary<NSIndexPath *, UIWebView *> *webDic;
+@property (strong, nonatomic) NSMutableDictionary<NSIndexPath *, NSNumber *> *webHeightDic;
+@property (strong, nonatomic) NSMutableArray *childCoordinator;
+@property (copy, nonatomic) void (^loginBlock)(void);
+@end
+
+@implementation WLKTCDMoreIntroVC
+- (instancetype)initWithCourseId:(NSString *)courseId
+{
+    self = [super init];
+    if (self) {
+        _courseId = courseId;
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self.view addSubview:self.tableView];
+    [self.view addSubview:self.bottomBtns];
+    
+    [self loadData];
+}
+
+- (void)dealloc{
+    for (NSIndexPath *obj in self.webDic.allKeys) {
+        if (self.webDic[obj]) {
+            [self.webDic[obj].scrollView removeObserver:self forKeyPath:@"contentSize" context:(__bridge void * _Nullable)(obj)];
+        }
+    }
+
+}
+
+- (void)setData:(WLKTCDData *)data{
+    _data = data;
+    self.bottomBtns.data = data;
+}
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+
+    [self.navigationController.navigationBar setBackgroundImage:[UIImage imageWithColor:[UIColor colorWithWhite:1.0 alpha:0.99]] forBarMetrics:UIBarMetricsDefault];
+    [self.navigationController.navigationBar setShadowImage:[UIImage imageWithColor:kMainBackgroundColor]];
+    
+    if (self.view.origin.x == 0) {
+        
+        MJRefreshNormalHeader *header = [MJRefreshNormalHeader headerWithRefreshingBlock:^{
+            [[NSNotificationCenter defaultCenter]postNotificationName:@"kCourseIntroBackToDetailNoti" object:nil];
+        }];
+        
+        header.lastUpdatedTimeLabel.hidden = YES;
+        [header setTintColor:KMainTextColor_6];
+        [header setTitle:@"下拉返回课程详情" forState:MJRefreshStateIdle];
+        [header setTitle:@"释放返回课程详情" forState:MJRefreshStatePulling];
+        [header setTitle:@"加载中..." forState:MJRefreshStateRefreshing];
+        self.tableView.mj_header = header;
+    }
+    else{
+        WS(weakSelf);
+        [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^{
+            [weakSelf loadData];
+        }];
+    }
+}
+
+- (void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+    
+    self.navigationController.navigationBar.titleTextAttributes = @{NSForegroundColorAttributeName: KMainTextColor_3};
+    [self.navigationController.navigationBar setBackgroundImage:[UIImage imageWithColor:kNavBarBackgroundColor] forBarMetrics:UIBarMetricsDefault];
+    [self.navigationController.navigationBar setShadowImage:[UIImage imageWithColor:kNavBarShadowImageColor]];
+    [self.navigationController setNavigationBarHidden:NO animated:NO];
+    
+}
+
+#pragma mark -
+- (void)loadData{
+    WLKTCDIntroduceApi *api = [[WLKTCDIntroduceApi alloc]initWithCourseId:self.courseId];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        
+        [self.tableView.mj_header endRefreshing];
+        NSArray *arr = [NSArray modelArrayWithClass:[WLKTCDIntroduce class] json:request.responseJSONObject[@"result"]];
+        self.dataArr = [NSArray arrayWithArray:arr];
+        [arr enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            
+            [self.stateDic setObject:@(idx == 0) forKey:@(idx)];
+        }];
+        
+        [self.tableView reloadData];
+        
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_header endRefreshing];
+    }];
+}
+
+#pragma mark - table view
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return self.dataArr.count;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    if (self.stateDic[@(section)].boolValue) {
+        return 1;
+    }
+    return 0;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+
+    if (self.webHeightDic[indexPath]) {
+        return self.webHeightDic[indexPath].floatValue + 20;
+    }
+    CGFloat documentHeight = [[self.webDic[indexPath] stringByEvaluatingJavaScriptFromString:@"document.body.offsetHeight"] floatValue];
+
+    return documentHeight + 20;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 50 *ScreenRatio_6;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    return 0.01;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    UITableViewCell *cell = [[UITableViewCell alloc]init];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    
+//    YYLabel *l = [[YYLabel alloc]init];
+//    l.displaysAsynchronously = YES;
+//    [cell.contentView addSubview:l];
+//    [l mas_makeConstraints:^(MASConstraintMaker *make) {
+//        make.height.centerX.centerY.mas_equalTo(cell.contentView);
+//        make.width.mas_equalTo(ScreenWidth - 20 *ScreenRatio_6);
+//    }];
+
+    UIView *sep = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 0.5)];
+    sep.backgroundColor = kMainBackgroundColor;
+    [cell.contentView addSubview:sep];
+    
+    UIWebView *web;
+    if (self.webDic[indexPath]) {
+        web = self.webDic[indexPath];
+    }
+    else{
+        web = [[UIWebView alloc]initWithFrame:CGRectMake(0, 0.5, ScreenWidth, 1)];
+        web.scrollView.showsHorizontalScrollIndicator = false;
+        [web.scrollView addObserver:self forKeyPath:@"contentSize" options:NSKeyValueObservingOptionNew context:(__bridge void * _Nullable)(indexPath)];
+        web.scrollView.scrollEnabled = false;
+        web.delegate = self;
+        self.webDic[indexPath] = web;
+    }
+    
+    NSString *htmlString = [NSString stringWithFormat:@"<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0'><meta name='apple-mobile-web-app-capable' content='yes'><meta name='apple-mobile-web-app-status-bar-style' content='black'><meta name='format-detection' content='telephone=no'><style type='text/css'>img{width:%fpx}</style>%@", ScreenWidth - 20 *ScreenRatio_6, self.dataArr[indexPath.section].content];
+    [web loadHTMLString:htmlString baseURL:nil];
+    
+    
+    [cell.contentView addSubview:web];
+//    [web.scrollView addObserver:self forKeyPath:@"contentSize" options:NSKeyValueObservingOptionNew context:@"WLKTCDMoreIntroVC"];
+    /*
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+
+        NSString *str = self.dataArr[indexPath.section].content;
+        //1.将字符串转化为标准HTML字符串
+        str = [self htmlEntityDecode:str];
+        //2.将HTML字符串转换为attributeString
+        NSString *htmlString = [NSString stringWithFormat:@"<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0'><meta name='apple-mobile-web-app-capable' content='yes'><meta name='apple-mobile-web-app-status-bar-style' content='black'><meta name='format-detection' content='telephone=no'><style type='text/css'>img{width:%fpx}</style>%@", ScreenWidth - 20 *ScreenRatio_6, str];
+        NSAttributedString * attributeStr = [self attributedStringWithHTMLString:str];
+        //创建文本容器
+        YYTextContainer *container = [YYTextContainer new];
+        container.size = CGSizeMake(ScreenWidth - 20 *ScreenRatio_6, CGFLOAT_MAX);
+        container.maximumNumberOfRows = 0;
+
+        // 生成排版结果
+        YYTextLayout *layout = [YYTextLayout layoutWithContainer:container text:attributeStr];
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            l.size = layout.textBoundingSize;
+            l.textLayout = layout;
+
+        });
+    });
+    */
+    return cell;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 50 *ScreenRatio_6)];
+    v.backgroundColor = [UIColor whiteColor];
+    
+    UIView *sep = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 10 *ScreenRatio_6)];
+    sep.backgroundColor = kMainBackgroundColor;
+    [v addSubview:sep];
+    
+    UILabel *l = [UILabel new];
+    l.textColor = KMainTextColor_3;
+    l.font = [UIFont systemFontOfSize:16 *ScreenRatio_6];
+    l.text = self.dataArr[section].type;
+    [v addSubview:l];
+    [l mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(v).offset(10 *ScreenRatio_6);
+        make.top.mas_equalTo(sep.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    
+    UIButton *b = [UIButton new];
+    b.tag = section;
+    [b setImage:[UIImage imageNamed:@"箭头下"] forState:UIControlStateNormal];
+    [b setImage:[UIImage imageNamed:@"箭头上"] forState:UIControlStateSelected];
+//    [b addTarget:self action:@selector(headerSectionSelectedAct:) forControlEvents:UIControlEventTouchUpInside];
+    [v addSubview:b];
+    [b mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(l);
+        make.size.mas_equalTo(CGSizeMake(20 *ScreenRatio_6, 20 *ScreenRatio_6));
+        make.right.mas_equalTo(v).offset(-15 *ScreenRatio_6);
+    }];
+
+    b.selected = self.stateDic[@(section)].boolValue;
+
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]initWithActionBlock:^(id  _Nonnull sender) {
+        [self headerSectionSelectedAct:b];
+        
+    }];
+    [v addGestureRecognizer:tap];
+    return v;
+}
+
+#pragma mark - scroll view
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView{
+    [[NSNotificationCenter defaultCenter]postNotificationName:@"kCourseDetailIntroScrollNoti" object:nil];
+}
+
+#pragma mark - kvo
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context{
+    NSIndexPath *indexPath = (__bridge NSIndexPath *)(context);
+    if ([keyPath isEqualToString:@"contentSize"]) {
+        UIScrollView *s = (UIScrollView *)object;
+        NSLog(@"s.contentSize.height:  %f", s.contentSize.height);
+        for (NSIndexPath *obj in self.webDic.allKeys) {
+            
+            if (indexPath && indexPath.section == obj.section) {
+                self.webDic[obj].frame = CGRectMake(0, 0.5, ScreenWidth, s.contentSize.height);
+                self.webHeightDic[obj] = @(s.contentSize.height);
+            }
+        }
+        if (indexPath) {
+            [self.tableView reloadData];
+        }
+        
+        
+    }
+}
+
+#pragma mark - aciton
+- (void)headerSectionSelectedAct:(UIButton *)sender{
+    BOOL select = self.stateDic[@(sender.tag)].boolValue;
+    for (NSNumber *obj in self.stateDic.allKeys) {
+        if (obj.integerValue == sender.tag) {
+            self.stateDic[obj] = @(!select);
+        }
+        else{
+            self.stateDic[obj] = @(false);
+        }
+    }
+
+    [self.tableView reloadData];
+}
+
+#pragma mark - CDBottomButtonDelegate
+- (void)CourseDetailBottomButtonDidSelectedButton:(UIButton *)button{
+    
+    if (button.tag == 0) {//隐私电话
+        [WLKTPolicyPhone policyPhoneWithType:WLKTPolicyPhoneTypeCourse typeId:self.data.courseinfo.cid];
+    }
+    if (button.tag == 1) {//在线客服
+        WLKTOnlineServiceVC *vc = [[WLKTOnlineServiceVC alloc]init];
+        vc.url = self.data.courseinfo.kftokenjs;
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+    if (button.tag == 2) {//预约试听
+        if (self.data.courseinfo.have_pg.intValue == 1) {//有拼购
+            [self addPayCourseInfoViewWithArray:self.data.price_system isPingou:false];
+        }
+        else{
+            [SVProgressHUD showProgress:-1 status:@"正在预约..."];
+            WLKTCourseDetailListenApi *api = [[WLKTCourseDetailListenApi alloc]initWithSchoolId:self.data.schinfo.suid phone:@"" content:@"" courseId:self.data.courseinfo.cid];
+            [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+                [SVProgressHUD dismiss];
+                NSString *code = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"errorCode"]];
+                if ([code isEqualToString:@"0"]) {
+                    WLKTCDAppointmentStateAlert *alert = [[WLKTCDAppointmentStateAlert alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight -IphoneXBottomInsetHeight)];
+                    [self.view.window addSubview:alert];
+                    alert.state = CDAppointmentStateSuccess;
+                }
+                else{
+                    [SVProgressHUD showErrorWithStatus:[NSString stringWithFormat:@"%@", request.responseJSONObject[@"message"]]];
+                }
+                
+            } failure:^(__kindof YTKBaseRequest *request) {
+                [SVProgressHUD dismiss];
+                WLKTCDAppointmentStateAlert *alert = [[WLKTCDAppointmentStateAlert alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight -IphoneXBottomInsetHeight)];
+                [self.view.window addSubview:alert];
+                alert.state = CDAppointmentStatefail;
+            }];
+        }
+        
+    }
+    if (button.tag == 3) {//立即购买
+        
+        if (!TheCurUser) {
+            @weakify(self)
+            [self loginWithComepletion:^ {
+                @strongify(self)
+                [self.navigationController dismissViewControllerAnimated:YES completion:nil];
+                if (self.data.courseinfo.have_pg.intValue == 1) {//有拼购
+                    [self addPayCourseInfoViewWithArray:self.data.pg_price_system isPingou:YES];
+                }
+                else{
+                    [self addPayCourseInfoViewWithArray:self.data.price_system isPingou:false];
+                }
+            }];
+            
+        } else {
+            if (self.data.courseinfo.have_pg.intValue == 1) {//有拼购
+                [self addPayCourseInfoViewWithArray:self.data.pg_price_system isPingou:YES];
+            }
+            else{
+                [self addPayCourseInfoViewWithArray:self.data.price_system isPingou:false];
+            }
+        }
+    }
+}
+
+- (void)addPayCourseInfoViewWithArray:(NSArray *)array isPingou:(BOOL)isPingou{
+    WLKTCDPayAlertView *v = [[WLKTCDPayAlertView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight -IphoneXBottomInsetHeight) target:self isPingou:isPingou];
+    [[UIApplication sharedApplication].keyWindow addSubview:v];
+    v.courseData = self.data;
+    v.data = array;
+}
+
+#pragma mark - LSGLoginCoordinatorDelegate
+- (void)loginCoordinatorDidFinishLogin:(WLKTLoginCoordinator *)loginCoordinator {
+    if (_loginBlock) {
+        _loginBlock();
+    }
+    
+    [_childCoordinator removeObject:loginCoordinator];
+}
+
+- (void)loginCoordinatorDidFinishLogin:(WLKTLoginCoordinator *)coordinator handler:(void (^)(UIViewController *))handler{
+    if (_loginBlock) {
+        _loginBlock();
+        handler(self);
+    }
+    
+    [_childCoordinator removeObject:coordinator];
+}
+
+- (void)loginCoordinatorDidRequestDismissal:(WLKTLoginCoordinator *)loginCoordinator {
+    [self.navigationController dismissViewControllerAnimated:YES completion:^{
+        [self.childCoordinator removeObject:loginCoordinator];
+    }];
+}
+
+- (void)loginWithComepletion:(void (^)(void))completion {
+    WLKTLoginCoordinator *cr = [WLKTLoginCoordinator new];
+    cr.delegate = self;
+    [self.childCoordinator addObject:cr];
+    self.loginBlock = completion;
+    [self.navigationController presentViewController:cr.navigationController animated:YES completion:nil];
+}
+
+#pragma mark - html
+//将 &lt 等类似的字符转化为HTML中的“<”等
+- (NSString *)htmlEntityDecode:(NSString *)string{
+    string = [string stringByReplacingOccurrencesOfString:@" " withString:@""];
+    string = [string stringByReplacingOccurrencesOfString:@"&quot;" withString:@"\""];
+    string = [string stringByReplacingOccurrencesOfString:@"&apos;" withString:@"'"];
+    string = [string stringByReplacingOccurrencesOfString:@"&lt;" withString:@"<"];
+    string = [string stringByReplacingOccurrencesOfString:@"&gt;" withString:@">"];
+    string = [string stringByReplacingOccurrencesOfString:@"&amp;" withString:@"&"]; // Do this last so that, e.g. @"&amp;lt;" goes to @"&lt;" not @"<"
+    
+    return string;
+}
+
+//将HTML字符串转化为NSAttributedString富文本字符串
+- (NSAttributedString *)attributedStringWithHTMLString:(NSString *)htmlString {
+    
+    NSDictionary *options = @{ NSDocumentTypeDocumentAttribute: NSHTMLTextDocumentType,
+                               /*NSFontAttributeName: [UIFont systemFontOfSize:16 *ScreenRatio_6],
+                               NSCharacterEncodingDocumentAttribute: @(NSUTF8StringEncoding)*/ };
+    
+    NSData *data = [htmlString dataUsingEncoding:NSUnicodeStringEncoding];
+    
+    return [[NSAttributedString alloc] initWithData:data options:options documentAttributes:nil error:nil];
+}
+
+#pragma mark - web view
+- (void)webViewDidStartLoad:(UIWebView *)webView{
+    [SVProgressHUD show];
+}
+
+- (void)webViewDidFinishLoad:(UIWebView *)webView{
+    [SVProgressHUD dismiss];
+}
+
+- (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error{
+    [SVProgressHUD dismiss];
+}
+
+#pragma mark - get
+- (UITableView *)tableView{
+    if (!_tableView) {
+        _tableView = [[UITableView alloc]initWithFrame:CGRectMake(0, NavigationBarAndStatusHeight, ScreenWidth, ScreenHeight - NavigationBarAndStatusHeight -50 -IphoneXBottomInsetHeight) style:UITableViewStyleGrouped];
+//        _tableView = [[UITableView alloc]initWithFrame:CGRectNull style:UITableViewStyleGrouped];
+        _tableView.dataSource = self;
+        _tableView.delegate = self;
+        _tableView.backgroundColor = kMainBackgroundColor;
+        _tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    }
+    return _tableView;
+}
+- (WLKTCDBottomButtons *)bottomBtns{
+    if (!_bottomBtns) {
+        _bottomBtns = [[WLKTCDBottomButtons alloc]initWithFrame:CGRectMake(0, ScreenHeight - 50 -IphoneXBottomInsetHeight, ScreenWidth, 50)];
+        _bottomBtns.delegate = self;
+    }
+    return _bottomBtns;
+}
+- (NSMutableDictionary<NSNumber *,NSNumber *> *)stateDic{
+    if (!_stateDic) {
+        _stateDic = [NSMutableDictionary dictionaryWithCapacity:5];
+    }
+    return _stateDic;
+}
+- (NSMutableDictionary<NSIndexPath *,UIWebView *> *)webDic{
+    if (!_webDic) {
+        _webDic = [NSMutableDictionary dictionaryWithCapacity:4];
+    }
+    return _webDic;
+}
+- (NSMutableDictionary<NSIndexPath *,NSNumber *> *)webHeightDic{
+    if (!_webHeightDic) {
+        _webHeightDic = [NSMutableDictionary dictionaryWithCapacity:3];
+    }
+    return _webHeightDic;
+}
+- (NSMutableArray *)childCoordinator {
+    if (!_childCoordinator) {
+        _childCoordinator = [NSMutableArray array];
+    }
+    return _childCoordinator;
+}
+@end

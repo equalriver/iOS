@@ -1,0 +1,207 @@
+//
+//  WLKTNews_Q_A_TVC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/26.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTNews_Q_A_TVC.h"
+#import "WLKTNews_Q_A_cell.h"
+#import "WLKTNewsCommentSectionView.h"
+#import "WLKTNewsApi.h"
+#import "WLKTTableviewRefresh.h"
+#import "WLKTNews_Q_A_list.h"
+#import "WLKTCourseDetailVC.h"
+#import "WLKTActivityDetailVC.h"
+#import "WLKTNewsQuestionAnswerTVC.h"
+
+@interface WLKTNews_Q_A_TVC ()
+@property (nonatomic) NSInteger page;
+@property (strong, nonatomic) NSMutableArray<WLKTNewsCommentList *> *dataArr;
+@end
+
+@implementation WLKTNews_Q_A_TVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.page = 1;
+    [self setRefresh];
+    [self loadDataWithPage:self.page];
+}
+
+#pragma mark - network
+- (void)loadDataWithPage:(NSInteger)page{
+    self.tableView.state = WLKTViewStateLoading;
+    WLKTNewsApi *api = [[WLKTNewsApi alloc]initWithType:WLKTNewsType_Q_A page:page];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        self.tableView.state = WLKTViewStateNormal;
+        NSArray *arr = [NSArray modelArrayWithClass:[WLKTNewsCommentList class] json:request.responseJSONObject[@"result"]];
+        if (arr.count == 0) {
+            if (page > 1) {
+                [self.tableView.mj_footer endRefreshingWithNoMoreData];
+            }
+            else{
+                [self.tableView.mj_footer endRefreshing];
+                self.tableView.state = WLKTViewStateEmpty;
+                self.tableView.imageForStateEmpty = [UIImage imageNamed:@"无内容"];
+                self.tableView.titleForStateEmpty = @"无内容";
+            }
+        }
+        else{
+            if (page == 1) {
+                [self.dataArr removeAllObjects];
+            }
+            [self.dataArr addObjectsFromArray:arr];
+            [self.tableView.mj_footer endRefreshing];
+        }
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView reloadData];
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView.mj_footer endRefreshing];
+        self.tableView.state = WLKTViewStateError;
+        WS(weakSelf);
+        self.tableView.emptyButtonClickBlock = ^{
+            [weakSelf loadDataWithPage:weakSelf.page];
+        };
+    }];
+}
+
+- (void)setRefresh{
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^{
+        weakSelf.page = 1;
+        [weakSelf loadDataWithPage:1];
+    }];
+    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableView block:^{
+        weakSelf.page++;
+        [weakSelf loadDataWithPage:weakSelf.page];
+    }];
+}
+
+#pragma mark - action
+- (void)pushViewControllerWithIndex:(NSInteger)index isGoDetail:(BOOL)isGoDetail{
+    if ([self.dataArr[index].linktype isEqualToString:@"1"]) {//course
+        WLKTCourseDetailVC *vc = [[WLKTCourseDetailVC alloc]initWithCourseId:self.dataArr[index].linkid];
+        @weakify(vc);
+        vc.completion = ^{
+            @strongify(vc);
+            if (isGoDetail) {
+                [vc.tableView scrollToRow:0 inSection:1 atScrollPosition:UITableViewScrollPositionTop animated:YES];//评价
+                CGPoint p = CGPointMake([vc.tableView rectForSection:8].origin.x, [vc.tableView rectForSection:8].origin.y - [vc.tableView rectForSection:1].origin.y - 110);
+                [vc.tableView setContentOffset:p];
+                
+            }
+        };
+        vc.hidesBottomBarWhenPushed = YES;
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+    if ([self.dataArr[index].linktype isEqualToString:@"2"]){//activity
+        WLKTActivityDetailVC *vc = [[WLKTActivityDetailVC alloc]initWithActivityId:self.dataArr[index].linkid];
+        @weakify(vc);
+        vc.completion = ^{
+            @strongify(vc);
+            if (isGoDetail) {
+                [vc.tableView scrollToRow:0 inSection:9 atScrollPosition:UITableViewScrollPositionTop animated:YES];//评价
+            }
+        };
+        vc.hidesBottomBarWhenPushed = YES;
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+    if ([self.dataArr[index].linktype isEqualToString:@"3"]){//其他
+        WLKTNewsQuestionAnswerTVC *vc = [[WLKTNewsQuestionAnswerTVC alloc]initWithQuestionId:self.dataArr[index].linkid];
+        vc.hidesBottomBarWhenPushed = YES;
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+}
+
+#pragma mark - Table view data source
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return self.dataArr.count;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return 1;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (self.dataArr[indexPath.section].answerlist) {
+        return 135 *ScreenRatio_6;
+    }
+    else{
+        return 65 *ScreenRatio_6;
+    }
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    CGFloat h = 65 *ScreenRatio_6;
+    if (self.dataArr[section].imglist.count) {
+        h += 90 *ScreenRatio_6;
+    }
+    CGFloat hh = [UILabel getSizeWithStr:self.dataArr[section].title Width:ScreenWidth -20 Font:17.5].height;
+    h += hh > 45 *ScreenRatio_6 ? 40 *ScreenRatio_6 : hh;
+    return h;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    return 5;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    WLKTNews_Q_A_cell *cell = [tableView dequeueReusableCellWithIdentifier:@"WLKTNews_Q_A_cell"];
+    if (cell == nil) {
+        cell = [[WLKTNews_Q_A_cell alloc]init];
+    }
+    [cell setCellData:self.dataArr[indexPath.section]];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    CGFloat h = 65 *ScreenRatio_6;
+    if (self.dataArr[section].imglist.count) {
+        h += 90 *ScreenRatio_6;
+    }
+    CGFloat hh = [UILabel getSizeWithStr:self.dataArr[section].title Width:ScreenWidth -20 Font:17.5].height;
+    h += hh > 45 *ScreenRatio_6 ? 40 *ScreenRatio_6 : hh;
+    WS(weakSelf);
+    WLKTNewsCommentSectionView *v = [[WLKTNewsCommentSectionView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, h) type:NewsSectionViewType_Q_A data:self.dataArr[section] clickHandle:^{
+        [weakSelf pushViewControllerWithIndex:section isGoDetail:false];
+    }];
+    return v;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section{
+    UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 5)];
+    v.backgroundColor = separatorView_color;
+    return v;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [self pushViewControllerWithIndex:indexPath.section isGoDetail:YES];
+}
+
+#pragma mark - UIScrollViewDelegate
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView{
+    [[UIApplication sharedApplication].keyWindow endEditing:YES];
+    
+    if (scrollView.contentOffset.y > ScreenHeight) {
+        [[NSNotificationCenter defaultCenter]postNotificationName:@"NewsGoTopShowNoti" object:nil];
+    }
+    else{
+        [[NSNotificationCenter defaultCenter]postNotificationName:@"NewsGoTopDismissNoti" object:nil];
+    }
+}
+
+#pragma mark -
+- (NSMutableArray<WLKTNewsCommentList *> *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray arrayWithCapacity:10];
+    }
+    return _dataArr;
+}
+@end
+

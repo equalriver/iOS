@@ -1,0 +1,172 @@
+//
+//  WLKTNewsQuestionAnswerTVC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/27.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTNewsQuestionAnswerTVC.h"
+#import "WLKTNewsDetailCommentReply.h"
+#import "WLKTNews_Q_A_replyCell.h"
+#import "WLKTNewsCommentSectionView.h"
+#import "WLKTNews_Q_A_normalApi.h"
+#import "WLKTNews_Q_A_detailData.h"
+#import "WLKTTableviewRefresh.h"
+#import "WLKTNews_Q_A_goAnswerVC.h"
+#import "WLKTCommentReplyApi.h"
+
+@interface WLKTNewsQuestionAnswerTVC ()
+@property (strong, nonatomic) WLKTNewsCommentSectionView *questionView;
+
+@property (copy, nonatomic) NSString *qid;
+@property (nonatomic) NSInteger page;
+@property (strong, nonatomic) NSMutableArray<WLKTNews_Q_A_detailReplyData *> *dataArr;
+@property (strong, nonatomic) WLKTNews_Q_A_detailData *data;
+@end
+
+@implementation WLKTNewsQuestionAnswerTVC
+- (instancetype)initWithQuestionId:(NSString *)qid
+{
+    self = [super init];
+    if (self) {
+        _qid = qid;
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"问答";
+    self.page = 1;
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    UIBarButtonItem *right = [[UIBarButtonItem alloc]initWithImage:[UIImage imageNamed:@"新闻回答"] style:UIBarButtonItemStylePlain target:self action:@selector(rightBarButtonAct)];
+    self.navigationItem.rightBarButtonItem = right;
+    [self setRefresh];
+}
+
+#pragma mark - network
+- (void)loadData{
+    WLKTNews_Q_A_normalApi *api = [[WLKTNews_Q_A_normalApi alloc]initWithQuestionId:self.qid page:self.page];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        if (self.page == 1) {
+            [self.dataArr removeAllObjects];
+            [self.tableView.mj_footer resetNoMoreData];
+        }
+        self.data = [WLKTNews_Q_A_detailData modelWithJSON:request.responseJSONObject[@"result"]];
+        NSArray *arr = [NSArray modelArrayWithClass:[WLKTNews_Q_A_detailReplyData class] json:request.responseJSONObject[@"result"][@"replylist"]];
+        [self.tableView.mj_header endRefreshing];
+        if (self.page != 1) {
+            if (arr.count) {
+                [self.tableView.mj_footer endRefreshing];
+            }
+            else{
+                [self.tableView.mj_footer endRefreshingWithNoMoreData];
+            }
+        }
+        CGFloat h = 85 *ScreenRatio_6;
+        if (self.data.thumb_picture.count) {
+            h += 90 *ScreenRatio_6;
+        }
+        h += [UILabel getSizeWithStr:self.data.question Width:ScreenWidth Font:15 *ScreenRatio_6].height;
+        WLKTNewsCommentSectionView *v = [[WLKTNewsCommentSectionView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, h) type:NewsSectionViewType_Q_A_detail data:self.data clickHandle:^{
+//            [weakSelf pushViewControllerWithIndex:section isGoDetail:false];
+        }];
+        v.titleLabel.numberOfLines = 0;
+        self.tableView.tableHeaderView = v;
+        [self.dataArr addObjectsFromArray:arr];
+        [self.tableView reloadData];
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_footer endRefreshing];
+        [self.tableView.mj_header endRefreshing];
+    }];
+}
+
+- (void)setRefresh{
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableView block:^{
+        weakSelf.page++;
+        [weakSelf loadData];
+    }];
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^{
+        weakSelf.page = 1;
+        [weakSelf loadData];
+    }];
+    [self.tableView.mj_header beginRefreshing];
+}
+
+#pragma mark - action
+- (void)rightBarButtonAct{
+    WS(weakSelf);
+    WLKTNews_Q_A_goAnswerVC *vc = [[WLKTNews_Q_A_goAnswerVC alloc]initWithQuestionData:self.data answerCompletion:^{
+        [weakSelf.tableView reloadData];
+    }];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+
+#pragma mark - table view
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return self.dataArr.count;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    CGFloat h = 40 *ScreenRatio_6;
+    h += [UILabel getSizeWithStr:self.dataArr[indexPath.row].answer Width:ScreenWidth -20 Font:14].height;
+    if (self.dataArr[indexPath.row].thumb_picture.count) {
+        h += (self.dataArr[indexPath.row].thumb_picture.count + 2) /3 * 100 *ScreenRatio_6;
+    }
+    return h;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 40;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTNews_Q_A_replyCell *cell = [tableView dequeueReusableCellWithIdentifier:@"WLKTNews_Q_A_replyCell"];
+    if (cell == nil) {
+        cell = [[WLKTNews_Q_A_replyCell alloc]init];
+    }
+    [cell setCellData:self.dataArr[indexPath.row]];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 40)];
+    v.backgroundColor = fillViewColor;
+    UIView *line = [UIView new];
+    line.backgroundColor = UIColorHex(33c4da);
+    [v addSubview:line];
+    [line mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(2, 20));
+        make.left.mas_equalTo(v).offset(10 * ScreenRatio_6);
+        make.centerY.mas_equalTo(v);
+    }];
+    UILabel *replyLabel = [UILabel new];
+    replyLabel.font = [UIFont systemFontOfSize:15 * ScreenRatio_6 weight:UIFontWeightSemibold];
+    replyLabel.textColor = KMainTextColor_3;
+    if (self.data.replynum) {
+        replyLabel.text = [NSString stringWithFormat:@"全部回答(%@)", self.data.replynum];
+    }
+    
+    [v addSubview:replyLabel];
+    [replyLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(line.mas_right).offset(5);
+        make.centerY.mas_equalTo(v);
+    }];
+    
+    return v;
+}
+
+#pragma mark - get
+- (NSMutableArray<WLKTNews_Q_A_detailReplyData *> *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray arrayWithCapacity:10];
+    }
+    return _dataArr;
+}
+@end
+

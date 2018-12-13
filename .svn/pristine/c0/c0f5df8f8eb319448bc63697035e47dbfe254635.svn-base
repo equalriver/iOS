@@ -1,0 +1,29 @@
+//
+//  WLKTHomepageViewController.h
+//  wlkt
+//
+//  Created by slovelys on 17/3/19.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTUser.h"
+@class WLKTHomepageViewController;
+@class WLKTCourse;
+
+typedef void(^requestHotSearchCompletion)(NSArray *hotSearchs);
+
+@protocol WLKTHomepageDelegate <NSObject>
+
+@optional
+- (void)homepageViewController:(WLKTHomepageViewController *)homepageViewController didSelectCourseItem:(WLKTCourse *)course;
+
+@end
+
+@interface WLKTHomepageViewController : UITableViewController
+
+@property (copy, nonatomic) requestHotSearchCompletion hotSearchCompletion;
+@property (weak, nonatomic) id <WLKTHomepageDelegate> homepageDelegate;
+
+- (instancetype)initWithUser:(WLKTUser *)user;
+
+@end

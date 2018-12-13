@@ -1,0 +1,785 @@
+//
+//  WLKTCDHeaderCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/3/14.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTCDHeaderCell.h"
+#import <SDCycleScrollView.h>
+#import "ZFButton.h"
+#import "WLKTCDHeaderPinLeftTimeView.h"
+#import <ZFPlayer.h>
+#import "WLKTLogin.h"
+
+@interface CDHeaderYouhuiView: UIView
+@property (strong, nonatomic) UILabel *tagLabel;
+@property (strong, nonatomic) UILabel *titleLabel;
+@property (strong, nonatomic) UIButton *detailBtn;
+@property (copy, nonatomic) void(^handle)(void);
+@end
+
+@implementation CDHeaderYouhuiView
+- (instancetype)initWithData:(id)data handle:(void(^)(void))handle
+{
+    self = [super init];
+    if (self) {
+        _handle = handle;
+        if ([data isKindOfClass:[WLKTCDDataCoupon class]]) {
+            WLKTCDDataCoupon *d = (WLKTCDDataCoupon *)data;
+            self.tagLabel.text = d.type;
+            self.titleLabel.text = d.content;
+        }
+        else if([data isKindOfClass:[WLKTCDDataYouhui class]]) {
+            WLKTCDDataYouhui *d = (WLKTCDDataYouhui *)data;
+            self.tagLabel.text = d.type;
+            self.titleLabel.text = d.title;
+        }
+        
+        self.backgroundColor = [UIColor whiteColor];
+        [self addSubview:self.tagLabel];
+        [self addSubview:self.titleLabel];
+        [self addSubview:self.detailBtn];
+        [self.tagLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(40, 21));
+            make.left.centerY.mas_equalTo(self);
+        }];
+        [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.left.mas_equalTo(self.tagLabel.mas_right).offset(10 *ScreenRatio_6);
+            make.centerY.mas_equalTo(self);
+            make.right.mas_equalTo(self.detailBtn.mas_left).offset(-10 *ScreenRatio_6);
+        }];
+        [self.detailBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(30 *ScreenRatio_6, 30 *ScreenRatio_6));
+            make.centerY.right.mas_equalTo(self);
+        }];
+    }
+    return self;
+}
+
+- (void)detailBtnAct{
+    !self.handle ?: self.handle();
+}
+
+
+#pragma mark - get
+- (UILabel *)tagLabel{
+    if (!_tagLabel) {
+        _tagLabel = [UILabel new];
+        _tagLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        _tagLabel.textColor = kMainTextColor_red;
+        _tagLabel.layer.borderColor = kMainTextColor_red.CGColor;
+        _tagLabel.layer.borderWidth = 0.5;
+        _tagLabel.layer.masksToBounds = YES;
+        _tagLabel.layer.cornerRadius = 2;
+        _tagLabel.textAlignment = NSTextAlignmentCenter;
+    }
+    return _tagLabel;
+}
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [UILabel new];
+        _titleLabel.font = [UIFont systemFontOfSize:14 *ScreenRatio_6];
+        _titleLabel.textColor = KMainTextColor_3;
+    }
+    return _titleLabel;
+}
+- (UIButton *)detailBtn{
+    if (!_detailBtn) {
+        _detailBtn = [UIButton new];
+        [_detailBtn setImage:[UIImage imageNamed:@"课程更多"] forState:UIControlStateNormal];
+        [_detailBtn addTarget:self action:@selector(detailBtnAct) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _detailBtn;
+}
+@end
+/*******************************************************************************/
+
+@interface CycleScrollViewCollectionCell: UICollectionViewCell
+@property (strong, nonatomic) UIImageView *imgIV;
+@property (strong, nonatomic) ZFPlayerView *videoPlayerView;
+@property (copy, nonatomic) void(^playerCallBack)(ZFPlayerState state);
+@end
+
+@implementation CycleScrollViewCollectionCell
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        self.contentView.tag = 111;
+        [self.contentView addSubview:self.imgIV];
+        [self.imgIV mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.centerX.centerY.mas_equalTo(self.contentView);
+        }];
+        
+    }
+    return self;
+}
+
+- (void)dealloc{
+    if (self.videoPlayerView) {
+        [self.videoPlayerView removeObserver:self forKeyPath:@"state"];
+    }
+    
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.imgIV.image = nil;
+    self.videoPlayerView = nil;
+}
+
+#pragma mark -
+- (void)setCellData:(WLKTCDData *)data scrollView:(UICollectionView *)scrollView indexPath:(NSIndexPath *)indexPath {
+    self.videoPlayerView = [[ZFPlayerView alloc] init];
+    [self.contentView addSubview:self.videoPlayerView];
+    [self.videoPlayerView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.centerX.centerY.mas_equalTo(self.contentView);
+    }];
+    
+    // 初始化控制层view(可自定义)
+    ZFPlayerControlView *controlView = [[ZFPlayerControlView alloc] init];
+
+    // 初始化播放模型
+    ZFPlayerModel *playerModel = [[ZFPlayerModel alloc]init];
+    playerModel.scrollView = scrollView;
+    playerModel.indexPath = indexPath;
+    playerModel.fatherViewTag = 111;
+//    playerModel.videoURL = [NSURL URLWithString:self.dataArr[indexPath.row].video];
+    
+    [self.videoPlayerView playerControlView:controlView playerModel:playerModel];
+    
+    // 设置代理
+//    videoPlayerView.delegate = self;
+    [self.videoPlayerView addObserver:self forKeyPath:@"state" options:NSKeyValueObservingOptionNew context:nil];
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context{
+    if ([object isKindOfClass:[ZFPlayerView class]]) {
+        ZFPlayerView *obj = object;
+        !self.playerCallBack ?: self.playerCallBack(obj.state);
+    }
+}
+
+- (UIImageView *)imgIV{
+    if (!_imgIV) {
+        _imgIV = [UIImageView new];
+        _imgIV.contentMode = UIViewContentModeScaleAspectFill;
+    }
+    return _imgIV;
+}
+@end
+
+/*******************************************************************************/
+@interface WLKTCDHeaderCell ()<SDCycleScrollViewDelegate>
+@property (strong, nonatomic) SDCycleScrollView *bannerView;
+@property (strong, nonatomic) UIView *priceBgView;
+@property (strong, nonatomic) UILabel *priceLabel;
+@property (strong, nonatomic) YYLabel *rawPriceLabel;
+@property (strong, nonatomic) UIView *sep_1;
+@property (strong, nonatomic) UILabel *renzhengLabel;
+@property (strong, nonatomic) UILabel *courseNameLabel;
+@property (strong, nonatomic) UIView *attentionView;
+@property (strong, nonatomic) ZFButton *attentionBtn;
+@property (strong, nonatomic) UIView *sep_2;
+@property (strong, nonatomic) UILabel *youhuiTagLabel;
+@property (strong, nonatomic) UIView *youhuiTempView;
+@property (strong, nonatomic) WLKTCDHeaderPinLeftTimeView *pinLeftTimeView;
+@property (strong, nonatomic) UIView *license;
+
+@property (strong, nonatomic) WLKTCDData *data;
+@end
+
+@implementation WLKTCDHeaderCell
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [self.contentView addSubview:self.bannerView];
+        [self.contentView addSubview:self.priceBgView];
+        [self.priceBgView addSubview:self.priceLabel];
+        [self.priceBgView addSubview:self.rawPriceLabel];
+        [self.contentView addSubview:self.sep_1];
+        [self.contentView addSubview:self.renzhengLabel];
+        [self.contentView addSubview:self.courseNameLabel];
+        [self.contentView addSubview:self.attentionView];
+        [self.attentionView addSubview:self.attentionBtn];
+        [self.contentView addSubview:self.sep_2];
+        [self.contentView addSubview:self.youhuiTempView];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+#pragma mark -
+- (void)setCellData:(WLKTCDData *)data{
+    _data = data;
+    self.courseNameLabel.text = data.courseinfo.coursename;
+    
+    if (data.courseinfo.shoucang.intValue == 1) {//1已关注
+        [self.attentionBtn setImage:[UIImage imageNamed:@"已关注"] forState:UIControlStateNormal];
+        [self.attentionBtn setTitle:@"已关注" forState:UIControlStateNormal];
+    }
+    //license
+    if (data.license.count) {
+        
+        self.license = _license ? _license : [self createLinceseView:data.license];
+        [self.contentView addSubview:self.license];
+        
+        if (data.courseinfo.have_pg.intValue == 1) {//有拼购
+            UIView *pin = [self createPinView];
+            [self.contentView addSubview:pin];
+            [pin mas_makeConstraints:^(MASConstraintMaker *make) {
+                make.size.mas_equalTo(CGSizeMake(ScreenWidth, 120 *ScreenRatio_6));
+                make.bottom.centerX.mas_equalTo(self.contentView);
+            }];
+            [self.license mas_makeConstraints:^(MASConstraintMaker *make) {
+                make.size.mas_equalTo(CGSizeMake(ScreenWidth, 35 *ScreenRatio_6));
+                make.centerX.mas_equalTo(self.contentView);
+                make.bottom.mas_equalTo(pin.mas_top);
+            }];
+        }
+        else{
+            [self.license mas_makeConstraints:^(MASConstraintMaker *make) {
+                make.size.mas_equalTo(CGSizeMake(ScreenWidth, 35 *ScreenRatio_6));
+                make.bottom.centerX.mas_equalTo(self.contentView);
+            }];
+        }
+    }
+    else{
+        if (data.courseinfo.have_pg.intValue == 1) {//有拼购
+            UIView *pin = [self createPinView];
+            [self.contentView addSubview:pin];
+            [pin mas_makeConstraints:^(MASConstraintMaker *make) {
+                make.size.mas_equalTo(CGSizeMake(ScreenWidth, 120 *ScreenRatio_6));
+                make.bottom.centerX.mas_equalTo(self.contentView);
+            }];
+        }
+    }
+    
+    if (data.courseinfo.have_pg.intValue == 1) {//有拼购
+        self.priceBgView.hidden = YES;
+        self.pinLeftTimeView.data = data;
+        [self.contentView addSubview:self.pinLeftTimeView];
+        [self.pinLeftTimeView mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(ScreenWidth, 55 *ScreenRatio_6));
+            make.centerX.mas_equalTo(self.contentView);
+            make.top.mas_equalTo(self.bannerView.mas_bottom);
+        }];
+    }
+    else{
+        self.priceBgView.hidden = false;
+        self.priceLabel.text = [NSString stringWithFormat:@"¥%@", data.courseinfo.showprice];
+        [self.priceLabel alignBottom];
+        if (data.courseinfo.oldprice.length) {
+            NSMutableAttributedString *s = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"¥%@", data.courseinfo.oldprice]];
+            [s setAttributes:@{NSFontAttributeName: [UIFont systemFontOfSize:16 *ScreenRatio_6], NSForegroundColorAttributeName: KMainTextColor_6} range:NSMakeRange(0, s.length)];
+            [s setTextStrikethrough:[YYTextDecoration decorationWithStyle:YYTextLineStyleSingle | YYTextLineStylePatternSolid width:nil color:KMainTextColor_6]];
+            
+            self.rawPriceLabel.attributedText = s;
+            
+        }
+    }
+    
+    NSMutableArray *arr = [NSMutableArray arrayWithCapacity:3];
+    for (CDDataTopImage *obj in data.topimage) {
+        [arr addObject:obj.img];
+    }
+    self.bannerView.imageURLStringsGroup = arr;
+    
+    NSMutableArray *youhuiArr = [NSMutableArray arrayWithCapacity:3];
+    if (data.youhui.count || data.yhq.count) {
+        [self.youhuiTagLabel removeFromSuperview];
+        [self.contentView addSubview:self.youhuiTagLabel];
+        [self.youhuiTagLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(40 *ScreenRatio_6, 20));
+            make.left.mas_equalTo(self.contentView).offset(10 *ScreenRatio_6);
+            make.top.mas_equalTo(self.sep_2).offset(8 *ScreenRatio_6);
+        }];
+    }
+    
+    //youhui
+    [self.youhuiTempView removeAllSubviews];
+    if (data.youhui.count) {
+        [data.youhui enumerateObjectsUsingBlock:^(WLKTCDDataYouhui * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            if (idx < 2) {
+                CDHeaderYouhuiView *v = [[CDHeaderYouhuiView alloc]initWithData:obj handle:^{
+                    if ([self.delegate respondsToSelector:@selector(didSelectedYouhuiType:)]) {
+                        [self.delegate didSelectedYouhuiType:CDHeaderCellYouhuiTypeZhe_jian];
+                    }
+                }];
+                [self.youhuiTempView addSubview:v];
+                [youhuiArr addObject:v];
+            }
+            else{
+                *stop = YES;
+            }
+            
+        }];
+        
+    }
+    
+    if (data.yhq.count) {
+        CDHeaderYouhuiView *v = [[CDHeaderYouhuiView alloc]initWithData:data.yhq.firstObject handle:^{
+            if ([self.delegate respondsToSelector:@selector(didSelectedYouhuiType:)]) {
+                [self.delegate didSelectedYouhuiType:CDHeaderCellYouhuiTypeCoupon];
+            }
+        }];
+        [self.youhuiTempView addSubview:v];
+        [youhuiArr addObject:v];
+        
+    }
+    if (youhuiArr.count) {
+        
+        [self.youhuiTempView mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.left.mas_equalTo(self.youhuiTagLabel.mas_right);
+            make.right.mas_equalTo(self.contentView).offset(-10 *ScreenRatio_6);
+            make.top.mas_equalTo(self.sep_2.mas_bottom);
+            make.height.mas_equalTo(youhuiArr.count * 35 *ScreenRatio_6);
+        }];
+        
+        if (youhuiArr.count > 1) {
+            [youhuiArr mas_distributeViewsAlongAxis:MASAxisTypeVertical withFixedSpacing:5 leadSpacing:0 tailSpacing:0];
+            [youhuiArr mas_makeConstraints:^(MASConstraintMaker *make) {
+                make.width.centerX.mas_equalTo(self.youhuiTempView);
+                make.height.mas_equalTo(35 *ScreenRatio_6);
+            }];
+        }
+        else{
+            [youhuiArr mas_makeConstraints:^(MASConstraintMaker *make) {
+                make.width.centerX.centerY.mas_equalTo(self.youhuiTempView);
+                make.height.mas_equalTo(35 *ScreenRatio_6);
+                
+            }];
+        }
+        
+    }
+    
+    
+}
+
+#pragma mark - SDCycleScrollView delegate
+- (void)cycleScrollView:(SDCycleScrollView *)cycleScrollView didSelectItemAtIndex:(NSInteger)index{
+    if ([self.delegate respondsToSelector:@selector(didSelectedBannerViewItem:)]) {
+        [self.delegate didSelectedBannerViewItem:index];
+    }
+    
+}
+
+// ========== 轮播自定义cell ==========
+
+/** 如果你需要自定义cell样式，请在实现此代理方法返回你的自定义cell的class。 */
+- (Class)customCollectionViewCellClassForCycleScrollView:(SDCycleScrollView *)view{
+    return [CycleScrollViewCollectionCell class];
+}
+
+/** 如果你自定义了cell样式，请在实现此代理方法为你的cell填充数据以及其它一系列设置 */
+- (void)setupCustomCell:(UICollectionViewCell *)cell forIndex:(NSInteger)index cycleScrollView:(SDCycleScrollView *)view{
+
+    //set data
+    CycleScrollViewCollectionCell *cc = (CycleScrollViewCollectionCell *)cell;
+    if (self.data.topimage.count > index) {
+        if ([self.data.topimage[index].type isEqualToString:@"video"]) {
+            
+            UICollectionView *cv = nil;
+            for (UIView *v in view.subviews) {
+                if ([v isKindOfClass:[UICollectionView class]]) {
+                    cv = (UICollectionView *)v;
+                    break;
+                }
+            }
+            
+            if (cv) {
+                [cc setCellData:self.data scrollView:cv indexPath:[NSIndexPath indexPathForItem:index inSection:0]];
+            }
+            
+        }
+        else{
+            [cc.imgIV setImageURL:[NSURL URLWithString:self.data.topimage[index].img]];
+        }
+        
+    }
+    
+    cc.playerCallBack = ^(ZFPlayerState state) {
+        switch (state) {
+            case ZFPlayerStatePlaying:
+            case ZFPlayerStateBuffering:
+                
+                view.autoScroll = false;
+                break;
+                
+            default:
+                view.autoScroll = YES;
+                break;
+        }
+    };
+    
+}
+
+
+#pragma mark - action
+- (void)attentionBtnAct:(ZFButton *)sender {
+    if ([self.delegate respondsToSelector:@selector(didClickAttentionButton:)]) {
+        [self.delegate didClickAttentionButton:sender];
+    }
+    
+}
+
+- (void)linceseBtnAct{
+    if ([self.delegate respondsToSelector:@selector(didClickLicenseButton)]) {
+        [self.delegate didClickLicenseButton];
+    }
+}
+
+- (void)ruleAlertAct{
+    if ([self.delegate respondsToSelector:@selector(didClickRuleAlertButton)]) {
+        [self.delegate didClickRuleAlertButton];
+    }
+}
+
+#pragma mark - create view
+- (UIView *)createLinceseView:(NSArray<CDDataLicense *> *)licenses {
+    UIView *v = [UIView new];
+    v.backgroundColor = kMainBackgroundColor;
+    
+    UIButton *detailBtn = [UIButton new];
+    [detailBtn setImage:[UIImage imageNamed:@"课程更多"] forState:UIControlStateNormal];
+    [detailBtn addTarget:self action:@selector(linceseBtnAct) forControlEvents:UIControlEventTouchUpInside];
+    [v addSubview:detailBtn];
+    [detailBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.height.centerY.mas_equalTo(v);
+        make.width.mas_equalTo(v.mas_height);
+        make.right.mas_equalTo(v).offset(-7 *ScreenRatio_6);
+    }];
+    
+    UIView *temp = [UIView new];
+    [v addSubview:temp];
+    [temp mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.centerY.height.mas_equalTo(v);
+        make.right.mas_equalTo(detailBtn.mas_left).offset(-60 *ScreenRatio_6);
+    }];
+    
+    NSInteger count = licenses.count > 3 ? 3 : licenses.count;
+    NSMutableArray *arr = [NSMutableArray arrayWithCapacity:3];
+    for (int i = 0; i < count; i++) {
+        UIButton *b = [UIButton new];
+        if (licenses[i].order.integerValue <= 0) {
+            [b setImage:[UIImage imageNamed:@"认证未选中"] forState:UIControlStateNormal];
+        }
+        else{
+            [b setImage:[UIImage imageNamed:@"license"] forState:UIControlStateNormal];
+        }
+        
+        [b setTitle:[NSString stringWithFormat:@"  %@", licenses[i].title] forState:UIControlStateNormal];
+        b.titleLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        [b setTitleColor:KMainTextColor_9 forState:UIControlStateNormal];
+        [temp addSubview:b];
+        [arr addObject:b];
+    }
+    [arr mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(temp);
+    }];
+    if (arr.count > 1) {
+        [arr mas_distributeViewsAlongAxis:MASAxisTypeHorizontal withFixedSpacing:0 leadSpacing:0 tailSpacing:0];
+    }
+    
+    UIView *sep = [UIView new];
+    sep.backgroundColor = UIColorHex(cccccc);
+    [v addSubview:sep];
+    [sep mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.width.centerX.bottom.mas_equalTo(v);
+        make.height.mas_equalTo(0.5);
+    }];
+    return v;
+}
+
+- (UIView *)createPinView{
+    
+    UIView *v = [UIView new];
+    v.backgroundColor = [UIColor whiteColor];
+    
+    UIView *separator = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 10 *ScreenRatio_6)];
+    separator.backgroundColor = kMainBackgroundColor;
+    [v addSubview:separator];
+    
+    UILabel *title = [UILabel new];
+    title.font = [UIFont systemFontOfSize:16 *ScreenRatio_6];
+    title.textColor = KMainTextColor_3;
+    title.text = @"拼购";
+    [v addSubview:title];
+    [title mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.left.mas_equalTo(v).offset(15 *ScreenRatio_6);
+
+    }];
+    
+    UIButton *rule = [UIButton new];
+    rule.titleLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+    [rule setTitle:@"规则" forState:UIControlStateNormal];
+    [rule setTitleColor:KMainTextColor_9 forState:UIControlStateNormal];
+    [rule addTarget:self action:@selector(ruleAlertAct) forControlEvents:UIControlEventTouchUpInside];
+    [v addSubview:rule];
+    [rule mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(title);
+        make.right.mas_equalTo(v);
+        make.size.mas_equalTo(CGSizeMake(60 *ScreenRatio_6, 25 *ScreenRatio_6));
+    }];
+    
+    UIView *sep = [UIView new];
+    sep.backgroundColor = kMainBackgroundColor;
+    [v addSubview:sep];
+    [sep mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0.5));
+        make.centerX.mas_equalTo(v);
+        make.top.mas_equalTo(title.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    
+    UIView *step_1 = [self createPinItemNumber:@"1" title:@"拼购"];
+    [v addSubview:step_1];
+    [step_1 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(70 *ScreenRatio_6, 25 *ScreenRatio_6));
+        make.left.mas_equalTo(v).offset(20 *ScreenRatio_6);
+        make.top.mas_equalTo(sep).offset(15 *ScreenRatio_6);
+    }];
+    
+    UIImageView *stepIV_1 = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"箭头_右"]];
+    [v addSubview:stepIV_1];
+    [stepIV_1 mas_makeConstraints:^(MASConstraintMaker *make) {
+        //        make.size.mas_equalTo(CGSizeMake(<#CGFloat width#>, <#CGFloat height#>))
+        make.left.mas_equalTo(step_1.mas_right).offset(20 *ScreenRatio_6);
+        make.centerY.mas_equalTo(step_1);
+    }];
+    
+    UIView *step_2 = [self createPinItemNumber:@"2" title:@"邀请好友"];
+    [v addSubview:step_2];
+    [step_2 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(95 *ScreenRatio_6, 25 *ScreenRatio_6));
+        make.left.mas_equalTo(stepIV_1.mas_right).offset(20 *ScreenRatio_6);
+        make.centerY.mas_equalTo(step_1);
+    }];
+    
+    UIImageView *stepIV_2 = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"箭头_右"]];
+    [v addSubview:stepIV_2];
+    [stepIV_2 mas_makeConstraints:^(MASConstraintMaker *make) {
+        //        make.size.mas_equalTo(CGSizeMake(<#CGFloat width#>, <#CGFloat height#>))
+        make.left.mas_equalTo(step_2.mas_right).offset(20 *ScreenRatio_6);
+        make.centerY.mas_equalTo(step_1);
+    }];
+    
+    UIView *step_3 = [self createPinItemNumber:@"3" title:@"满员"];
+    [v addSubview:step_3];
+    [step_3 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(70 *ScreenRatio_6, 25 *ScreenRatio_6));
+        make.left.mas_equalTo(stepIV_2.mas_right).offset(20 *ScreenRatio_6);
+        make.centerY.mas_equalTo(step_1);
+    }];
+    
+    UILabel *prompt = [UILabel new];
+    prompt.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+    prompt.textColor = KMainTextColor_9;
+    prompt.text = @"(不满拼购人数自动退款)";
+    [v addSubview:prompt];
+    [prompt mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.right.mas_equalTo(v).offset(-15 *ScreenRatio_6);
+        make.top.mas_equalTo(step_3.mas_bottom).offset(5);
+    }];
+    
+    return v;
+}
+
+- (UIView *)createPinItemNumber:(NSString *)number title:(NSString *)title{
+    UIView *v = [UIView new];
+    v.backgroundColor = [UIColor whiteColor];
+    
+    UILabel *num = [UILabel new];
+    num.font = [UIFont systemFontOfSize:14 *ScreenRatio_6 weight:UIFontWeightBold];
+    num.textColor = [UIColor whiteColor];
+    num.backgroundColor = KMainTextColor_9;
+    num.layer.masksToBounds = YES;
+    num.layer.cornerRadius = 1;
+    num.text = number;
+    num.textAlignment = NSTextAlignmentCenter;
+    [v addSubview:num];
+    [num mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.centerY.mas_equalTo(v);
+        make.size.mas_equalTo(CGSizeMake(20 *ScreenRatio_6, 20 *ScreenRatio_6));
+    }];
+    
+    UILabel *tt = [UILabel new];
+    tt.font = [UIFont systemFontOfSize:14 *ScreenRatio_6];
+    tt.textColor = KMainTextColor_6;
+    tt.text = title;
+    [v addSubview:tt];
+    [tt mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.right.mas_equalTo(v);
+        make.left.mas_equalTo(num.mas_right).offset(15 *ScreenRatio_6);
+        make.centerY.mas_equalTo(num);
+    }];
+    
+    return v;
+}
+
+#pragma mark -
+- (void)makeConstraints{
+//    [self.bannerView mas_makeConstraints:^(MASConstraintMaker *make) {
+//        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 280 *ScreenRatio_6));
+//        make.top.centerX.mas_equalTo(self.contentView);
+//    }];
+    [self.priceBgView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 55 *ScreenRatio_6));
+        make.centerX.mas_equalTo(self.contentView);
+        make.top.mas_equalTo(self.bannerView.mas_bottom);
+    }];
+    [self.priceLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.priceBgView).offset(10 *ScreenRatio_6);
+        make.centerY.mas_equalTo(self.priceBgView);
+    }];
+    [self.rawPriceLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.bottom.mas_equalTo(self.priceLabel).offset(-3 *ScreenRatio_6);
+        make.left.mas_equalTo(self.priceLabel.mas_right).offset(10 *ScreenRatio_6);
+    }];
+    [self.sep_1 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0.5));
+        make.top.mas_equalTo(self.bannerView.mas_bottom).offset(55 *ScreenRatio_6);
+        make.centerX.mas_equalTo(self.contentView);
+    }];
+    [self.renzhengLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(55 *ScreenRatio_6, 19 *ScreenRatio_6));
+        make.left.mas_equalTo(self.contentView).offset(10 *ScreenRatio_6);
+        make.top.mas_equalTo(self.sep_1.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    [self.courseNameLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(self.renzhengLabel);
+        make.left.mas_equalTo(self.renzhengLabel.mas_right).offset(10 *ScreenRatio_6);
+        make.right.mas_equalTo(self.attentionBtn.mas_left).offset(-10 *ScreenRatio_6);
+    }];
+    [self.attentionView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(40 *ScreenRatio_6, 40 *ScreenRatio_6));
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-10 *ScreenRatio_6);
+        make.top.mas_equalTo(self.sep_1.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+
+    [self.sep_2 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0.5));
+        make.top.mas_equalTo(self.attentionView.mas_bottom).offset(10 *ScreenRatio_6);
+        make.centerX.mas_equalTo(self.contentView);
+    }];
+    
+}
+
+#pragma mark - get
+- (SDCycleScrollView *)bannerView{
+    if (!_bannerView) {
+        _bannerView = [SDCycleScrollView cycleScrollViewWithFrame:CGRectMake(0, 0, ScreenWidth, 280 *ScreenRatio_6) delegate:self placeholderImage:nil];
+    }
+    return _bannerView;
+}
+- (UIView *)priceBgView{
+    if (!_priceBgView) {
+        _priceBgView = [UIView new];
+        _priceBgView.backgroundColor = [UIColor whiteColor];
+    }
+    return _priceBgView;
+}
+- (UILabel *)priceLabel{
+    if (!_priceLabel) {
+        _priceLabel = [UILabel new];
+        _priceLabel.font = [UIFont systemFontOfSize:24 *ScreenRatio_6 weight:UIFontWeightSemibold];
+        _priceLabel.textColor = kMainTextColor_red;
+    }
+    return _priceLabel;
+}
+- (YYLabel *)rawPriceLabel{
+    if (!_rawPriceLabel) {
+        _rawPriceLabel = [YYLabel new];
+        _rawPriceLabel.font = [UIFont systemFontOfSize:16 *ScreenRatio_6];
+        _rawPriceLabel.textColor = KMainTextColor_6;
+        //        NSMutableAttributedString *s = [NSMutableAttributedString attachmentStringWithContent:self contentMode:UIViewContentModeCenter width:1 ascent:1 descent:1];
+        //        [s setTextStrikethrough:[YYTextDecoration decorationWithStyle:YYTextLineStyleSingle | YYTextLineStylePatternSolid]];
+        
+    }
+    return _rawPriceLabel;
+}
+- (UIView *)sep_1{
+    if (!_sep_1) {
+        _sep_1 = [UIView new];
+        _sep_1.backgroundColor = UIColorHex(eeeeee);
+    }
+    return _sep_1;
+}
+- (UIView *)sep_2{
+    if (!_sep_2) {
+        _sep_2 = [UIView new];
+        _sep_2.backgroundColor = UIColorHex(eeeeee);
+    }
+    return _sep_2;
+}
+- (UILabel *)renzhengLabel{
+    if (!_renzhengLabel) {
+        _renzhengLabel = [UILabel new];
+        _renzhengLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        _renzhengLabel.textColor = [UIColor whiteColor];
+        _renzhengLabel.backgroundColor = kMainTextColor_red;
+        _renzhengLabel.textAlignment = NSTextAlignmentCenter;
+        _renzhengLabel.text = @"认证课程";
+        _renzhengLabel.layer.cornerRadius = 2;
+        _renzhengLabel.layer.masksToBounds = YES;
+    }
+    return _renzhengLabel;
+}
+- (UILabel *)courseNameLabel{
+    if (!_courseNameLabel) {
+        _courseNameLabel = [UILabel new];
+        _courseNameLabel.font = [UIFont systemFontOfSize:18 *ScreenRatio_6 weight:UIFontWeightSemibold];
+        _courseNameLabel.textColor = KMainTextColor_3;
+        _courseNameLabel.numberOfLines = 2;
+    }
+    return _courseNameLabel;
+}
+- (UIView *)attentionView{
+    if (!_attentionView) {
+        _attentionView = [UIView new];
+        _attentionView.backgroundColor = [UIColor whiteColor];
+    }
+    return _attentionView;
+}
+- (ZFButton *)attentionBtn{
+    if (!_attentionBtn) {
+        _attentionBtn = [[ZFButton alloc]initWithFrame:CGRectMake(0, 0, 40 * ScreenRatio_6, 40 *ScreenRatio_6)];
+        [_attentionBtn setImage:[UIImage imageNamed:@"关注"] forState:UIControlStateNormal];
+        [_attentionBtn setTitle:@"关注" forState:UIControlStateNormal];
+        _attentionBtn.titleLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        _attentionBtn.titleLabel.textAlignment = NSTextAlignmentCenter;
+        [_attentionBtn setTitleColor:KMainTextColor_9 forState:UIControlStateNormal];
+        _attentionBtn.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;
+        _attentionBtn.imageRect = CGRectMake(12 * ScreenRatio_6, 0, 15 *ScreenRatio_6, 15 *ScreenRatio_6);
+        _attentionBtn.titleRect = CGRectMake(0, 20 * ScreenRatio_6, 40 * ScreenRatio_6, 15 *ScreenRatio_6);
+        [_attentionBtn addTarget:self action:@selector(attentionBtnAct:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _attentionBtn;
+}
+- (UIView *)youhuiTempView{
+    if (!_youhuiTempView) {
+        _youhuiTempView = [UIView new];
+        _youhuiTempView.backgroundColor = [UIColor whiteColor];
+    }
+    return _youhuiTempView;
+}
+- (UILabel *)youhuiTagLabel{
+    if (!_youhuiTagLabel) {
+        _youhuiTagLabel = [UILabel new];
+        _youhuiTagLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        _youhuiTagLabel.textColor = KMainTextColor_9;
+        _youhuiTagLabel.text = @"优惠";
+
+    }
+    return _youhuiTagLabel;
+}
+- (WLKTCDHeaderPinLeftTimeView *)pinLeftTimeView{
+    if (!_pinLeftTimeView) {
+        _pinLeftTimeView = [[WLKTCDHeaderPinLeftTimeView alloc]init];
+    }
+    return _pinLeftTimeView;
+}
+
+@end

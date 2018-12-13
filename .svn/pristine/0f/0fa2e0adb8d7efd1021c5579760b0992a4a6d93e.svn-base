@@ -1,0 +1,218 @@
+//
+//  WLKTCourseDetailLocationCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/22.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTCourseDetailLocationCell.h"
+#import "WLKTCourseDetailMapVC.h"
+
+@interface WLKTCourseDetailLocationCell ()
+@property (strong, nonatomic) UILabel *schoolNameLabel;
+@property (strong, nonatomic) UILabel *tagLabel;
+@property (strong, nonatomic) UILabel *tagDetailLabel;
+@property (strong, nonatomic) UIImageView *locationIconIV;
+@property (strong, nonatomic) UILabel *locationLabel;
+@property (strong, nonatomic) UILabel *distanceLabel;
+@property (strong, nonatomic) UIImageView *rightArrowIV;
+@property (strong, nonatomic) UIView *separatorView;
+
+@end
+
+@implementation WLKTCourseDetailLocationCell
+
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [self.contentView addSubview:self.schoolNameLabel];
+        [self.contentView addSubview:self.tagLabel];
+        [self.contentView addSubview:self.tagDetailLabel];
+        [self.contentView addSubview:self.locationLabel];
+        [self.contentView addSubview:self.locationIconIV];
+        [self.contentView addSubview:self.rightArrowIV];
+        [self.contentView addSubview:self.distanceLabel];
+        [self.contentView addSubview:self.separatorView];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)setCellData:(WLKTCourse *)data index:(NSInteger)index currentCoordinate:(CLLocationCoordinate2D)currentCoordinate{
+    self.schoolNameLabel.text = data.point[index].name;
+    self.locationLabel.text = data.point[index].address;
+    if (data.point[index].youhui.count > 0) {
+        self.tagLabel.hidden = NO;
+        self.tagDetailLabel.hidden = NO;
+    }
+    else{
+        self.tagLabel.hidden = YES;
+        self.tagDetailLabel.hidden = YES;
+    }
+//    [WLKTCourseDetailMapVC getCoordinateByAddress:data.point[index].address completion:^(CLLocationCoordinate2D coordinate, NSError *error) {
+//        if (!error) {
+//            double distance = [self getDistanceLat1:coordinate.latitude whitLng1:coordinate.longitude whitLat2:currentCoordinate.latitude whitLng2:currentCoordinate.longitude];
+//            NSString *dis = distance * 0.001 > 1 ? [NSString stringWithFormat:@"%.1fkm    ", distance * 0.001] : [NSString stringWithFormat:@"%.0fm    ", distance];
+//            if (distance * 0.001 > 999) {
+//                dis = [NSString stringWithFormat:@"%.0fkm    ", distance * 0.001];
+//            }
+//            self.distanceLabel.text = dis;
+//        }
+//    }];
+    self.distanceLabel.text = [NSString stringWithFormat:@"%@    ", data.distance ?: @""];
+    //判断定位是否开启
+    if ([CLLocationManager locationServicesEnabled]){
+        //  判断用户是否允许程序获取位置权限
+        if ([CLLocationManager authorizationStatus] == kCLAuthorizationStatusAuthorizedWhenInUse || [CLLocationManager authorizationStatus] == kCLAuthorizationStatusAuthorizedAlways){
+            //用户允许获取位置权限
+            self.distanceLabel.hidden = false;
+        }else{
+            //用户拒绝开启用户权限
+            self.distanceLabel.hidden = YES;
+        }
+    }else{
+        self.distanceLabel.hidden = YES;
+    }
+
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.schoolNameLabel.text = nil;
+    self.locationLabel.text = nil;
+    self.distanceLabel.text = nil;
+}
+
+#pragma mark - location
+//根据角度计算弧度
+-(double)radian:(double)d{
+    return d * M_PI/180.0;
+}
+
+//根据两点经纬度计算两点距离
+-(double)getDistanceLat1:(double)lat1 whitLng1:(double)lng1 whitLat2:(double)lat2 whitLng2:(double)lng2{
+    
+    double EARTH_RADIUS = 6378137;//地球半径  人类规定(单位：m)
+    double radLat1 = [self radian:lat1];
+    double radLat2 = [self radian:lat2];
+    double radLng1 = [self radian:lng1];
+    double radLng2 = [self radian:lng2];
+    
+    double a = radLat1 - radLat2;
+    double b = radLng1 - radLng2;
+    
+    double s = 2 * asin(sqrt(pow(sin(a/2),2) + cos(radLat1)*cos(radLat2)*pow(sin(b/2),2)));//google maps里面实现的算法
+    s = s * EARTH_RADIUS;
+    
+    return s;
+}
+
+#pragma mark - make constaints
+- (void)makeConstraints{
+    [self.schoolNameLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.contentView).offset(12 * ScreenRatio_6);
+    }];
+    [self.tagLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(12.5, 12.5));
+        make.left.mas_equalTo(self.schoolNameLabel.mas_right).offset(3);
+        make.centerY.mas_equalTo(self.schoolNameLabel);
+    }];
+    [self.tagDetailLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.tagLabel.mas_right).offset(5);
+        make.centerY.mas_equalTo(self.schoolNameLabel);
+    }];
+    [self.locationIconIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(7.5 * 1.2, 10.5 * 1.2));
+        make.left.mas_equalTo(self.contentView).offset(13 * ScreenRatio_6);
+        make.top.mas_equalTo(self.schoolNameLabel.mas_bottom).offset(7 * ScreenRatio_6);
+    }];
+    [self.locationLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(285 * ScreenRatio_6, 15));
+        make.left.mas_equalTo(self.locationIconIV.mas_right).offset(5);
+        make.centerY.mas_equalTo(self.locationIconIV);
+    }];
+    [self.rightArrowIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-10 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.contentView);
+    }];
+    [self.distanceLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.right.mas_equalTo(self.rightArrowIV.mas_left).offset(5);
+        make.centerY.mas_equalTo(self.contentView);
+    }];
+    [self.separatorView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0.5));
+        make.top.mas_equalTo(self.contentView);
+    }];
+}
+
+#pragma mark - get
+- (UILabel *)schoolNameLabel{
+    if (!_schoolNameLabel) {
+        _schoolNameLabel = [[UILabel alloc]init];
+        _schoolNameLabel.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+        _schoolNameLabel.textColor = UIColorHex(333333);
+    }
+    return _schoolNameLabel;
+}
+- (UILabel *)tagLabel{
+    if (!_tagLabel) {
+        _tagLabel = [[UILabel alloc]init];
+        _tagLabel.font = [UIFont systemFontOfSize:10 * ScreenRatio_6];
+        _tagLabel.textColor = UIColorHex(ffffff);
+        _tagLabel.text = @"荐";
+        _tagLabel.backgroundColor = UIColorHex(ee402d);
+        _tagLabel.layer.cornerRadius = 1.5;
+        _tagLabel.layer.masksToBounds = YES;
+        _tagLabel.textAlignment = NSTextAlignmentCenter;
+    }
+    return _tagLabel;
+}
+- (UILabel *)tagDetailLabel{
+    if (!_tagDetailLabel) {
+        _tagDetailLabel = [[UILabel alloc]init];
+        _tagDetailLabel.font = [UIFont systemFontOfSize:10 * ScreenRatio_6];
+        _tagDetailLabel.textColor = UIColorHex(ee402d);
+        _tagDetailLabel.text = @"优惠活动仅适用于此分校";
+    }
+    return _tagDetailLabel;
+}
+- (UIImageView *)locationIconIV{
+    if (!_locationIconIV) {
+        _locationIconIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"课程详情定位"]];
+    }
+    return _locationIconIV;
+}
+- (UILabel *)locationLabel{
+    if (!_locationLabel) {
+        _locationLabel = [[UILabel alloc]init];
+        _locationLabel.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+        _locationLabel.textColor = UIColorHex(999999);
+    }
+    return _locationLabel;
+}
+- (UILabel *)distanceLabel{
+    if (!_distanceLabel) {
+        _distanceLabel = [UILabel new];
+        _distanceLabel.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+        _distanceLabel.textColor = UIColorHex(333333);
+        _distanceLabel.textAlignment = NSTextAlignmentCenter;
+    }
+    return _distanceLabel;
+}
+- (UIImageView *)rightArrowIV{
+    if (!_rightArrowIV) {
+        _rightArrowIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"课程详情进入"]];
+    }
+    return _rightArrowIV;
+}
+- (UIView *)separatorView{
+    if (!_separatorView) {
+        _separatorView = [UIView new];
+        _separatorView.backgroundColor = separatorView_color;
+    }
+    return _separatorView;
+}
+@end

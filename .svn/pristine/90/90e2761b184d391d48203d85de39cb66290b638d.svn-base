@@ -1,0 +1,195 @@
+//
+//  WLKTCDMore_QA_detailCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/3/20.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTCDMore_QA_detailCell.h"
+
+@interface WLKTCDMore_QA_detailCell()
+@property (strong, nonatomic) UIImageView *headerIV;
+@property (strong, nonatomic) UILabel *nameLabel;
+@property (strong, nonatomic) UILabel *timeLabel;
+@property (strong, nonatomic) UILabel *tagLabel;
+@property (strong, nonatomic) UILabel *detailLabel;
+@property (strong, nonatomic) UIButton *reportBtn;
+@property (strong, nonatomic) UIView *sepView;
+@property (strong, nonatomic) NSIndexPath *indexPath;
+@end
+
+@implementation WLKTCDMore_QA_detailCell
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [self.contentView addSubview:self.headerIV];
+        [self.contentView addSubview:self.nameLabel];
+        [self.contentView addSubview:self.timeLabel];
+        [self.contentView addSubview:self.tagLabel];
+        [self.contentView addSubview:self.detailLabel];
+        [self.contentView addSubview:self.reportBtn];
+        [self.contentView addSubview:self.sepView];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+
+- (void)setCellData:(id)data indexPath:(NSIndexPath *)indexPath{
+    _indexPath = indexPath;
+    
+    if ([data isKindOfClass:[CDQuestionDetailList class]]) {
+        CDQuestionDetailList *d = (CDQuestionDetailList *)data;
+        [self.headerIV setImageURL:[NSURL URLWithString:d.headimg]];
+        self.nameLabel.text = d.name;
+        self.timeLabel.text = d.createtime;
+        self.detailLabel.text = d.answer;
+        self.tagLabel.text = d.tag;
+        if ([d.tag isEqualToString:@"同学"]) {
+            self.tagLabel.textColor = kMainTextColor_red;
+            self.tagLabel.layer.borderColor = kMainTextColor_red.CGColor;
+            self.tagLabel.layer.borderWidth = 0.5;
+            self.tagLabel.layer.cornerRadius = 1;
+            self.tagLabel.layer.masksToBounds = YES;
+        }
+        if ([d.tag isEqualToString:@"机构"]) {
+            self.tagLabel.backgroundColor = kMainTextColor_red;
+            self.tagLabel.textColor = [UIColor whiteColor];
+        }
+    }
+    else if([data isKindOfClass:[CDQuestionDetailQues class]]){
+        CDQuestionDetailQues *d = (CDQuestionDetailQues *)data;
+        [self.headerIV setImageURL:[NSURL URLWithString:d.headimg]];
+        self.nameLabel.text = d.username;
+        self.timeLabel.text = d.createtime;
+        self.detailLabel.text = d.question;
+    }
+    
+}
+
+- (void)reportBtnAct{
+    if ([self.delegate respondsToSelector:@selector(didClickReportWithIndex:)]) {
+        [self.delegate didClickReportWithIndex:self.indexPath];
+    }
+}
+
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.headerIV.image = nil;
+    self.nameLabel.text = nil;
+    self.timeLabel.text = nil;
+    self.tagLabel.text = nil;
+    self.detailLabel.text = nil;
+}
+
+- (void)setIsQuestion:(BOOL)isQuestion{
+    _isQuestion = isQuestion;
+    if (isQuestion) {
+        [self.headerIV mas_updateConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(40 *ScreenRatio_6, 40 *ScreenRatio_6));
+            make.top.left.mas_equalTo(self.contentView).offset(10 *ScreenRatio_6);
+        }];
+        self.headerIV.layer.cornerRadius = 20 *ScreenRatio_6;
+        self.detailLabel.textColor = KMainTextColor_3;
+    }
+}
+
+- (void)makeConstraints{
+    [self.headerIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(30 *ScreenRatio_6, 30 *ScreenRatio_6));
+        make.top.left.mas_equalTo(self.contentView).offset(15 *ScreenRatio_6);
+    }];
+    [self.nameLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.headerIV.mas_right).offset(5);
+        make.top.mas_equalTo(self.headerIV);
+    }];
+    [self.timeLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.nameLabel);
+        make.top.mas_equalTo(self.nameLabel.mas_bottom).offset(5);
+    }];
+    [self.tagLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.nameLabel.mas_right).offset(5);
+        make.centerY.mas_equalTo(self.nameLabel);
+        make.width.mas_equalTo(30 *ScreenRatio_6);
+    }];
+    [self.detailLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.nameLabel);
+        make.right.mas_equalTo(self.contentView).offset(-10 *ScreenRatio_6);
+        make.top.mas_equalTo(self.timeLabel.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    [self.reportBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(50 *ScreenRatio_6, 30 *ScreenRatio_6));
+        make.right.mas_equalTo(self.contentView);
+        make.centerY.mas_equalTo(self.nameLabel);
+    }];
+    [self.sepView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.bottom.right.mas_equalTo(self.contentView);
+        make.left.mas_equalTo(self.nameLabel);
+        make.height.mas_equalTo(0.5);
+    }];
+}
+
+#pragma mark - get
+- (UIImageView *)headerIV{
+    if (!_headerIV) {
+        _headerIV = [UIImageView new];
+        _headerIV.layer.masksToBounds = YES;
+        _headerIV.layer.cornerRadius = 15 *ScreenRatio_6;
+    }
+    return _headerIV;
+}
+- (UILabel *)nameLabel{
+    if (!_nameLabel) {
+        _nameLabel = [UILabel new];
+        _nameLabel.font = [UIFont systemFontOfSize:14 *ScreenRatio_6];
+        _nameLabel.textColor = KMainTextColor_6;
+    }
+    return _nameLabel;
+}
+- (UILabel *)timeLabel{
+    if (!_timeLabel) {
+        _timeLabel = [UILabel new];
+        _timeLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        _timeLabel.textColor = KMainTextColor_6;
+    }
+    return _timeLabel;
+}
+- (UILabel *)tagLabel{
+    if (!_tagLabel) {
+        _tagLabel = [UILabel new];
+        _tagLabel.font = [UIFont systemFontOfSize:14 *ScreenRatio_6];
+        _tagLabel.textAlignment = NSTextAlignmentCenter;
+    }
+    return _tagLabel;
+}
+- (UILabel *)detailLabel{
+    if (!_detailLabel) {
+        _detailLabel = [UILabel new];
+        _detailLabel.font = [UIFont systemFontOfSize:16 *ScreenRatio_6];
+        _detailLabel.textColor = KMainTextColor_6;
+        _detailLabel.numberOfLines = 0;
+    }
+    return _detailLabel;
+}
+- (UIButton *)reportBtn{
+    if (!_reportBtn) {
+        _reportBtn = [UIButton new];
+        _reportBtn.titleLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        [_reportBtn setTitle:@"举报" forState:UIControlStateNormal];
+        [_reportBtn setTitleColor:KMainTextColor_6 forState:UIControlStateNormal];
+        [_reportBtn addTarget:self action:@selector(reportBtnAct) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _reportBtn;
+}
+- (UIView *)sepView{
+    if (!_sepView) {
+        _sepView = [UIView new];
+        _sepView.backgroundColor = kMainBackgroundColor;
+    }
+    return _sepView;
+}
+
+@end

@@ -1,0 +1,306 @@
+//
+//  WLKTLogin.m
+//  wlkt
+//
+//  Created by slovelys on 17/3/19.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTLogin.h"
+#import "WLKTLoginApi.h"
+#import "WLKTLoginOutApi.h"
+#import "WLKTMessageManager.h"
+#import "WLKTSNSLoginApi.h"
+#import <WeiboSDK.h>
+#import "AppDelegate.h"
+
+static NSString * const kLSGKeychainService = @"kWLKTKeychainService";
+static NSString * const kEncryptKey = @"*#ICn0ke71,.m23o*4l#&$Z~";   //不要修改!
+static NSString * const kUserDataPath = @"UserData.bin";
+static NSString * const kLastUsername = @"kLastUsername";
+static WLKTUser * curUser;
+
+@implementation WLKTLogin
+
++ (void)autoLogin {
+    if (![self curUser]) {
+        return;
+    }
+    NSString *username = [self lastUsername];
+    NSError *error;
+    NSString *password = [YYKeychain getPasswordForService:kLSGKeychainService account:username error:&error];
+    if (!password ) {
+        if (error) {
+            DDLogError(@"Get password error: %@", error.localizedDescription);
+        } else {
+            DDLogError(@"Password empty");
+        }
+        [self logoutWithCompletion:nil];
+        return;
+    }
+    WLKTLoginApi *api = [[WLKTLoginApi alloc] initWithUsername:username password:password];
+    @weakify(self)
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        @strongify(self)
+        [SVProgressHUD dismiss];
+        
+        [self setLoginData:request.responseJSONObject[@"result"][@"info"] completion:^{
+            
+        }];
+    } failure:^(__kindof YTKBaseRequest *request) {
+        ShowApiError;
+        [self logoutWithCompletion:nil];
+    }];
+}
+
++ (void)loginWithUsername:(NSString *)username password:(NSString *)password completion:(LoginCompletion)completion {
+    if (![SVProgressHUD isVisible]) {
+        [SVProgressHUD showWithStatus:@"请稍候..."];
+    }
+    WLKTLoginApi *api = [[WLKTLoginApi alloc] initWithUsername:username password:password];
+    @weakify(self)
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        @strongify(self)
+        [SVProgressHUD dismiss];
+        if ([request.responseJSONObject[@"errorCode"] isEqual:@0]) {
+            [self savePassword:password username:username];
+            [self setLastUsername:username];
+            [self setLoginData:request.responseJSONObject[@"result"][@"info"] completion:^{
+                if (completion) {
+                    completion(curUser);
+                }
+            }];
+        }
+        else{
+            [SVProgressHUD showInfoWithStatus:[NSString stringWithFormat:@"%@", request.responseJSONObject[@"message"]]];
+            return ;
+        }
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        ShowApiError;
+    }];
+}
+
++ (void)loginWithSNSType:(SSDKPlatformType)type completion:(LoginCompletion)completion SNSPushHandler:(void (^)(void))handler{
+//    if (![SVProgressHUD isVisible]) {
+//        [SVProgressHUD showWithStatus:@"正在登录..."];
+//    }
+    NSString *t = @"";
+    switch (type) {
+        case SSDKPlatformTypeQQ:
+            t = @"qq";
+            break;
+        case SSDKPlatformTypeWechat:
+            t = @"weixin";
+            break;
+        case SSDKPlatformTypeSinaWeibo:
+            t = @"sina";
+            break;
+        default:
+            break;
+    }
+    
+    [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"isSNSPush"];
+    
+
+
+    if (type == SSDKPlatformTypeSinaWeibo) {
+        WBAuthorizeRequest *request = [WBAuthorizeRequest request];
+        request.redirectURI = @"http://sns.whalecloud.com/sina2/callback";
+        [WeiboSDK sendRequest:request];
+        
+        AppDelegate *del = (AppDelegate *)[UIApplication sharedApplication].delegate;
+        del.weiboAuthoHandler = ^(NSDictionary *dic) {
+            if (![dic valueForKey:@"screen_name"]) {
+                return;
+            }
+            [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"isSNSPush"];
+            
+            WLKTSNSLoginApi *api = [[WLKTSNSLoginApi alloc]initWithType:t snsuserid:[dic valueForKey:@"idstr"] name:[dic valueForKey:@"screen_name"] head:[dic valueForKey:@"avatar_hd"]];
+            [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+                [SVProgressHUD dismiss];
+                NSString *errorCode = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"errorCode"]];
+                if ([errorCode isEqualToString:@"0"]) {
+                    if (completion) {
+                        [self setLoginData:request.responseJSONObject[@"result"][@"info"] completion:^{
+                            completion(curUser);
+                        }];
+                    }
+                }
+                else{//未绑定
+                    if (handler) {
+                        handler();
+                    }
+                }
+                
+            } failure:^(__kindof YTKBaseRequest *request) {
+                [SVProgressHUD showErrorWithStatus:@"登录失败"];
+            }];
+        };
+        
+    }
+    else{
+        [ShareSDK authorize:type settings:nil onStateChanged:^(SSDKResponseState state, SSDKUser *user, NSError *error) {
+            if (error) {
+                [SVProgressHUD showErrorWithStatus:@"登录失败"];
+            } else {
+                if (state == SSDKResponseStateSuccess){
+                    [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"isSNSPush"];
+                    if (!user.nickname) {
+                        return;
+                    }
+                    NSString *uid = user.uid;
+                    WLKTSNSLoginApi *api = [[WLKTSNSLoginApi alloc]initWithType:t snsuserid:uid name:user.nickname head:user.icon];
+                    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+                        [SVProgressHUD dismiss];
+                        NSString *errorCode = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"errorCode"]];
+                        if ([errorCode isEqualToString:@"0"]) {
+                            if (completion) {
+                                [self setLoginData:request.responseJSONObject[@"result"][@"info"] completion:^{
+                                    completion(curUser);
+                                }];
+                            }
+                        }
+                        else{//未绑定
+                            if (handler) {
+                                handler();
+                            }
+                        }
+                        
+                    } failure:^(__kindof YTKBaseRequest *request) {
+                        [SVProgressHUD showErrorWithStatus:@"登录失败"];
+                    }];
+                }
+            }
+        }];
+    }
+    
+
+//    [[UMSocialManager defaultManager] getUserInfoWithPlatform:type currentViewController:nil completion:^(id result, NSError *error) {
+//        if (error) {
+//            [SVProgressHUD showErrorWithStatus:@"登录失败"];
+//        } else {
+//            UMSocialUserInfoResponse *resp = result;
+//            NSString *uid = [t isEqualToString:@"qq"] ? resp.unionId : resp.uid;
+//            WLKTSNSLoginApi *api = [[WLKTSNSLoginApi alloc]initWithType:t snsuserid:uid name:resp.name head:resp.iconurl];
+//            [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+//                NSString *errorCode = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"errorCode"]];
+//                if ([errorCode isEqualToString:@"0"]) {
+//                    if (completion) {
+//                        [self setLoginData:request.responseJSONObject[@"result"][@"info"] completion:^{
+//                            completion(curUser);
+//                        }];
+//                    }
+//                }
+//                else{//未绑定
+//                    if (handler) {
+//                        handler();
+//                    }
+//                }
+//
+//            } failure:^(__kindof YTKBaseRequest *request) {
+//                [SVProgressHUD showErrorWithStatus:@"登录失败"];
+//            }];
+//        }
+//    }];
+}
+
++ (void)logoutWithCompletion:(void (^)(void))completion {
+    [[WLKTLoginOutApi new] startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+    } failure:^(__kindof YTKBaseRequest *request) {
+        
+    }];
+    [self deleteUserData];
+    [[WLKTMessageManager sharedManager] clearBadge];
+    curUser = nil;
+    if (completion) {
+        completion();
+    }
+}
+
++ (void)deleteUserData {
+    if ([DefaultFileManager fileExistsAtPath:[self userDataPath]]) {
+        NSError *error;
+        if (![DefaultFileManager removeItemAtPath:[self userDataPath] error:&error]) {
+            DDLogError(@"Delete user data error: %@", error.localizedDescription);
+        }
+    }
+}
+
++ (void)savePassword:(NSString *)password username:(nonnull NSString *)username {
+    NSError *error;
+    if (![YYKeychain setPassword:password forService:kLSGKeychainService account:username error:&error]) {
+        DDLogError(@"Save password error: %@", error.localizedDescription);
+    }
+}
+
++ (void)setLoginData:(NSDictionary *)data completion:(void (^)(void))completion {
+    if (!data) {
+        return;
+    }
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        WLKTUser *user = [WLKTUser modelWithDictionary:data];
+        [self saveUserData:user];
+        
+        curUser = user;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (completion) {
+                completion();
+            }
+        });
+    });
+}
+
+#pragma mark - User Data
+//+ (void)saveUserData {
+//    [self saveUserData:curUser];
+//}
+
++ (void)saveUserData:(WLKTUser *)user {
+    if (!user) {
+        return;
+    }
+    NSData *userData = [user modelToJSONData];
+    NSData *encryptData = [userData aes256EncryptWithKey:[self encryptKey] iv:nil];
+    NSError *error;
+    if (![encryptData writeToFile:[self userDataPath] options:NSDataWritingAtomic error:&error]) {
+        DDLogError(@"Write user data error: %@", error);
+    }
+}
+
+#pragma mark - Getters & Setters
++ (WLKTUser *)curUser {
+    if (!curUser) {
+        if (![DefaultFileManager fileExistsAtPath:[self userDataPath]]) {
+            return nil;
+        }
+        
+        NSData *decryptData = [[NSData dataWithContentsOfFile:[self userDataPath]] aes256DecryptWithkey:[self encryptKey] iv:nil];
+        curUser = [WLKTUser modelWithJSON:decryptData];
+    }
+    return curUser;
+}
+
++ (NSData *)encryptKey {
+    return [kEncryptKey dataValue];
+}
+
++ (NSString *)userDataPath {
+    return [[UIApplication sharedApplication].documentsPath stringByAppendingPathComponent:[kUserDataPath md5String]];
+}
+
++ (NSString *)lastUsername {
+    return [StandardUserDefaults stringForKey:kLastUsername];
+}
+
++ (void)setLastUsername:(NSString *)phone {
+    [StandardUserDefaults setValue:phone forKey:kLastUsername];
+}
+
++ (NSString *)lastPassword {
+    NSString *username = [self lastUsername];
+    NSError *error;
+    return [YYKeychain getPasswordForService:kLSGKeychainService account:username error:&error];
+}
+
+@end

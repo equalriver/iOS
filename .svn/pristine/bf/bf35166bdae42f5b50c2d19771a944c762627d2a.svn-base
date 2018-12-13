@@ -1,0 +1,162 @@
+//
+//  WLKTSchoolNewsListTVC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/29.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTSchoolNewsListTVC.h"
+#import "WLKTSchoolNewsCell.h"
+#import "WLKTSchoolNewsListApi.h"
+#import "WLKTTableviewRefresh.h"
+#import "WLKTSchoolNewsDetailVC.h"
+
+@interface WLKTSchoolNewsListTVC ()
+@property (strong, nonatomic) UILabel *tableViewFooterlabel;
+@property (strong, nonatomic) UIButton *goTopButton;
+
+@property (copy, nonatomic) NSString *suid;
+@property (assign) NSInteger page;
+@property (strong, nonatomic) NSMutableArray<WLKTSchoolNewsList *> *dataArr;
+@end
+
+@implementation WLKTSchoolNewsListTVC
+- (instancetype)initWithSchoolId:(NSString *)suid
+{
+    self = [super init];
+    if (self) {
+        _suid = suid;
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"新闻动态";
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    [self setRefresh];
+    [self loadData];
+}
+
+#pragma mark - network
+- (void)loadData{
+    WS(weakSelf);
+    self.tableView.state = WLKTViewStateLoading;
+    WLKTSchoolNewsListApi *api = [[WLKTSchoolNewsListApi alloc]initWithSchoolId:self.suid page:self.page];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        NSArray *arr = [NSArray modelArrayWithClass:[WLKTSchoolNewsList class] json:request.responseJSONObject[@"result"]];
+        [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableView block:^{
+            if (weakSelf.dataArr.count) {
+                weakSelf.page++;
+                [weakSelf loadData];
+            }
+            else{
+                weakSelf.tableView.mj_footer = nil;
+            }
+        }];
+        if (self.page == 1) {
+            [self.tableView.mj_footer endRefreshing];
+            if (!arr.count) {
+                self.tableView.state = WLKTViewStateEmpty;
+                self.tableView.imageForStateEmpty = [UIImage imageNamed:@"message_bg"];
+            }
+        }
+        else{
+            if (arr.count) {
+                [self.tableView.mj_footer endRefreshing];
+            }
+            else{
+                [self.tableView.mj_footer endRefreshingWithNoMoreData];
+            }
+        }
+        [self.dataArr addObjectsFromArray:arr];
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView reloadData];
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView.mj_footer endRefreshing];
+//        self.tableView.state = WLKTViewStateError;
+    }];
+}
+
+- (void)setRefresh{
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^{
+        weakSelf.page = 1;
+        [weakSelf.dataArr removeAllObjects];
+        [weakSelf loadData];
+    }];
+
+}
+
+#pragma mark - Table view data source
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return self.dataArr.count;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    NSInteger count = self.dataArr[indexPath.row].imglist.count;
+    if (count == 0) {//无图片
+        return 145;
+    }
+    if (count == 1) {//有视频
+        return 130;
+    }
+    if (count > 1) {//有图片
+        return 190;
+    }
+    return 0;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    WLKTSchoolNewsCell *cell = [tableView dequeueReusableCellWithIdentifier:@"WLKTSchoolNewsCell"];
+    if (cell == nil) {
+        cell = [[WLKTSchoolNewsCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"WLKTSchoolNewsCell"];
+    }
+    [cell setCellData:self.dataArr[indexPath.row]];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (self.dataArr.count <= indexPath.row) {
+        return;
+    }
+    WLKTSchoolNewsDetailVC *vc = [[WLKTSchoolNewsDetailVC alloc]initWithNewsId:self.dataArr[indexPath.row].nid];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+#pragma mark - action
+- (void)goTopButtonAct:(UIButton *)sender{
+    [self.tableView scrollToTop];
+}
+
+#pragma mark - get
+- (UILabel *)tableViewFooterlabel{
+    if (!_tableViewFooterlabel) {
+        _tableViewFooterlabel = [[UILabel alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 40)];
+        _tableViewFooterlabel.font = [UIFont systemFontOfSize:11];
+        _tableViewFooterlabel.textColor = UIColorHex(999999);
+        _tableViewFooterlabel.textAlignment = NSTextAlignmentCenter;
+        _tableViewFooterlabel.backgroundColor = separatorView_color;
+        _tableViewFooterlabel.text = @"已经到底啦～";
+    }
+    return _tableViewFooterlabel;
+}
+- (UIButton *)goTopButton{
+    if (!_goTopButton) {
+        _goTopButton = [[UIButton alloc]initWithFrame:CGRectMake(330 * ScreenRatio_6, 2.5, 35, 35)];
+        [_goTopButton setImage:[UIImage imageNamed:@"顶部"] forState:UIControlStateNormal];
+        [_goTopButton addTarget:self action:@selector(goTopButtonAct:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _goTopButton;
+}
+- (NSMutableArray<WLKTSchoolNewsList *> *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray arrayWithCapacity:10];
+    }
+    return _dataArr;
+}
+@end

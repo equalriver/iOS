@@ -1,0 +1,177 @@
+//
+//  WLKTActivePayWayTV.m
+//  wlkt
+//
+//  Created by 尹平江 on 2017/7/11.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTActivePayWayTV.h"
+#import "WLKTActivePayWayCell.h"
+#import "WLKTActivePayWayBottomCell.h"
+
+@interface WLKTActivePayWayTV ()
+@property (copy, nonatomic) NSArray *bankIconArr;
+@property (copy, nonatomic) NSArray *bankTitleArr;
+@property (copy, nonatomic) NSMutableArray *cellArr;
+@property (assign) BOOL isShowMorePay;
+@end
+
+@implementation WLKTActivePayWayTV
+
+- (instancetype)initWithFrame:(CGRect)frame style:(UITableViewStyle)style
+{
+    self = [super initWithFrame:frame style:style];
+    if (self) {
+        self.separatorStyle = UITableViewCellSeparatorStyleNone;
+        self.scrollEnabled = NO;
+        self.delegate = self;
+        self.dataSource = self;
+    }
+    return self;
+}
+
+#pragma mark - tableView
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    if (self.isShowMorePay) {
+        return 4;
+    }
+    return 2;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return 1;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTActivePayWayCell *cell = [[WLKTActivePayWayCell alloc]init];
+    WLKTActivePayWayBottomCell *bottomCell = [[WLKTActivePayWayBottomCell alloc]init];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    bottomCell.selectionStyle = UITableViewCellSelectionStyleNone;
+    [bottomCell.otherPayBtn addTarget:self action:@selector(showPayWayAct:) forControlEvents:UIControlEventTouchUpInside];
+    if (indexPath.section != 3) {
+        cell.bankIconImageView.image = self.bankIconArr[indexPath.section];
+        cell.bankTitle.text = self.bankTitleArr[indexPath.section];
+        [cell.bankTitle mas_remakeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo([self getSizeWithStr:self.bankTitleArr[indexPath.section] Height:25 Font:17]);
+            make.left.mas_equalTo(cell.bankIconImageView.mas_right).offset(10 *ScreenRatio_6);
+            make.centerY.mas_equalTo(cell.contentView);
+        }];
+    }
+
+    if (!self.isShowMorePay) {
+        if (indexPath.section == 1) {
+            [bottomCell.otherPayBtn setTitle:@"选择更多支付方式" forState:UIControlStateNormal];
+            bottomCell.otherPayIcon.image = [UIImage imageNamed:@"moreButton"];
+            return bottomCell;
+        }
+        cell.checkImageView.image = [UIImage imageNamed:@"正确"];
+        cell.tianfuPayDetailLabel.hidden = NO;
+        [self.cellArr insertObject:cell atIndex:indexPath.section];
+        return cell;
+    }
+    else {//显示更多支付
+        switch (indexPath.section) {
+            case 0:
+                cell.checkImageView.image = [UIImage imageNamed:@"正确"];
+                cell.tianfuPayDetailLabel.hidden = NO;
+                break;
+            case 1: case 2:
+                cell.checkImageView.image = [UIImage imageNamed:@"圆圈"];
+                cell.tianfuPayDetailLabel.hidden = YES;
+                break;
+            case 3:
+                [bottomCell.otherPayBtn setTitle:@"收起更多支付方式" forState:UIControlStateNormal];
+                bottomCell.otherPayIcon.image = [UIImage imageNamed:@"arrow_up"];
+                return bottomCell;
+            default:
+                break;
+        }
+//        switch (indexPath.section) {
+//            case 0: case 1:
+//                cell.checkImageView.image = [UIImage imageNamed:@"圆圈"];
+//                cell.tianfuPayDetailLabel.hidden = YES;
+//                break;
+//            case 2:
+//                [bottomCell.otherPayBtn setTitle:@"收起更多支付方式" forState:UIControlStateNormal];
+//                bottomCell.otherPayIcon.image = [UIImage imageNamed:@"arrow_up"];
+//                return bottomCell;
+//            default:
+//                break;
+//        }
+//        [self.cellArr insertObject:cell atIndex:indexPath.section];
+        return cell;
+    }
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (self.cellArr.count > 0 && self.cellArr.count - 1 >= indexPath.section) {
+        WLKTActivePayWayCell *currentCell = self.cellArr[indexPath.section];
+        
+        if (indexPath.section != 3 && self.isShowMorePay) {
+            for (WLKTActivePayWayCell *cell in self.cellArr) {
+                if (currentCell == cell) {
+                    cell.checkImageView.image = [UIImage imageNamed:@"正确"];
+                }
+                else{
+                    cell.checkImageView.image = [UIImage imageNamed:@"圆圈"];
+                }
+            }
+            NSArray *btnTag = @[@"0", @"1", @"2"];
+            NSString *tag = btnTag[indexPath.section];
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"activePayWayTag" object:nil userInfo:@{@"tag" : tag}];
+        }
+        
+    }
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return 45 * ScreenRatio_6;
+}
+
+- (CGSize) getSizeWithStr:(NSString *) str Height:(float)height Font:(float)fontSize
+{
+    NSDictionary * attribute = @{NSFontAttributeName :[UIFont systemFontOfSize:fontSize] };
+    CGSize tempSize=[str boundingRectWithSize:CGSizeMake(MAXFLOAT, height)
+                                      options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading
+                                   attributes:attribute
+                                      context:nil].size;
+    return tempSize;
+}
+
+#pragma mark - button
+
+- (void)showPayWayAct:(UIButton *)sender{
+    self.isShowMorePay = !self.isShowMorePay;
+    if (!self.isShowMorePay) {
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"activePayWayTag" object:nil userInfo:@{@"tag" : @0}];
+    }
+    [self reloadData];
+}
+
+#pragma mark - get
+
+- (NSArray *)bankIconArr{
+    if (!_bankIconArr) {
+        _bankIconArr = @[[UIImage imageNamed:@"tianfu"], [UIImage imageNamed:@"支付宝"], [UIImage imageNamed:@"微信支付"]];
+    }
+    return _bankIconArr;
+}
+
+- (NSArray *)bankTitleArr{
+    if (!_bankTitleArr) {
+        _bankTitleArr = @[@"钱包余额支付", @"支付宝", @"微信"];
+    }
+    return _bankTitleArr;
+}
+
+- (NSMutableArray *)cellArr{
+    if (!_cellArr) {
+        _cellArr = [NSMutableArray arrayWithCapacity:3];
+    }
+    return _cellArr;
+}
+
+@end
+

@@ -1,0 +1,217 @@
+//
+//  WLKTHPRecommendBannerView.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/1/25.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTHPRecommendBannerView.h"
+
+@interface WLKTHPRecommendCycleCustomCVCell: UICollectionViewCell
+@property (strong, nonatomic) UIImageView *imgIV;
+@end
+
+@implementation WLKTHPRecommendCycleCustomCVCell
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self.contentView addSubview:self.imgIV];
+        [self.imgIV mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.center.mas_equalTo(self.contentView);
+            make.size.mas_equalTo(self.contentView);
+        }];
+    }
+    return self;
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.imgIV.image = nil;
+}
+
+- (UIImageView *)imgIV{
+    if (!_imgIV) {
+        _imgIV = [UIImageView new];
+        _imgIV.contentMode = UIViewContentModeScaleToFill;
+        _imgIV.layer.masksToBounds = YES;
+    }
+    return _imgIV;
+}
+@end
+
+
+////////////////////////////////////////////////////////////////
+@interface WLKTHPRecommendBannerView()<UICollectionViewDelegate, UICollectionViewDataSource>
+@property (strong, nonatomic) UIPageControl *pageControl;
+@property (strong, nonatomic) NSTimer *timer;
+@property (strong, nonatomic) UICollectionViewFlowLayout *layout;
+@property (nonatomic, assign) NSInteger totalItemsCount;
+@end
+
+@implementation WLKTHPRecommendBannerView
+- (instancetype)initWithFrame:(CGRect)frame collectionViewLayout:(UICollectionViewLayout *)layout{
+    self = [super initWithFrame:frame collectionViewLayout:layout];
+    if (self) {
+        _layout = (UICollectionViewFlowLayout *)layout;
+        self.pagingEnabled = YES;
+        self.showsHorizontalScrollIndicator = false;
+        self.dataSource = self;
+        self.delegate = self;
+        self.backgroundColor = [UIColor whiteColor];
+        [self registerClass:[WLKTHPRecommendCycleCustomCVCell class] forCellWithReuseIdentifier:@"WLKTHPRecommendCycleCustomCVCell"];
+        [self addSubview:self.pageControl];
+        [self.pageControl mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(60, 15));
+            make.centerX.mas_equalTo(self);
+            make.bottom.mas_equalTo(self.mas_bottom);
+        }];
+        
+    }
+    return self;
+}
+
+- (void)dealloc{
+    [self invalidateTimer];
+}
+
+- (void)setBannerArr:(NSArray *)bannerArr{
+    [self invalidateTimer];
+    _bannerArr = bannerArr;
+    _totalItemsCount = bannerArr.count *100;
+    if (bannerArr.count > 1) { // 由于 !=1 包含count == 0等情况
+        self.scrollEnabled = YES;
+    }
+    else {
+        self.scrollEnabled = NO;
+        [self invalidateTimer];
+    }
+    if (_bannerArr.count) {
+        self.pageControl.numberOfPages = _bannerArr.count;
+        [self.pageControl mas_updateConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake(self.bannerArr.count *24, 15));
+        }];
+        [self reloadData];
+        [self setupTimer];
+    }
+}
+
+- (void)layoutSubviews{
+    [super layoutSubviews];
+    if (self.contentOffset.x == 0 &&  _totalItemsCount) {
+        int targetIndex = 0;
+        
+        targetIndex = _totalItemsCount * 0.5;
+
+        [self scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:targetIndex inSection:0] atScrollPosition:UICollectionViewScrollPositionNone animated:NO];
+    }
+}
+
+//解决当父View释放时，当前视图因为被Timer强引用而不能释放的问题
+- (void)willMoveToSuperview:(UIView *)newSuperview
+{
+    if (!newSuperview) {
+        [self invalidateTimer];
+    }
+}
+
+#pragma mark - timer
+- (void)setupTimer {
+    [self invalidateTimer]; // 创建定时器前先停止定时器，不然会出现僵尸定时器，导致轮播频率错误
+    
+    _timer = [NSTimer scheduledTimerWithTimeInterval:2 target:self selector:@selector(automaticScroll) userInfo:nil repeats:YES];
+    [[NSRunLoop mainRunLoop] addTimer:_timer forMode:NSRunLoopCommonModes];
+}
+
+- (void)invalidateTimer {
+    [_timer invalidate];
+    _timer = nil;
+}
+
+- (void)automaticScroll {
+    if (0 == _totalItemsCount) return;
+    int currentIndex = [self currentIndex];
+    int targetIndex = currentIndex + 1;
+    [self scrollToIndex:targetIndex];
+}
+
+- (void)scrollToIndex:(int)targetIndex {
+    if (targetIndex >= _totalItemsCount) {
+        
+        targetIndex = _totalItemsCount * 0.5;
+        [self scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:targetIndex inSection:0] atScrollPosition:UICollectionViewScrollPositionNone animated:NO];
+        
+        return;
+    }
+    [self scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:targetIndex inSection:0] atScrollPosition:UICollectionViewScrollPositionNone animated:YES];
+}
+
+#pragma mark - UIScrollViewDelegate
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView
+{
+    if (!self.bannerArr.count) return; // 解决清除timer时偶尔会出现的问题
+    int itemIndex = [self currentIndex];
+    int indexOnPageControl = [self pageControlIndexWithCurrentCellIndex:itemIndex];
+    
+    self.pageControl.currentPage = indexOnPageControl;
+    
+}
+
+- (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView{
+//    if (self.autoScroll) {
+        [self invalidateTimer];
+//    }
+}
+
+
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate{
+//    if (self.autoScroll) {
+        [self setupTimer];
+//    }
+}
+
+#pragma mark -
+- (int)currentIndex{
+    if (self.frame.size.width == 0 || self.frame.size.height == 0) {
+        return 0;
+    }
+    
+    int index = 0;
+    if (_layout.scrollDirection == UICollectionViewScrollDirectionHorizontal) {
+        index = (self.contentOffset.x + _layout.itemSize.width * 0.5) / _layout.itemSize.width;
+    } else {
+        index = (self.contentOffset.y + _layout.itemSize.height * 0.5) / _layout.itemSize.height;
+    }
+    
+    return MAX(0, index);
+}
+
+- (int)pageControlIndexWithCurrentCellIndex:(NSInteger)index{
+    return (int)index % self.bannerArr.count;
+}
+
+#pragma mark - delegate
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    return _totalItemsCount;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTHPRecommendCycleCustomCVCell *cell = [self dequeueReusableCellWithReuseIdentifier:@"WLKTHPRecommendCycleCustomCVCell" forIndexPath:indexPath];
+    long itemIndex = [self pageControlIndexWithCurrentCellIndex:indexPath.item];
+    [cell.imgIV setImageURL:[NSURL URLWithString:self.bannerArr[itemIndex]]];
+    return cell;
+}
+
+
+#pragma mark -
+- (UIPageControl *)pageControl{
+    if (!_pageControl) {
+        _pageControl = [[UIPageControl alloc]init];
+        _pageControl.userInteractionEnabled = false;
+        _pageControl.currentPageIndicatorTintColor = [UIColor whiteColor];
+        _pageControl.pageIndicatorTintColor = KMainTextColor_9;
+    }
+    return _pageControl;
+}
+@end

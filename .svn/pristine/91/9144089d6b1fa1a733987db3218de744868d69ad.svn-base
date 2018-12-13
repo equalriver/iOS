@@ -1,0 +1,181 @@
+//
+//  WLKTActivityDetialComplaintCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/12.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTActivityDetialComplaintCell.h"
+#import "WLKTCourseDetailImagesCollectionCell.h"
+#import "MIPhotoBrowser.h"
+
+@interface WLKTActivityDetialComplaintCell ()<MIPhotoBrowserDelegate, UICollectionViewDelegate, UICollectionViewDataSource>
+@property (strong, nonatomic) UILabel *detailLabel;
+@property (strong, nonatomic) UILabel *username_timeLabel;
+@property (strong, nonatomic) UIImageView *answerIV;
+@property (strong, nonatomic) UICollectionView *imageCV;
+@property (strong, nonatomic) UICollectionViewFlowLayout *layout;
+
+@property (strong, nonatomic) WLKTActivityDetailComplaint *data;
+@property (strong, nonatomic) WLKTActivityDetailComplaintItem *currentComplaint;
+@end
+
+@implementation WLKTActivityDetialComplaintCell
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [self.contentView addSubview:self.answerIV];
+        [self.contentView addSubview:self.imageCV];
+        [self.contentView addSubview:self.detailLabel];
+        [self.contentView addSubview:self.username_timeLabel];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)setCellData:(WLKTActivityDetailComplaint *)data index:(NSInteger)index{
+    _data = data;
+    NSMutableArray *arr = [NSMutableArray arrayWithCapacity:5];
+    for (int i = 0; i < data.complaint.count; i++) {
+        [arr addObject:data.complaint[i].question_item];
+        if (data.complaint[i].answer.result.length > 0) {//有回复
+            [arr addObject:data.complaint[i].answer];
+        }
+    }
+    if (arr.count > index) {
+        if ([arr[index] isKindOfClass:[WLKTActivityDetailComplaintItem class]]) {
+            WLKTActivityDetailComplaintItem *obj = arr[index];
+            _currentComplaint = obj;
+            self.answerIV.hidden = YES;
+            self.detailLabel.text = obj.describe;
+            self.username_timeLabel.text = [NSString stringWithFormat:@"投诉人：%@  投诉时间：%@", obj.username, obj.create_time];
+
+            if (obj.thumb_picture.count == 0) {
+                [self.username_timeLabel mas_remakeConstraints:^(MASConstraintMaker *make) {
+                    make.top.mas_equalTo(self.detailLabel.mas_bottom).offset(10 * ScreenRatio_6);
+                    make.left.mas_equalTo(self.detailLabel);
+                }];
+            }
+            else{
+                [self.imageCV mas_remakeConstraints:^(MASConstraintMaker *make) {
+                    make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+                    make.top.mas_equalTo(self.detailLabel.mas_bottom).offset(15 * ScreenRatio_6);
+                    make.size.mas_equalTo(CGSizeMake(ScreenWidth, ((obj.thumb_picture.count + 2) /3)* 115 * ScreenRatio_6));
+                }];
+                [self.imageCV reloadData];
+            }
+        }
+        else if ([arr[index] isKindOfClass:[WLKTActivityDetailComplaintReplyItem class]]){//回复
+            WLKTActivityDetailComplaintReplyItem *obj = arr[index];
+            self.answerIV.hidden = NO;
+            self.detailLabel.text = [NSString stringWithFormat:@"回复：%@", obj.result];
+            self.username_timeLabel.text = [NSString stringWithFormat:@"解决人：%@  处理时间：%@", obj.username, obj.create_time];
+            [self.detailLabel mas_remakeConstraints:^(MASConstraintMaker *make) {
+                make.left.mas_equalTo(self.contentView).offset(20 * ScreenRatio_6);
+                make.top.mas_equalTo(self.contentView).offset(15 * ScreenRatio_6);
+                make.size.mas_equalTo(CGSizeMake(310 * ScreenRatio_6, 15));
+            }];
+            [self.username_timeLabel mas_remakeConstraints:^(MASConstraintMaker *make) {
+                make.top.mas_equalTo(self.detailLabel.mas_bottom).offset(10 * ScreenRatio_6);
+                make.left.mas_equalTo(self.detailLabel);
+            }];
+        }
+    }
+}
+
+#pragma mark - collection view
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    return self.currentComplaint.picture.count;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTCourseDetailImagesCollectionCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"WLKTCourseDetailImagesCollectionCell" forIndexPath:indexPath];
+    [cell setCellData:self.currentComplaint.thumb_picture[indexPath.item]];
+    return cell;
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTCourseDetailImagesCollectionCell *cell = (WLKTCourseDetailImagesCollectionCell *)[collectionView cellForItemAtIndexPath:indexPath];
+    MIPhotoBrowser *photoBrowser = [[MIPhotoBrowser alloc] init];
+    photoBrowser.delegate = self;
+    photoBrowser.sourceImagesContainerView = cell.contentView;
+    photoBrowser.imageCount = self.currentComplaint.picture.count;
+    photoBrowser.currentImageIndex = indexPath.item;
+    [photoBrowser show];
+}
+
+#pragma mark - photo browser
+- (NSString *)photoBrowser:(MIPhotoBrowser *)photoBrowser URLImageForIndex:(NSInteger)index{
+    return self.currentComplaint.picture[index];
+}
+
+- (void)makeConstraints{
+    [self.detailLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.size.mas_equalTo(CGSizeMake(310 * ScreenRatio_6, 15));
+    }];
+    [self.answerIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.contentView);
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-10 * ScreenRatio_6);
+    }];
+    [self.imageCV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0));
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.detailLabel.mas_bottom).offset(15 * ScreenRatio_6);
+    }];
+    [self.username_timeLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(self.imageCV.mas_bottom).offset(10 * ScreenRatio_6);
+        make.left.mas_equalTo(self.detailLabel);
+    }];
+}
+
+#pragma mark - get
+- (UILabel *)detailLabel{
+    if (!_detailLabel) {
+        _detailLabel = [UILabel new];
+        _detailLabel.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+        _detailLabel.textColor = UIColorHex(333333);
+        _detailLabel.numberOfLines = 2;
+    }
+    return _detailLabel;
+}
+- (UILabel *)username_timeLabel{
+    if (!_username_timeLabel) {
+        _username_timeLabel = [UILabel new];
+        _username_timeLabel.font = [UIFont systemFontOfSize:11 * ScreenRatio_6];
+        _username_timeLabel.textColor = UIColorHex(999999);
+    }
+    return _username_timeLabel;
+}
+- (UIImageView *)answerIV{
+    if (!_answerIV) {
+        _answerIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"气泡框"]];
+    }
+    return _answerIV;
+}
+- (UICollectionView *)imageCV{
+    if (!_imageCV) {
+        _imageCV = [[UICollectionView alloc]initWithFrame:CGRectNull collectionViewLayout:self.layout];
+        _imageCV.backgroundColor = [UIColor whiteColor];
+        _imageCV.scrollEnabled = false;
+        _imageCV.dataSource = self;
+        _imageCV.delegate = self;
+        [_imageCV registerClass:[WLKTCourseDetailImagesCollectionCell class] forCellWithReuseIdentifier:@"WLKTCourseDetailImagesCollectionCell"];
+    }
+    return _imageCV;
+}
+- (UICollectionViewFlowLayout *)layout{
+    if (!_layout) {
+        _layout = [UICollectionViewFlowLayout new];
+        _layout.itemSize = CGSizeMake(115 * ScreenRatio_6, 115 * ScreenRatio_6);
+        _layout.minimumInteritemSpacing = 5 *ScreenRatio_6;
+        _layout.sectionInset = UIEdgeInsetsMake(0, 0, 0, 10 *ScreenRatio_6);
+    }
+    return _layout;
+}
+@end
+

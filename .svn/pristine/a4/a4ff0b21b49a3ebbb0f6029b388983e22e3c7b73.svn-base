@@ -1,0 +1,119 @@
+//
+//  WLKTCouponSaleVC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/18.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTCouponSaleVC.h"
+#import "WLKTCouponSaleHeadCell.h"
+#import "WLKTCouponSaleCourseCell.h"
+#import "WLKTSaleCourseApi.h"
+#import "WLKTSaleCourseSchoolList.h"
+#import "WLKTSaleCourseData.h"
+#import "WLKTSchoolVC.h"
+#import "WLKTTableviewRefresh.h"
+
+@interface WLKTCouponSaleVC ()<WLKTCouponSaleSchoolItemDelegate>
+@property (strong, nonatomic) NSMutableArray<WLKTSaleCourseData *> *courseListArr;
+@property (strong, nonatomic) NSMutableArray<WLKTSaleCourseSchoolList *> *schoolListArr;
+@property (nonatomic) NSInteger page;
+@end
+
+@implementation WLKTCouponSaleVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"限时特价";
+    self.page = 1;
+    self.hidesBottomBarWhenPushed = YES;
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.tableView.backgroundColor = [UIColor colorWithHexString:@"fb9661"];
+    [self request];
+    [self setRefresh];
+}
+
+#pragma mark - network
+- (void)request{
+    self.tableView.state = WLKTViewStateLoading;
+    WLKTSaleCourseApi *api = [[WLKTSaleCourseApi alloc]initWithPage:self.page];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        
+        NSArray *sarr = [NSArray modelArrayWithClass:[WLKTSaleCourseSchoolList class] json:request.responseJSONObject[@"result"][@"schoollist"]];
+        NSArray *carr = [NSArray modelArrayWithClass:[WLKTSaleCourseData class] json:request.responseJSONObject[@"result"][@"clist"]];
+        self.schoolListArr = sarr.mutableCopy;
+        if (carr.count) {
+            [self.tableView.mj_footer endRefreshing];
+        }
+        else{
+            [self.tableView.mj_footer endRefreshingWithNoMoreData];
+        }
+        [self.courseListArr addObjectsFromArray:carr];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.tableView reloadData];
+        });
+    } failure:^(__kindof YTKBaseRequest *request) {
+        WS(weakSelf);
+        self.tableView.state = WLKTViewStateError;
+        self.tableView.emptyButtonClickBlock = ^{
+            [weakSelf request];
+        };
+    }];
+}
+
+- (void)setRefresh{
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableView block:^{
+        weakSelf.page++;
+        [weakSelf request];
+    }];
+}
+
+#pragma mark - Table view data source
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return 2;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    if (indexPath.row == 0) {
+        WLKTCouponSaleHeadCell *cell = [[WLKTCouponSaleHeadCell alloc]initWithSchoolNames:self.schoolListArr];
+        cell.delegate = self;
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        return cell;
+    }
+    WLKTCouponSaleCourseCell *cell = [[WLKTCouponSaleCourseCell alloc]initWithSaleCourse:self.courseListArr target:self];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (indexPath.row == 0) {
+        return 400 * ScreenRatio_6;
+    }
+    return 55 * ScreenRatio_6 + (self.courseListArr.count + 1)/2 * 202 * ScreenRatio_6;
+}
+
+#pragma mark - head cell delegate
+- (void)couponSaleDidSelectedItem:(NSIndexPath *)indexPath{
+    if (self.schoolListArr.count > 0) {
+        WLKTSchoolVC *vc = [[WLKTSchoolVC alloc]initWithSchoolId:self.schoolListArr[indexPath.item].suid];
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+}
+
+#pragma mark - get
+- (NSMutableArray<WLKTSaleCourseData *> *)courseListArr{
+    if (!_courseListArr) {
+        _courseListArr = [NSMutableArray array];
+    }
+    return _courseListArr;
+}
+- (NSMutableArray<WLKTSaleCourseSchoolList *> *)schoolListArr{
+    if (!_schoolListArr) {
+        _schoolListArr = [NSMutableArray array];
+    }
+    return _schoolListArr;
+}
+@end

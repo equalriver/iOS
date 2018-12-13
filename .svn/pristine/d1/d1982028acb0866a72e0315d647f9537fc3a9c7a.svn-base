@@ -1,0 +1,253 @@
+//
+//  WLKTAppCoordinator.m
+//  wlkt
+//
+//  Created by slovelys on 17/3/19.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTAppCoordinator.h"
+#import "WLKTHomepageCoordinator.h"
+#import "WLKTLogin.h"
+#import "WLKTCourseCoordinator.h"
+#import "WLKTLoginCoordinator.h"
+#import "WLKTUserController.h"
+#import "WLKTIntroManager.h"
+#import <BlocksKit.h>
+#import <UIView+BlocksKit.h>
+#import <PYSearch.h>
+#import "WLKTMessageManager.h"
+#import <UIBarButtonItem+BlocksKit.h>
+#import "WLKTMsgNotiTVC.h"
+//#import "WLKTActivityVC.h"
+#import "WLKTClassifyActivityTVC.h"
+#import "WLKTCourseDetailVC.h"
+#import "WLKTNewsVC.h"
+#import "WLKTClassroomVC.h"
+#import "WLKTBaseNaviController.h"
+
+@interface WLKTAppCoordinator () <WLKTLoginCoordinatorDelegate>
+
+@property (strong, nonatomic) UIWindow *window;
+@property (strong, nonatomic) NSMutableArray *childCoordinators;
+@property (strong, nonatomic) WLKTUser *user;
+@property (strong, nonatomic, readwrite) WLKTBaseTabBarController *tabBarController;
+
+@property (strong, nonatomic) WLKTBaseNaviController *homepageNavigationController;
+@property (strong, nonatomic) WLKTBaseNaviController *classroomNavigationController;
+@property (strong, nonatomic) WLKTBaseNaviController *newsNavigationController;
+@property (strong, nonatomic) WLKTBaseNaviController *userNavigationController;
+@property (strong, nonatomic, readwrite) WLKTHomepageCoordinator *homepageCoordinator;
+@property (strong, nonatomic, readwrite) WLKTCourseCoordinator *courseCoordinator;
+@property (strong, nonatomic, readwrite) WLKTLoginCoordinator *loginCoordinator;
+@property (copy, nonatomic) void (^loginBlock)(void);
+//@property (strong, nonatomic) UISearchBar *searchBar;
+//@property (strong, nonatomic) UIBarButtonItem *message;
+@property (copy, nonatomic) NSDictionary *launchOptions;
+
+@end
+
+@implementation WLKTAppCoordinator
+
+- (instancetype)initWithWindow:(UIWindow *)window options:(NSDictionary *)launchOptions {
+    if (self = [super init]) {
+        _window = window;
+        _launchOptions = [NSDictionary dictionaryWithDictionary:launchOptions];
+//        _launchWithNotification = launchOptions[UIApplicationLaunchOptionsRemoteNotificationKey] ? YES : NO;
+//        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(loginOrLogout) name:kDidLoginNotification object:nil];
+//        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(loginOrLogout) name:kDidLogoutNotification object:nil];
+    }
+    return self;
+}
+
+- (void)start {
+    self.window.rootViewController = self.tabBarController;
+    self.window.backgroundColor = [UIColor whiteColor];
+//    NSString *shareURL = self.launchOptions[UIApplicationLaunchOptionsURLKey];
+//    if ([shareURL containsString:COURSE_SHARE_URL]) {
+//        NSString *courseId = [[url.absoluteString componentsSeparatedByString:@"?"].lastObject componentsSeparatedByString:@"="].lastObject;
+//        WLKTCourseDetailViewController *vc = [[WLKTCourseDetailViewController alloc]initWithCourseId:courseId];
+//        if ([self.tabBarController.childViewControllers.firstObject isKindOfClass:[UINavigationController class]]) {
+//            UINavigationController *navi = self.tabBarController.childViewControllers.firstObject;
+//            [navi pushViewController:vc animated:YES];
+//        }
+//    }
+    [self.window makeKeyAndVisible];
+    [WLKTLogin autoLogin];
+    if (TheCurUser) {
+        [[WLKTMessageManager sharedManager] requestLatestMessagesWithCompletionHandler:nil];
+    }
+    if ([WLKTIntroManager needDisplayIntroView]) {
+        [WLKTIntroManager displayIntroView];
+    }
+
+}
+
+#pragma mark - WLKTLoginCoordinatorDelegate
+- (void)loginCoordinatorDidFinishLogin:(WLKTLoginCoordinator *)coordinator {
+    if (_loginBlock) {
+        _loginBlock();
+    }
+    [_childCoordinators removeObject:coordinator];
+    [[WLKTMessageManager sharedManager] requestLatestMessagesWithCompletionHandler:nil];
+}
+
+- (void)loginCoordinatorDidFinishLogin:(WLKTLoginCoordinator *)coordinator handler:(void (^)(UIViewController *))handler{
+    if (_loginBlock) {
+        _loginBlock();
+        handler(self.tabBarController.selectedViewController);
+    }
+    [_childCoordinators removeObject:coordinator];
+    [[WLKTMessageManager sharedManager] requestLatestMessagesWithCompletionHandler:nil];
+}
+
+- (void)loginCoordinatorDidRequestDismissal:(WLKTLoginCoordinator *)loginCoordinator {
+    [loginCoordinator.navigationController dismissViewControllerAnimated:YES completion:^{
+        [_childCoordinators removeObject:loginCoordinator];
+    }];
+}
+
+- (void)loginWithCompletion:(void (^)(void))completion {
+    WLKTLoginCoordinator *coordinator = [WLKTLoginCoordinator new];
+    coordinator.delegate = self;
+    [self.childCoordinators addObject:coordinator];
+    self.loginBlock = completion;
+    [self.tabBarController.selectedViewController presentViewController:coordinator.navigationController animated:YES completion:nil];
+}
+
+- (void)navigateToMessageViewController {
+    WLKTMsgNotiTVC *vc = [[WLKTMsgNotiTVC alloc] initWithStyle:UITableViewStylePlain];
+    vc.hidesBottomBarWhenPushed = YES;
+    [self.tabBarController.selectedViewController pushViewController:vc animated:YES];
+}
+
+
+#pragma mark - Getters & Setters
+
+- (NSMutableArray *)childCoordinators {
+    if (!_childCoordinators) {
+        _childCoordinators = [NSMutableArray array];
+    }
+    return _childCoordinators;
+}
+
+//- (NSMutableArray *)hotSearchArray {
+//    if (!_hotSearchArray) {
+//        _hotSearchArray = [NSMutableArray array];
+//    }
+//    return  _hotSearchArray;
+//}
+
+- (WLKTBaseTabBarController *)tabBarController {
+    if (!_tabBarController) {
+        _tabBarController = [[WLKTBaseTabBarController alloc] init];
+        _tabBarController.hidesBottomBarWhenPushed = YES;
+        _tabBarController.viewControllers = @[self.homepageNavigationController, self.classroomNavigationController, self.newsNavigationController, self.userNavigationController];
+        [_tabBarController.viewControllers enumerateObjectsUsingBlock:^(__kindof UIViewController * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            obj.tabBarItem.title = [self tabTitles][idx];
+            obj.tabBarItem.image = [self tabDefaultImageAtIndex:idx];
+            obj.tabBarItem.selectedImage = [self tabSelectedImageAtIndex:idx];
+        }];
+    }
+    return _tabBarController;
+}
+
+- (WLKTBaseNaviController *)homepageNavigationController {
+    if (!_homepageNavigationController) {
+        WLKTHomepageCoordinator *homepageCoordinator = [[WLKTHomepageCoordinator alloc] initWithUser:_user];
+//        homepageCoordinator.searchBar = self.searchBar;
+//        homepageCoordinator.message = self.message;
+        _homepageNavigationController = (WLKTBaseNaviController *)homepageCoordinator.navigationController;
+        self.homepageCoordinator = homepageCoordinator;
+        [self.childCoordinators addObject:homepageCoordinator];
+    }
+    
+    return _homepageNavigationController;
+}
+
+- (WLKTBaseNaviController *)classroomNavigationController {
+    if (!_classroomNavigationController) {
+        _classroomNavigationController = [[WLKTBaseNaviController alloc] initWithRootViewController:[[WLKTClassroomVC alloc] init]];
+        
+    }
+    return _classroomNavigationController;
+}
+
+- (WLKTBaseNaviController *)newsNavigationController{
+    if (!_newsNavigationController) {
+        _newsNavigationController = [[WLKTBaseNaviController alloc]initWithRootViewController:[[WLKTNewsVC alloc]init]];
+    
+    }
+    return _newsNavigationController;
+}
+
+- (WLKTBaseNaviController *)userNavigationController {
+    if (!_userNavigationController) {
+        _userNavigationController = [[WLKTBaseNaviController alloc] initWithRootViewController:[[WLKTUserController alloc] init]];
+
+        [[WLKTMessageManager sharedManager] addMessageButton:_userNavigationController.tabBarItem];
+    }
+    return _userNavigationController;
+}
+/*
+- (UISearchBar *)searchBar {
+    if (!_searchBar) {
+        _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, kScreenWidth - 70 *ScreenRatio_6, 44)];
+//        _searchBar.delegate = self;
+        [_searchBar setSearchBarStyle:UISearchBarStyleMinimal];
+        [_searchBar setPlaceholder:@"请输入关键词"];
+//        _searchBar.barTintColor = [UIColor whiteColor];
+//        UIView *searchTextField = [[[_searchBar.subviews firstObject] subviews] lastObject];
+//        searchTextField.backgroundColor = [UIColor whiteColor];
+//        for (UIView *v in _searchBar.subviews.firstObject.subviews) {
+//            v.backgroundColor = [UIColor whiteColor];
+//        }
+//        for (UIView *v in searchTextField.subviews) {
+//            v.backgroundColor = [UIColor whiteColor];
+//        }
+    }
+    return _searchBar;
+}*/
+
+//- (UIBarButtonItem *)message {
+//    if (!_message) {
+//        _message = [[UIBarButtonItem alloc] bk_initWithImage:[UIImage imageNamed:@"nav_message"] style:UIBarButtonItemStylePlain handler:^(id sender) {
+//            if (TheCurUser) {
+//                [self navigateToMessageViewController];
+//            } else {
+//                @weakify(self)
+//                [self loginWithCompletion:^{
+//                    @strongify(self)
+//                    [self.tabBarController.selectedViewController dismissViewControllerAnimated:NO completion:nil];
+//                    [self navigateToMessageViewController];
+//                }];
+//            }
+//        }];
+//    }
+//    return _message;
+//}
+
+
+- (NSArray *)tabTitles {
+    return @[@"首页", @"课堂+", @"发现", @"我的"];
+}
+
+- (UIImage *)tabDefaultImageAtIndex:(NSInteger)index {
+    switch (index) {
+        case 0: return [UIImage imageNamed:@"tab_homepage_unselect"];
+        case 1: return [UIImage imageNamed:@"Tab_课堂"];
+        case 2: return [UIImage imageNamed:@"发现"];
+    }
+    return [UIImage imageNamed:@"tab_mine_unselect"];
+}
+
+- (UIImage *)tabSelectedImageAtIndex:(NSInteger)index {
+    switch (index) {
+        case 0: return [UIImage imageNamed:@"tab_homepage_select"];
+        case 1: return [UIImage imageNamed:@"Tab_课堂-拷贝"];
+        case 2: return [UIImage imageNamed:@"发现选中"];
+    }
+    return [UIImage imageNamed:@"tab_mine_select"];
+}
+
+@end

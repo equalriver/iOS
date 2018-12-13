@@ -1,0 +1,198 @@
+//
+//  WLKTSNSLoginSetPsdVC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/28.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTSNSLoginSetPsdVC.h"
+#import "WLKTSNSPasswordApi.h"
+#import "WLKTLogin.h"
+#import "WLKTSetHobbyVC.h"
+
+@interface WLKTSNSLoginSetPsdVC ()
+@property (strong, nonatomic) UIView *contentView;
+@property (strong, nonatomic) UITextField *passwordTF;
+@property (strong, nonatomic) UIView *separatorView;
+@property (strong, nonatomic) UITextField *confirmPsdTF;
+@property (strong, nonatomic) UIButton *passwordCheckBtn;
+@property (strong, nonatomic) UIButton *confirmPsdCheckBtn;
+@property (strong, nonatomic) UIButton *confirmBtn;
+@end
+
+@implementation WLKTSNSLoginSetPsdVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"设置登录密码";
+    self.navigationItem.hidesBackButton = YES;
+    self.view.backgroundColor = fillViewColor;
+    [self.view addSubview:self.contentView];
+    [self.contentView addSubview:self.passwordTF];
+    [self.contentView addSubview:self.separatorView];
+    [self.contentView addSubview:self.confirmPsdTF];
+    [self.contentView addSubview:self.passwordCheckBtn];
+    [self.contentView addSubview:self.confirmPsdCheckBtn];
+    [self.view addSubview:self.confirmBtn];
+    [self makeConstraints];
+}
+
+#pragma mark - action
+- (void)confirmBtnAct{
+    if (![self.passwordTF.text isEqualToString:self.confirmPsdTF.text]) {
+        [SVProgressHUD showInfoWithStatus:@"两次输入的密码不一致"];
+        return;
+    }
+    WLKTSNSPasswordApi *api = [[WLKTSNSPasswordApi alloc]initWithPassword:self.confirmPsdTF.text];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        NSString *errorCode = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"errorCode"]];
+        if ([errorCode isEqualToString:@"-1"]) {
+            [SVProgressHUD showInfoWithStatus:@"注册失败"];
+            [self.navigationController popToRootViewControllerAnimated:YES];
+        }
+        if ([errorCode isEqualToString:@"0"]) {
+            
+            if (request.responseJSONObject[@"result"][@"fuli"]) {
+                dispatch_async_on_main_queue(^{
+                    NSString *s = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"fulistr"]];
+                    NSString *ss = [s stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"\\n"]];
+                    UIAlertController *alc = [UIAlertController alertControllerWithTitle:nil message:ss preferredStyle:UIAlertControllerStyleAlert];
+                    UIAlertAction *ac = [UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+                        [WLKTLogin setLoginData:request.responseJSONObject[@"result"][@"info"] completion:^{
+                            WLKTSetHobbyVC *vc = [[WLKTSetHobbyVC alloc]initWithHandle:^{
+                                [self.navigationController popToRootViewControllerAnimated:YES];
+                            }];
+                            vc.hidesBottomBarWhenPushed = YES;
+                            [self.navigationController presentViewController:vc animated:YES completion:nil];
+                            
+                        }];
+                    }];
+                    [alc addAction:ac];
+                    [self presentViewController:alc animated:YES completion:nil];
+                });
+                
+            }
+
+        }
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        ShowApiError
+    }];
+}
+
+- (void)passwordCheckBtnAct:(UIButton *)sender{
+    if (sender.tag == 0) {
+        sender.selected = !sender.isSelected;
+        [self.passwordTF setSecureTextEntry:sender.isSelected];
+    }
+    else{
+        sender.selected = !sender.isSelected;
+        [self.confirmPsdTF setSecureTextEntry:sender.isSelected];
+    }
+}
+
+#pragma mark -
+- (void)makeConstraints{
+    [self.contentView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 100));
+        make.top.mas_equalTo(self.view);
+        make.left.mas_equalTo(self.view);
+    }];
+    [self.passwordTF mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(15);
+        make.top.mas_equalTo(self.contentView).offset(10);
+        make.size.mas_equalTo(CGSizeMake(250 * ScreenRatio_6, 30));
+    }];
+    [self.separatorView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0.5));
+        make.left.mas_equalTo(self.contentView);
+        make.top.mas_equalTo(self.passwordTF.mas_bottom).offset(2);
+    }];
+    [self.confirmPsdTF mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(15);
+        make.top.mas_equalTo(self.separatorView).offset(1);
+        make.size.mas_equalTo(CGSizeMake(250 * ScreenRatio_6, 30));
+    }];
+    [self.passwordCheckBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-15);
+        make.centerY.mas_equalTo(self.passwordTF);
+    }];
+    [self.confirmPsdCheckBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-15);
+        make.centerY.mas_equalTo(self.confirmPsdTF);
+    }];
+    [self.confirmBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth - 30, 40));
+        make.centerX.mas_equalTo(self.view);
+        make.top.mas_equalTo(self.contentView.mas_bottom).offset(15);
+    }];
+}
+#pragma mark - get
+- (UIView *)contentView{
+    if (!_contentView) {
+        _contentView = [UIView new];
+        _contentView.backgroundColor = [UIColor whiteColor];
+    }
+    return _contentView;
+}
+- (UIView *)separatorView{
+    if (!_separatorView) {
+        _separatorView = [UIView new];
+        _separatorView.backgroundColor = separatorView_color;
+    }
+    return _separatorView;
+}
+- (UITextField *)passwordTF{
+    if (!_passwordTF) {
+        _passwordTF = [UITextField new];
+        _passwordTF.font = [UIFont systemFontOfSize:13];
+        _passwordTF.textColor = UIColorHex(333333);
+        _passwordTF.placeholder = @"请设置密码";
+        _passwordTF.secureTextEntry = YES;
+    }
+    return _passwordTF;
+}
+- (UITextField *)confirmPsdTF{
+    if (!_confirmPsdTF) {
+        _confirmPsdTF = [UITextField new];
+        _confirmPsdTF.font = [UIFont systemFontOfSize:13];
+        _confirmPsdTF.textColor = UIColorHex(333333);
+        _confirmPsdTF.placeholder = @"确认密码";
+        _confirmPsdTF.secureTextEntry = YES;
+    }
+    return _confirmPsdTF;
+}
+- (UIButton *)passwordCheckBtn{
+    if (!_passwordCheckBtn) {
+        _passwordCheckBtn = [UIButton new];
+        _passwordCheckBtn.tag = 0;
+        [_passwordCheckBtn setImage:[UIImage imageNamed:@"button_checkpassword"] forState:UIControlStateNormal];
+        [_passwordCheckBtn setImage:[UIImage imageNamed:@"button_checkpassword_selected"] forState:UIControlStateSelected];
+        [_passwordCheckBtn addTarget:self action:@selector(passwordCheckBtnAct:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _passwordCheckBtn;
+}
+- (UIButton *)confirmPsdCheckBtn{
+    if (!_confirmPsdCheckBtn) {
+        _confirmPsdCheckBtn = [UIButton new];
+        _confirmPsdCheckBtn.tag = 1;
+        [_confirmPsdCheckBtn setImage:[UIImage imageNamed:@"button_checkpassword"] forState:UIControlStateNormal];
+        [_confirmPsdCheckBtn setImage:[UIImage imageNamed:@"button_checkpassword_selected"] forState:UIControlStateSelected];
+        [_confirmPsdCheckBtn addTarget:self action:@selector(passwordCheckBtnAct:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _confirmPsdCheckBtn;
+}
+- (UIButton *)confirmBtn{
+    if (!_confirmBtn) {
+        _confirmBtn = [UIButton new];
+        _confirmBtn.backgroundColor = UIColorHex(33c4da);
+        _confirmBtn.layer.cornerRadius = 20;
+        _confirmBtn.layer.masksToBounds = YES;
+        [_confirmBtn setTitle:@"完成" forState:UIControlStateNormal];
+        [_confirmBtn setTitleColor:UIColorHex(ffffff) forState:UIControlStateNormal];
+        [_confirmBtn addTarget:self action:@selector(confirmBtnAct) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _confirmBtn;
+}
+@end

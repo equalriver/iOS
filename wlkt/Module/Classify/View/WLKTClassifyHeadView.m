@@ -1,0 +1,186 @@
+//
+//  WLKTClassifyHeadView.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/4.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTClassifyHeadView.h"
+#import "WLKTExchangeButton.h"
+#import "SDCycleScrollView.h"
+
+@interface ClassifyCollectionCell: UICollectionViewCell
+@property (strong, nonatomic) UIImageView *iconIV;
+@property (strong, nonatomic) UILabel *titleLabel;
+- (void)setCellDataWithImage:(NSString *)image title:(NSString *)title;
+@end
+
+@implementation ClassifyCollectionCell
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self.contentView addSubview:self.iconIV];
+        [self.contentView addSubview:self.titleLabel];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)setCellDataWithImage:(NSString *)image title:(NSString *)title{
+    [self.iconIV setImageURL:[NSURL URLWithString:image]];
+    self.titleLabel.text = title;
+}
+
+- (void)makeConstraints{
+    [self.iconIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(50 *ScreenRatio_6, 50 *ScreenRatio_6));
+        make.top.mas_equalTo(self.contentView);
+        make.centerX.mas_equalTo(self.contentView);
+    }];
+    [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(self.iconIV.mas_bottom).offset(5);
+        make.centerX.mas_equalTo(self.contentView);
+    }];
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.iconIV.image = nil;
+    self.titleLabel.text = nil;
+}
+
+- (UIImageView *)iconIV{
+    if (!_iconIV) {
+        _iconIV = [UIImageView new];
+    }
+    return _iconIV;
+}
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [UILabel new];
+        _titleLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        _titleLabel.textColor = KMainTextColor_3;
+    }
+    return _titleLabel;
+}
+@end
+
+@interface WLKTClassifyHeadView ()<UICollectionViewDelegate, UICollectionViewDataSource, SDCycleScrollViewDelegate>
+@property (strong, nonatomic) SDCycleScrollView *bannerView;
+@property (strong, nonatomic) UIView *separatorView_2;
+
+@end
+
+@implementation WLKTClassifyHeadView
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        _currentItem = -1;
+        [self addSubview:self.separatorView_2];
+        [self addSubview:self.classifyCV];
+        [self addSubview:self.bannerView];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)setData:(WLKTClassifyData *)data{
+    _data = data;
+    if (data.banner.count) {
+        NSMutableArray *arr = [NSMutableArray arrayWithCapacity:3];
+        for (WLKTClassifyBanner *obj in data.banner) {
+            [arr addObject:obj.img];
+        }
+        self.bannerView.imageURLStringsGroup = arr;
+    }
+    [self.classifyCV reloadData];
+}
+
+#pragma mark - banner view delegate
+- (void)cycleScrollView:(SDCycleScrollView *)cycleScrollView didSelectItemAtIndex:(NSInteger)index{
+    if (self.data.banner.count) {
+        if ([self.delegate respondsToSelector:@selector(didSelectedImageWithType:url:)]) {
+            [self.delegate didSelectedImageWithType:self.data.banner[index].type url:self.data.banner[index].url];
+        }
+    }
+}
+
+#pragma mark - collection view
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    return self.data.nav_classify.count;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+    ClassifyCollectionCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"ClassifyCollectionCell" forIndexPath:indexPath];
+    cell.titleLabel.textColor = KMainTextColor_3;
+    [cell setCellDataWithImage:self.data.nav_classify[indexPath.item].img title:self.data.nav_classify[indexPath.item].str];
+    if (self.currentItem != -1 && self.currentItem == indexPath.item) {
+        cell.titleLabel.textColor = kMainTextColor_red;
+    }
+    return cell;
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    if ([self.delegate respondsToSelector:@selector(didSelectedNaviItemByType:)]) {
+        [self.delegate didSelectedNaviItemByType:self.data.nav_classify[indexPath.item].nid];
+    }
+    self.currentItem = indexPath.item;
+    [self.classifyCV reloadData];
+
+}
+
+#pragma mark -
+- (void)makeConstraints{
+    [self.classifyCV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 80 *ScreenRatio_6));
+        make.left.mas_equalTo(self);
+        make.top.mas_equalTo(self);
+    }];
+    [self.bannerView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth - 20 *ScreenRatio_6, 100 *ScreenRatio_6));
+        make.centerX.mas_equalTo(self);
+        make.top.mas_equalTo(self.classifyCV.mas_bottom);
+    }];
+    [self.separatorView_2 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 5 *ScreenRatio_6));
+        make.left.mas_equalTo(self);
+        make.top.mas_equalTo(self.bannerView.mas_bottom).offset(5);
+    }];
+}
+
+#pragma mark - get
+- (UICollectionView *)classifyCV{
+    if (!_classifyCV) {
+        UICollectionViewFlowLayout *l = [UICollectionViewFlowLayout new];
+        l.itemSize = CGSizeMake(ScreenWidth /4 - 6, 80 *ScreenRatio_6);
+        l.sectionInset = UIEdgeInsetsMake(0, 0, 0, 10);
+        l.scrollDirection = UICollectionViewScrollDirectionHorizontal;
+        _classifyCV = [[UICollectionView alloc]initWithFrame:CGRectNull collectionViewLayout:l];
+        _classifyCV.delegate = self;
+        _classifyCV.dataSource = self;
+        _classifyCV.backgroundColor = UIColorHex(ffffff);
+        _classifyCV.showsHorizontalScrollIndicator = false;
+        _classifyCV.scrollEnabled = false;
+        [_classifyCV registerClass:[ClassifyCollectionCell class] forCellWithReuseIdentifier:@"ClassifyCollectionCell"];
+    }
+    return _classifyCV;
+}
+- (SDCycleScrollView *)bannerView{
+    if (!_bannerView) {
+        _bannerView = [SDCycleScrollView cycleScrollViewWithFrame:CGRectNull delegate:self placeholderImage:[UIImage imageNamed:@"活动banner1"]];
+        _bannerView.backgroundColor = [UIColor whiteColor];
+        _bannerView.bannerImageViewContentMode = UIViewContentModeScaleToFill;
+    }
+    return _bannerView;
+}
+- (UIView *)separatorView_2{
+    if (!_separatorView_2) {
+        _separatorView_2 = [UIView new];
+        _separatorView_2.backgroundColor = separatorView_color;
+    }
+    return _separatorView_2;
+}
+@end

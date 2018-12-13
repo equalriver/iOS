@@ -1,0 +1,238 @@
+//
+//  WLKTHomepageCoordinator.m
+//  wlkt
+//
+//  Created by slovelys on 17/3/19.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTHomepageCoordinator.h"
+#import "WLKTHomepageVC.h"
+#import <PYSearch.h>
+#import "WLKTCourse.h"
+#import "WLKTSearchApi.h"
+#import <BlocksKit.h>
+#import "WLKTLoginCoordinator.h"
+#import "WLKTMessageManager.h"
+#import "WLKTActivityDetailVC.h"
+#import "WLKTSchoolVC.h"
+#import "WKWebViewController.h"
+#import "WLKTSearchResultVC.h"
+#import "WLKTSearchContentView.h"
+#import "WLKTCDPageController.h"
+
+@interface WLKTHomepageCoordinator () <PYSearchViewControllerDelegate, PYSearchViewControllerDataSource, UISearchBarDelegate, /*WLKTHomepageDelegate,*/ WLKTLoginCoordinatorDelegate, WLKTHomepageVCDelegate>
+
+@property (strong, nonatomic, readwrite) UINavigationController *navigationController;
+
+@property (strong, nonatomic) WLKTHomepageVC *homepage;
+
+@property (strong, nonatomic) WLKTUser *user;
+
+@property (strong, nonatomic) NSMutableArray *hotSearchs;
+
+@property (strong, nonatomic) WLKTSearchApi *api;
+
+@property (strong, nonatomic) NSMutableArray *searchResults;
+
+@property (copy, nonatomic) void (^loginBlock)(void);
+
+@end
+
+@implementation WLKTHomepageCoordinator
+
+- (instancetype)initWithUser:(WLKTUser *)user {
+    if (self = [super init]) {
+        _user = user;
+//        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleIAPPurchaseNotification:) name:IAPPurchaseNotification object:nil];
+    }
+    return self;
+}
+
+- (void)start {
+    
+}
+
+#pragma mark - UISearchBarDelegate
+- (BOOL)searchBarShouldBeginEditing:(UISearchBar *)searchBar {
+    PYSearchViewController *searchViewController = [PYSearchViewController searchViewControllerWithHotSearches:[self.hotSearchs bk_map:^id(WLKTCourse *obj) {
+        return obj.coursename;
+    }] searchBarPlaceholder:@"请输入关键词" didSearchBlock:^(PYSearchViewController *searchViewController, UISearchBar *searchBar, NSString *searchText) {
+        
+    }];
+    searchViewController.searchBar.tintColor = [UIColor lightGrayColor];
+    searchViewController.hotSearchStyle = PYHotSearchStyleARCBorderTag;
+    searchViewController.searchHistoryStyle = PYHotSearchStyleDefault;
+    searchViewController.delegate = self;
+    searchViewController.dataSource = self;
+    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:searchViewController];
+    [self.navigationController presentViewController:nav animated:YES completion:nil];
+    
+    return NO;
+}
+
+#pragma mark - PYSearchViewControllerDelegate
+- (void)searchViewController:(PYSearchViewController *)searchViewController searchTextDidChange:(UISearchBar *)seachBar searchText:(NSString *)searchText{
+    if (searchText.length) {
+        WLKTSearchApi *api = [[WLKTSearchApi alloc] initWithSearchText:searchText];
+        [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+            [request.responseJSONObject[@"result"][@"list"] enumerateObjectsUsingBlock:^(NSDictionary * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                [self.searchResults addObject:obj];
+            }];
+            searchViewController.searchSuggestions = [request.responseJSONObject[@"result"][@"list"] bk_map:^id(NSDictionary *obj) {
+                return obj[@"coursename"];
+            }];
+        } failure:^(__kindof YTKBaseRequest *request) {
+            NSLog(@"%@", request.responseJSONObject);
+        }];
+    }
+}
+
+- (void)searchViewController:(PYSearchViewController *)searchViewController didSelectHotSearchAtIndex:(NSInteger)index searchText:(NSString *)searchText {
+    WLKTCourse *course = self.hotSearchs[index];
+    WLKTSearchResultVC *vc = [[WLKTSearchResultVC alloc]initWithSearchText:course.coursename];
+    [searchViewController.navigationController pushViewController:vc animated:YES];
+}
+
+- (void)searchViewController:(PYSearchViewController *)searchViewController didSelectSearchHistoryAtIndex:(NSInteger)index searchText:(NSString *)searchText {
+    WLKTSearchApi *api = [[WLKTSearchApi alloc] initWithSearchText:searchText];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        NSMutableArray *array = [NSMutableArray array];
+        [self.searchResults removeAllObjects];
+        [request.responseJSONObject[@"result"][@"list"] enumerateObjectsUsingBlock:^(NSDictionary * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            [self.searchResults addObject:obj];
+        }];
+        if (array.count == 1) {
+            NSDictionary * dic = request.responseJSONObject[@"result"][@"list"][0];
+            WLKTSearchResultVC *vc = [[WLKTSearchResultVC alloc]initWithSearchText:dic[@"coursename"]];
+            [searchViewController.navigationController pushViewController:vc animated:YES];
+        } else {
+            searchViewController.searchSuggestions = [request.responseJSONObject[@"result"][@"list"] bk_map:^id(NSDictionary *obj) {
+                return obj[@"coursename"];
+            }];
+        }
+    } failure:^(__kindof YTKBaseRequest *request) {
+        NSLog(@"%@", request.responseJSONObject);
+    }];
+}
+
+- (void)searchViewController:(PYSearchViewController *)searchViewController didSelectSearchSuggestionAtIndexPath:(NSIndexPath *)indexPath searchBar:(UISearchBar *)searchBar{
+    [self.searchResults enumerateObjectsUsingBlock:^(NSDictionary *  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        if ([obj[@"coursename"] isEqualToString:searchBar.text]) {
+            WLKTSearchResultVC *vc = [[WLKTSearchResultVC alloc]initWithSearchText:searchBar.text];
+            [searchViewController.navigationController pushViewController:vc animated:YES];
+            *stop = YES;
+        }
+    }];
+}
+
+#pragma mark - WLKTHomepageDelegate
+- (void)didClickSearchButtonItem{
+    PYSearchViewController *searchViewController = [PYSearchViewController searchViewControllerWithHotSearches:[self.hotSearchs bk_map:^id(WLKTCourse *obj) {
+        return obj.coursename;
+    }] searchBarPlaceholder:@"请输入关键词" didSearchBlock:^(PYSearchViewController *searchViewController, UISearchBar *searchBar, NSString *searchText) {
+        
+    }];
+    searchViewController.searchBar.tintColor = [UIColor lightGrayColor];
+    searchViewController.hotSearchStyle = PYHotSearchStyleARCBorderTag;
+    searchViewController.searchHistoryStyle = PYHotSearchStyleDefault;
+    searchViewController.delegate = self;
+    searchViewController.dataSource = self;
+    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:searchViewController];
+    [self.navigationController presentViewController:nav animated:YES completion:nil];
+}
+//- (void)homepageViewController:(WLKTHomepageViewController *)homepageViewController didSelectCourseItem:(WLKTCourse *)course {
+//    switch (course.type) {
+//        case WLKTBannerListTyeNormal:
+//            break;
+//        case WLKTBannerListTyeSchool: {
+//            WLKTSchoolVC *vc = [[WLKTSchoolVC alloc] initWithSchoolId:course.url];
+//            vc.hidesBottomBarWhenPushed = YES;
+//            [homepageViewController.navigationController pushViewController:vc animated:YES];
+//        }
+//            break;
+//        case WLKTBannerListTyeCourseDetail: {
+//            if (course.uid.length > 0) {
+//                WLKTCourseDetailVC *vc = [[WLKTCourseDetailVC alloc] initWithCourseId:course.url];
+//                vc.hidesBottomBarWhenPushed = YES;
+//                [homepageViewController.navigationController pushViewController:vc animated:YES];
+//            }
+//        }
+//            break;
+//        case WLKTBannerListTyeActivityDetail: {
+//            WLKTActivityDetailVC *vc = [[WLKTActivityDetailVC alloc] initWithActivityId:course.url];
+//            vc.hidesBottomBarWhenPushed = YES;
+//            [homepageViewController.navigationController pushViewController:vc animated:YES];
+//        }
+//            break;
+//        case WLKTBannerListTyeURL: {
+//            WKWebViewController *vc = [[WKWebViewController alloc] init];
+//            [vc loadWebURLSring:course.url];
+//            vc.hidesBottomBarWhenPushed = YES;
+//            [homepageViewController.navigationController pushViewController:vc animated:YES];
+//        }
+//            break;
+//
+//        default:
+//            break;
+//    }
+//
+//
+//}
+
+#pragma mark - Setters & Getters
+
+//- (WLKTHomepageViewController *)homepage {
+//    if (!_homepage) {
+//        _homepage = [[WLKTHomepageViewController alloc] initWithUser:self.user];
+//        _homepage.homepageDelegate = self;
+//        @weakify(self)
+//        _homepage.hotSearchCompletion = ^(NSArray *hotSearchs) {
+//            @strongify(self)
+//            [hotSearchs enumerateObjectsUsingBlock:^(WLKTCourse *_Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+//                [self.hotSearchs addObject:obj];
+//            }];
+//        };
+//        if (self.searchBar) {
+//            WLKTSearchContentView *scv = [[WLKTSearchContentView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth - 70 * ScreenRatio_6, 44) searchBar:self.searchBar];
+//            _homepage.navigationItem.titleView = scv;
+//            [scv resetSearchBar];
+//
+//            self.searchBar.delegate = self;
+//        }
+//        if (self.message) {
+//            [[WLKTMessageManager sharedManager] addMessageButton:self.message];
+//            _homepage.navigationItem.rightBarButtonItem = self.message;
+//        }
+//    }
+//    return _homepage;
+//}
+- (WLKTHomepageVC *)homepage{
+    if (!_homepage) {
+        _homepage = [[WLKTHomepageVC alloc]init];
+        _homepage.HomepageVCDelegate = self;
+    }
+    return _homepage;
+}
+- (UINavigationController *)navigationController {
+    if (!_navigationController) {
+        _navigationController = [[UINavigationController alloc] initWithRootViewController:self.homepage];
+    }
+    return _navigationController;
+}
+
+- (NSMutableArray *)hotSearchs {
+    if (!_hotSearchs) {
+        _hotSearchs = [NSMutableArray array];
+    }
+    return  _hotSearchs;
+}
+
+- (NSMutableArray *)searchResults {
+    if (!_searchResults) {
+        _searchResults = [NSMutableArray array];
+    }
+    return  _searchResults;
+}
+
+@end

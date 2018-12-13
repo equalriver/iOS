@@ -1,0 +1,141 @@
+//
+//  WLKTCoursePageController.m
+//  wlkt
+//
+//  Created by slovelys on 17/4/5.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTCoursePageController.h"
+#import "WLKTCourseClassificationViewController.h"
+#import "WLKTCourseClassificationApi.h"
+#import "WLKTRectangleTagView.h"
+#import "WLKTMoreCourseApi.h"
+#import "WLKTBlurView.h"
+
+@interface WLKTCoursePageController () <WLKTRectangleViewDelegate>
+
+@property (copy, nonatomic) NSString *classifition;
+@property (strong, nonatomic) NSMutableArray *titleArray;
+@property (strong, nonatomic) NSMutableArray *courseIdArray;
+@property (strong, nonatomic) WLKTRectangleTagView *tagView;
+
+@end
+
+@implementation WLKTCoursePageController
+
+- (instancetype)initWithCourseClassifition:(NSString *)classifition{
+    WLKT_INIT(
+              _classifition = [classifition copy];
+    )
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.menuView.backgroundColor = UIColorHex(fafafa);
+    self.titleSizeNormal = 14;
+    self.titleSizeSelected = 14;
+//    self.isNeedUnfoldButton = YES;
+    self.menuView.height = 40;
+    self.titleColorSelected = UIColorHex(33c4da);
+    self.menuViewStyle = WMMenuViewStyleLine;
+    [self loadData];
+}
+
+- (void)loadData {
+    WLKTMoreCourseApi *api = [[WLKTMoreCourseApi alloc] initWithCourseUrl:_classifition];
+    @weakify(self)
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        @strongify(self)
+        [self.titleArray addObjectsFromArray:request.responseJSONObject[@"result"][@"childrentitle"]];
+        [self.courseIdArray addObjectsFromArray:request.responseJSONObject[@"result"][@"childrenid"]];
+        [self.titleArray insertObject:@"全部" atIndex:0];
+        [self.courseIdArray insertObject:@"0" atIndex:0];
+        [self reloadData];
+        if (self.selectString.length > 0) {
+            [self.titleArray enumerateObjectsUsingBlock:^(NSString * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                if ([obj isEqualToString:self.selectString]) {
+                    self.selectIndex = [NSNumber numberWithInteger:idx].intValue;
+                    *stop = YES;
+                }
+            }];
+        }
+    } failure:^(__kindof YTKBaseRequest *request) {
+        NSLog(@"%@", request.responseJSONObject);
+    }];
+}
+
+- (void)setupTagViewWithTextArray:(NSArray *)array {
+    _tagView = [[WLKTRectangleTagView alloc] initWithTextArray:array];
+    _tagView.frame = CGRectMake(0, 0, kScreenWidth, kScreenHeight);
+    _tagView.rectangleViewDelegate = self;
+    
+    [[WLKTBlurView sharedInstance] showBlurViewInView:self.view completion:^{
+        [self.view addSubview:self.tagView];
+        [self.view bringSubviewToFront:self.tagView];
+    }];
+    [WLKTBlurView sharedInstance].touchBlock = ^{
+        [[WLKTBlurView sharedInstance] hideBlurViewImmediately];
+        [self.tagView removeRectangleTagView];
+    };
+}
+
+#pragma mark - WLKTRectangleViewDelegate
+- (void)didTapCancelButton {
+    [[WLKTBlurView sharedInstance] hideBlurViewImmediately];
+    [_tagView removeRectangleTagView];
+}
+
+- (void)didSelectItemAtIndex:(NSInteger)index {
+    [[WLKTBlurView sharedInstance] hideBlurViewImmediately];
+    [_tagView removeRectangleTagView];
+    self.selectIndex = (int)index;
+}
+
+#pragma mark - Datasource & Delegate
+- (NSInteger)numbersOfChildControllersInPageController:(WMPageController *)pageController {
+    return self.titleArray.count;
+}
+
+- (CGRect)pageController:(WMPageController *)pageController preferredFrameForMenuView:(WMMenuView *)menuView{
+    return CGRectMake(0, 0, kScreenWidth, 40);
+}
+
+- (CGRect)pageController:(WMPageController *)pageController preferredFrameForContentView:(WMScrollView *)contentView{
+    return CGRectMake(0, 40, kScreenWidth, kScreenHeight - NavigationBarAndStatusHeight - 40);
+}
+
+- (UIViewController *)pageController:(WMPageController *)pageController viewControllerAtIndex:(NSInteger)index {
+    NSMutableArray *array = [NSMutableArray arrayWithArray:self.titleArray];
+    if (![_classifition isEqualToString:@"热门课程"]) {
+        [array replaceObjectAtIndex:0 withObject:_classifition];
+    }
+    WLKTCourseClassificationViewController *vc = [[WLKTCourseClassificationViewController alloc] initWithClassificationStr:array[index]];
+//    vc.view.backgroundColor = [UIColor groupTableViewBackgroundColor];
+    return vc;
+}
+
+- (NSString *)pageController:(WMPageController *)pageController titleAtIndex:(NSInteger)index {
+    return self.titleArray[index];
+}
+
+- (void)menuViewDidTapMoreButton:(WMMenuView *)menu {
+    [self setupTagViewWithTextArray:self.titleArray];
+}
+
+#pragma mark - Setter & Getter
+- (NSMutableArray *)titleArray {
+    if (!_titleArray) {
+        _titleArray = [NSMutableArray array];
+    }
+    return _titleArray;
+}
+
+- (NSMutableArray *)courseIdArray {
+    if (!_courseIdArray) {
+        _courseIdArray = [NSMutableArray array];
+    }
+    return _courseIdArray;
+}
+
+@end

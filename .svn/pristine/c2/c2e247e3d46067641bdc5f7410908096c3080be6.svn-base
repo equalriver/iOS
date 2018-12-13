@@ -1,0 +1,260 @@
+//
+//  WLKTCDRenzhengAlert.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/3/20.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTCDRenzhengAlert.h"
+
+@interface CDRenzhengAlertTableCell: UITableViewCell
+@property (strong, nonatomic) UIImageView *iconIV;
+@property (strong, nonatomic) UILabel *titleLabel;
+@property (strong, nonatomic) UILabel *detailLabel;
+@property (strong, nonatomic) UILabel *tagLabel;
+
+@property (assign, nonatomic) BOOL isRenzheng;
+@property (strong, nonatomic) CDDataLicense *data;
+@end
+
+@implementation CDRenzhengAlertTableCell
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [self.contentView addSubview:self.iconIV];
+        [self.contentView addSubview:self.titleLabel];
+        [self.contentView addSubview:self.detailLabel];
+        [self.contentView addSubview:self.tagLabel];
+        [self makeConstraints];
+        
+    }
+    return self;
+}
+
+- (void)setData:(CDDataLicense *)data{
+    _data = data;
+    self.titleLabel.text = data.title;
+    self.detailLabel.text = data.text;
+    self.tagLabel.text = data.dep;
+    if (data.order.intValue > 0) {//认证
+        self.isRenzheng = YES;
+    }
+    else{
+        self.isRenzheng = false;
+    }
+}
+
+- (void)setIsRenzheng:(BOOL)isRenzheng{
+    _isRenzheng = isRenzheng;
+    if (isRenzheng) {
+        self.iconIV.image = [UIImage imageNamed:@"认证选中"];
+        self.tagLabel.hidden = false;
+    }
+    else{
+        self.iconIV.image = [UIImage imageNamed:@"认证未选中"];
+        self.tagLabel.hidden = YES;
+    }
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.titleLabel.text = nil;
+    self.detailLabel.text = nil;
+    self.tagLabel.text = nil;
+}
+
+- (void)makeConstraints{
+    [self.iconIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(15 *ScreenRatio_6, 15 *ScreenRatio_6));
+        make.left.mas_equalTo(self.contentView).offset(15 *ScreenRatio_6);
+        make.top.mas_equalTo(self.contentView);
+    }];
+    [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.iconIV.mas_right).offset(10 *ScreenRatio_6);
+        make.right.mas_equalTo(self.contentView).offset(-15 *ScreenRatio_6);
+        make.centerY.mas_equalTo(self.iconIV);
+    }];
+    [self.detailLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.titleLabel);
+        make.top.mas_equalTo(self.titleLabel.mas_bottom).offset(5);
+
+    }];
+    [self.tagLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.detailLabel.mas_right).offset(10 *ScreenRatio_6);
+        make.centerY.mas_equalTo(self.detailLabel);
+        make.size.mas_equalTo(CGSizeMake(35 *ScreenRatio_6, 15 *ScreenRatio_6));
+    }];
+
+}
+
+#pragma mark - get
+- (UIImageView *)iconIV{
+    if (!_iconIV) {
+        _iconIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"认证未选中"]];
+    }
+    return _iconIV;
+}
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [UILabel new];
+        _titleLabel.font = [UIFont systemFontOfSize:16 *ScreenRatio_6];
+        _titleLabel.textColor = KMainTextColor_3;
+    }
+    return _titleLabel;
+}
+- (UILabel *)detailLabel{
+    if (!_detailLabel) {
+        _detailLabel = [UILabel new];
+        _detailLabel.font = [UIFont systemFontOfSize:14 *ScreenRatio_6];
+        _detailLabel.textColor = KMainTextColor_9;
+    }
+    return _detailLabel;
+}
+- (UILabel *)tagLabel{
+    if (!_tagLabel) {
+        _tagLabel = [UILabel new];
+        _tagLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        _tagLabel.textColor = [UIColor whiteColor];
+        _tagLabel.backgroundColor = UIColorHex(005293);
+        _tagLabel.layer.cornerRadius = 2;
+        _tagLabel.layer.masksToBounds = YES;
+        _tagLabel.textAlignment = NSTextAlignmentCenter;
+    }
+    return _tagLabel;
+}
+
+@end
+
+/**********************************************************/
+@interface WLKTCDRenzhengAlert ()<UITableViewDelegate, UITableViewDataSource>
+@property (strong, nonatomic) UIView *contentView;
+@property (strong, nonatomic) UITableView *tableView;
+@property (strong, nonatomic) UIButton *closeBtn;
+@end
+
+@implementation WLKTCDRenzhengAlert
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        self.backgroundColor = [UIColor colorWithWhite:0.3 alpha:0.5];
+        [self addSubview:self.contentView];
+        [self.contentView addSubview:self.tableView];
+        [self.contentView addSubview:self.closeBtn];
+        [self makeConstraints];
+        
+        [UIView viewAnimateComeOutWithDuration:0.5 delay:0 target:self.contentView completion:^(BOOL finished) {
+            
+        }];
+        
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]initWithActionBlock:^(id  _Nonnull sender) {
+            [UIView viewAnimateDismissWithDuration:0.5 delay:0 target:self.contentView completion:^(BOOL finished) {
+                [self removeFromSuperview];
+            }];
+        }];
+        [self addGestureRecognizer:tap];
+        
+    }
+    return self;
+}
+
+- (void)setData:(WLKTCDData *)data{
+    _data = data;
+    [self.tableView reloadData];
+}
+
+- (void)closeBtnAct{
+    [UIView viewAnimateDismissWithDuration:0.5 delay:0 target:self.contentView completion:^(BOOL finished) {
+        [self removeFromSuperview];
+    }];
+}
+
+#pragma mark - table view
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return self.data.license.count;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return 60 *ScreenRatio_6;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 55 *ScreenRatio_6;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    CDRenzhengAlertTableCell *cell = [tableView dequeueReusableCellWithIdentifier:@"CDRenzhengAlertTableCell"];
+    if (cell == nil) {
+        cell = [[CDRenzhengAlertTableCell alloc]init];
+    }
+    cell.data = self.data.license[indexPath.row];
+    
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 55 *ScreenRatio_6)];
+    v.backgroundColor = [UIColor whiteColor];
+    
+    UILabel *l = [UILabel new];
+    l.font = [UIFont systemFontOfSize:18 *ScreenRatio_6];
+    l.textColor = KMainTextColor_3;
+    [v addSubview:l];
+    [l mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(v).offset(12.5 *ScreenRatio_6);
+        make.right.centerY.mas_equalTo(v);
+    }];
+    l.text = @"官方认证";
+    
+    return v;
+}
+
+#pragma mark -
+- (void)makeConstraints{
+    [self.tableView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.width.centerX.mas_equalTo(self.contentView);
+        make.bottom.mas_equalTo(self.closeBtn.mas_top).offset(-10 *ScreenRatio_6);
+    }];
+    [self.closeBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 50 *ScreenRatio_6));
+        make.centerX.bottom.mas_equalTo(self.contentView);
+    }];
+}
+
+#pragma mark - get
+- (UIView *)contentView{
+    if (!_contentView) {
+        _contentView = [[UIView alloc]initWithFrame:CGRectMake(0, ScreenHeight, ScreenWidth, 370 *ScreenRatio_6)];
+        _contentView.backgroundColor = [UIColor whiteColor];
+    }
+    return _contentView;
+}
+- (UITableView *)tableView{
+    if (!_tableView) {
+        _tableView = [UITableView new];
+        _tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+        _tableView.dataSource = self;
+        _tableView.delegate = self;
+        _tableView.backgroundColor = [UIColor whiteColor];
+    }
+    return _tableView;
+}
+- (UIButton *)closeBtn{
+    if (!_closeBtn) {
+        _closeBtn = [UIButton new];
+        _closeBtn.titleLabel.font = [UIFont systemFontOfSize:16 *ScreenRatio_6];
+        _closeBtn.backgroundColor = kMainTextColor_red;
+        [_closeBtn setTitle:@"关闭" forState:UIControlStateNormal];
+        [_closeBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        [_closeBtn addTarget:self action:@selector(closeBtnAct) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _closeBtn;
+}
+
+@end
+
+
+

@@ -1,0 +1,68 @@
+
+//
+//  WLKTCourseDetailHeader.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/2.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#ifndef WLKTCourseDetailHeader_h
+#define WLKTCourseDetailHeader_h
+
+#import "WLKTCourse.h"
+#import "WLKTCourseDetailData.h"
+#import "WLKTLogin.h"
+
+#import "WLKTLoginCoordinator.h"
+#import "WLKTQRShare.h"
+#import "LGPhoto.h"
+#import "WLKTTableviewRefresh.h"
+#import "WLKTExchangeButton.h"
+#import "WLKTCourseDetailApi.h"
+#import "WLKTCourseCollectApi.h"
+#import "WLKTCourseCancelCollectApi.h"
+#import "WLKTCourseDetailListenApi.h"
+#import "WLKTPolicyPhone.h"
+
+#import "WLKTCourseDetailPopoverVC.h"
+#import "WLKTAppCoordinator.h"
+#import "AppDelegate.h"
+#import "WLKTCourseDetailRegisterAlert.h"
+#import "WLKTScreenshotsPopView.h"
+#import "WLKTCustomShare.h"
+
+#import "WLKTCourseDetailAppointment.h"
+#import "WLKTCourseDetailHeadIndexes.h"
+#import "WLKTCourseDetailBottomButtons.h"
+
+#import "WLKTCourseDetailHeadCell.h"
+#import "WLKTCourseDetailLocationCell.h"
+#import "WLKTCourseDetailPrivatePhoneCell.h"
+#import "WLKTCourseDetailPhotoCell.h"
+#import "WLKTCourseDetailVRPhotoCell.h"
+#import "WLKTCourseDetailIntroCell.h"
+#import "WLKTCourseDetailTeacherCell.h"
+#import "WLKTCourseDetailSchoolCell.h"
+#import "WLKTCourseDetailEvaluationStarBtnCell.h"
+#import "WLKTCourseDetailEvaluationCell.h"
+#import "WLKTCourseDetail_Q_A_cell.h"
+#import "WLKTCourseDetialComplaintCell.h"
+#import "WLKTCourseDetailOtherCourseCell.h"
+#import "WLKTCourseDetailMoreBrowseCell.h"
+
+#import "WLKTSchoolVC.h"
+#import "WLKTCourseDetailEvaluationVC.h"
+#import "WLKTCourseDetail_Q_A_VC.h"
+#import "WLKTCourseDetailComplaintVC.h"
+#import "WLKTCourseDetailMapVC.h"
+#import "WLKTCourseDetailGoEvaluationVC.h"
+#import "WLKTCourseDetailGoQuestionVC.h"
+#import "WLKTCourseDetailGoComplaintVC.h"
+#import "WLKTBugReportVC.h"
+#import "WLKTCourseDetailNearTVC.h"
+#import "WLKTOnlineServiceVC.h"
+#import "WLKTSchoolVRPlayVC.h"
+
+#endif /* WLKTCourseDetailHeader_h */
+

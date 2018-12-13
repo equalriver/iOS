@@ -1,0 +1,288 @@
+//
+//  WLKTSchoolHeadCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/20.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTSchoolHeadCell.h"
+
+@interface WLKTSchoolHeadCell ()
+@property (strong, nonatomic) UIImageView *imgIV;
+@property (strong, nonatomic) UIView *see_collectCount_bgView;
+@property (strong, nonatomic) UIImageView *seeIV;
+@property (strong, nonatomic) UILabel *seeLabel;
+@property (strong, nonatomic) UIImageView *collectCountIV;
+@property (strong, nonatomic) UILabel *collectCountLabel;
+@property (strong, nonatomic) UILabel *schoolNameLabel;
+@property (strong, nonatomic) UIImageView *tagIconIV;
+@property (strong, nonatomic) UILabel *tagLabel;
+@property (strong, nonatomic) UIButton *phoneBtn;
+@property (strong, nonatomic) UILabel *phoneLabel;
+@property (strong, nonatomic) UIImageView *yingIV;
+@property (strong, nonatomic) UIImageView *xukeIV;
+@property (strong, nonatomic) UIImageView *jiaoshiIV;
+@property (strong, nonatomic) UIImageView *changdiIV;
+@property (strong, nonatomic) UIImageView *farenIV;
+@property (strong, nonatomic) UIImageView *shengqingIV;
+@end
+
+@implementation WLKTSchoolHeadCell
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [self.contentView addSubview:self.imgIV];
+        [self.contentView addSubview:self.see_collectCount_bgView];
+        [self.see_collectCount_bgView addSubview:self.seeIV];
+        [self.see_collectCount_bgView addSubview:self.seeLabel];
+        [self.see_collectCount_bgView addSubview:self.collectCountIV];
+        [self.see_collectCount_bgView addSubview:self.collectCountLabel];
+        [self.contentView addSubview:self.schoolNameLabel];
+        [self.contentView addSubview:self.tagIconIV];
+        [self.contentView addSubview:self.tagLabel];
+        [self.contentView addSubview:self.phoneBtn];
+        [self.contentView addSubview:self.phoneLabel];
+        [self.contentView addSubview:self.yingIV];
+        [self.contentView addSubview:self.xukeIV];
+        [self.contentView addSubview:self.jiaoshiIV];
+        [self.contentView addSubview:self.changdiIV];
+        [self.contentView addSubview:self.farenIV];
+        [self.contentView addSubview:self.shengqingIV];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)setCellData:(WLKTSchoolInfo *)data{
+    [self.imgIV setImageURL:[NSURL URLWithString:data.showpic]];
+    self.seeLabel.text = [NSString stringWithFormat:@"%@人看过  |  ", data.views];
+    self.collectCountLabel.text = [NSString stringWithFormat:@"%@人收藏", data.shoucangnum];
+    self.schoolNameLabel.text = data.schoolname;
+    if (data.papers.count) {
+        for (WLKTSchoolInfoPapers *obj in data.papers) {
+            if ([obj.title isEqualToString:@"营业执照"] && [obj.status isEqualToString:@"1"]) {
+                self.yingIV.image = [UIImage imageNamed:@"证明亮1"];
+            }
+            if ([obj.title isEqualToString:@"办学许可证"] && [obj.status isEqualToString:@"1"]) {
+                self.xukeIV.image = [UIImage imageNamed:@"证明亮3"];
+            }
+            if ([obj.title isEqualToString:@"教师资格证"] && [obj.status isEqualToString:@"1"]) {
+                self.jiaoshiIV.image = [UIImage imageNamed:@"证明亮5"];
+            }
+            if ([obj.title isEqualToString:@"办学场地"] && [obj.status isEqualToString:@"1"]) {
+                self.changdiIV.image = [UIImage imageNamed:@"证明亮2"];
+            }
+            if ([obj.title isEqualToString:@"法人身份证"] && [obj.status isEqualToString:@"1"]) {
+                self.farenIV.image = [UIImage imageNamed:@"证明亮4"];
+            }
+            if ([obj.title isEqualToString:@"申请人身份证"] && [obj.status isEqualToString:@"1"]) {
+                self.shengqingIV.image = [UIImage imageNamed:@"证明亮6"];
+            }
+        }
+    }
+}
+
+- (void)makeConstraints{
+    [self.imgIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 145));
+        make.top.mas_equalTo(self.contentView);
+        make.left.mas_equalTo(self.contentView);
+    }];
+    [self.see_collectCount_bgView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 25));
+        make.left.mas_equalTo(self.contentView);
+        make.bottom.mas_equalTo(self.imgIV.mas_bottom);
+    }];
+    [self.collectCountLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.see_collectCount_bgView);
+        make.right.mas_equalTo(self.see_collectCount_bgView.mas_right).offset(-10);
+    }];
+    [self.collectCountIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.see_collectCount_bgView);
+        make.right.mas_equalTo(self.collectCountLabel.mas_left).offset(-3);
+    }];
+    [self.seeLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.see_collectCount_bgView);
+        make.right.mas_equalTo(self.collectCountIV.mas_left);
+    }];
+    [self.seeIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.see_collectCount_bgView);
+        make.right.mas_equalTo(self.seeLabel.mas_left).offset(-5);
+    }];
+    [self.schoolNameLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10);
+        make.top.mas_equalTo(self.imgIV.mas_bottom).offset(15);
+    }];
+    [self.tagIconIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.schoolNameLabel.mas_right).offset(5);
+        make.centerY.mas_equalTo(self.schoolNameLabel);
+    }];
+    [self.tagLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.tagIconIV.mas_right).offset(3);
+        make.centerY.mas_equalTo(self.schoolNameLabel);
+    }];
+    [self.yingIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10);
+        make.top.mas_equalTo(self.schoolNameLabel.mas_bottom).offset(15);
+    }];
+    [self.xukeIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.yingIV);
+        make.left.mas_equalTo(self.yingIV.mas_right).offset(16 * ScreenRatio_6);
+    }];
+    [self.jiaoshiIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.yingIV);
+        make.left.mas_equalTo(self.xukeIV.mas_right).offset(15 * ScreenRatio_6);
+    }];
+    [self.changdiIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10);
+        make.top.mas_equalTo(self.yingIV.mas_bottom).offset(10);
+    }];
+    [self.farenIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.changdiIV);
+        make.left.mas_equalTo(self.changdiIV.mas_right).offset(15 * ScreenRatio_6);
+    }];
+    [self.shengqingIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.changdiIV);
+        make.left.mas_equalTo(self.farenIV.mas_right).offset(15 * ScreenRatio_6);
+    }];
+    [self.phoneBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(35, 35));
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-10);
+        make.top.mas_equalTo(self.imgIV.mas_bottom).offset(25);
+    }];
+    [self.phoneLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerX.mas_equalTo(self.phoneBtn);
+        make.top.mas_equalTo(self.phoneBtn.mas_bottom).offset(5);
+    }];
+}
+
+
+#pragma mark - action
+- (void)phoneBtnAct:(UIButton *)sender{
+    if ([self.delegate respondsToSelector:@selector(didSelectedPhoneButton)]) {
+        [self.delegate didSelectedPhoneButton];
+    }
+}
+
+#pragma mark - get
+- (UIImageView *)imgIV{
+    if (!_imgIV) {
+        _imgIV = [[UIImageView alloc]init];
+    }
+    return _imgIV;
+}
+- (UIView *)see_collectCount_bgView{
+    if (!_see_collectCount_bgView) {
+        _see_collectCount_bgView = [UIView new];
+        _see_collectCount_bgView.backgroundColor = [UIColor colorWithWhite:0.3 alpha:0.7];
+    }
+    return _see_collectCount_bgView;
+}
+- (UIImageView *)seeIV{
+    if (!_seeIV) {
+        _seeIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"预览b"]];
+    }
+    return _seeIV;
+}
+- (UILabel *)seeLabel{
+    if (!_seeLabel) {
+        _seeLabel = [UILabel new];
+        _seeLabel.font = [UIFont systemFontOfSize:10];
+        _seeLabel.textColor = UIColorHex(ffffff);
+    }
+    return _seeLabel;
+}
+- (UIImageView *)collectCountIV{
+    if (!_collectCountIV) {
+        _collectCountIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"星收藏白"]];
+    }
+    return _collectCountIV;
+}
+- (UILabel *)collectCountLabel{
+    if (!_collectCountLabel) {
+        _collectCountLabel = [UILabel new];
+        _collectCountLabel.font = [UIFont systemFontOfSize:10];
+        _collectCountLabel.textColor = UIColorHex(ffffff);
+    }
+    return _collectCountLabel;
+}
+- (UILabel *)schoolNameLabel{
+    if (!_schoolNameLabel) {
+        _schoolNameLabel = [[UILabel alloc]init];
+        _schoolNameLabel.font = [UIFont systemFontOfSize:13];
+        _schoolNameLabel.textColor = UIColorHex(333333);
+    }
+    return _schoolNameLabel;
+}
+- (UIImageView *)tagIconIV{
+    if (!_tagIconIV) {
+        _tagIconIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"机构认证"]];
+    }
+    return _tagIconIV;
+}
+- (UILabel *)tagLabel{
+    if (!_tagLabel) {
+        _tagLabel = [UILabel new];
+        _tagLabel.font = [UIFont systemFontOfSize:10];
+        _tagLabel.textColor = UIColorHex(999999);
+        _tagLabel.text = @"认证机构";
+    }
+    return _tagLabel;
+}
+- (UIButton *)phoneBtn{
+    if (!_phoneBtn) {
+        _phoneBtn = [UIButton new];
+        [_phoneBtn setImage:[UIImage imageNamed:@"电话-圈"] forState:UIControlStateNormal];
+        [_phoneBtn addTarget:self action:@selector(phoneBtnAct:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _phoneBtn;
+}
+- (UILabel *)phoneLabel{
+    if (!_phoneLabel) {
+        _phoneLabel = [UILabel new];
+        _phoneLabel.textColor = UIColorHex(333333);
+        _phoneLabel.font = [UIFont systemFontOfSize:11];
+        _phoneLabel.text = @"咨询电话";
+    }
+    return _phoneLabel;
+}
+- (UIImageView *)yingIV{
+    if (!_yingIV) {
+        _yingIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"证明暗1"]];
+    }
+    return _yingIV;
+}
+- (UIImageView *)xukeIV{
+    if (!_xukeIV) {
+        _xukeIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"证明暗3"]];
+    }
+    return _xukeIV;
+}
+- (UIImageView *)jiaoshiIV{
+    if (!_jiaoshiIV) {
+        _jiaoshiIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"证明暗5"]];
+    }
+    return _jiaoshiIV;
+}
+- (UIImageView *)changdiIV{
+    if (!_changdiIV) {
+        _changdiIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"证明暗2"]];
+    }
+    return _changdiIV;
+}
+- (UIImageView *)farenIV{
+    if (!_farenIV) {
+        _farenIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"证明暗4"]];
+    }
+    return _farenIV;
+}
+- (UIImageView *)shengqingIV{
+    if (!_shengqingIV) {
+        _shengqingIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"证明暗6"]];
+    }
+    return _shengqingIV;
+}
+
+@end

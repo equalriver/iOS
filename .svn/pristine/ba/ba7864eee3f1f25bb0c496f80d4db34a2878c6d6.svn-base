@@ -1,0 +1,91 @@
+//
+//  WLKTCourseDetailBottomButtons.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/10/30.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTCourseDetailBottomButtons.h"
+
+@interface WLKTCourseDetailBottomButtons ()
+@property (strong, nonatomic) ZFButton *consultantBtn;
+@property (strong, nonatomic) UIButton *appointmentBtn;
+@property (strong, nonatomic) UIButton *registerBtn;
+
+@end
+
+@implementation WLKTCourseDetailBottomButtons
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        self.backgroundColor = [UIColor whiteColor];
+        [self addSubview:self.consultantBtn];
+        [self addSubview:self.collectBtn];
+        [self addSubview:self.appointmentBtn];
+        [self addSubview:self.registerBtn];
+    }
+    return self;
+}
+
+- (void)btnDidClick:(UIButton *)sender{
+    if ([self.delegate respondsToSelector:@selector(CourseDetailBottomButtonDidSelectedButton:)]) {
+        [self.delegate CourseDetailBottomButtonDidSelectedButton:sender];
+    }
+}
+
+//图片在上  文字在下
+- (ZFButton *)createZFButton:(NSString *)title image:(UIImage *)image tag:(NSInteger)tag {
+    ZFButton *btn = [ZFButton new];
+    [btn setImage:image forState:UIControlStateNormal];
+    [btn setTitle:title forState:UIControlStateNormal];
+    btn.titleLabel.font = [UIFont systemFontOfSize:12];
+    btn.titleLabel.textAlignment = NSTextAlignmentCenter;
+    [btn setTitleColor:UIColorHex(999999) forState:UIControlStateNormal];
+    btn.tag = tag;
+    btn.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;
+    btn.frame = CGRectMake(tag * 78 * ScreenRatio_6, 0, 75 * ScreenRatio_6, 50);
+    btn.imageRect = CGRectMake(27 * ScreenRatio_6, 4 * ScreenRatio_6, 20, 20);
+    btn.titleRect = CGRectMake(0, 30 * ScreenRatio_6, 75 * ScreenRatio_6, 15);
+    [btn addTarget:self action:@selector(btnDidClick:) forControlEvents:UIControlEventTouchUpInside];
+    return btn;
+}
+
+#pragma mark - get
+- (ZFButton *)consultantBtn{
+    if (!_consultantBtn) {
+        _consultantBtn = [self createZFButton:@"在线咨询" image:[UIImage imageNamed:@"客服"] tag:0];
+    }
+    return _consultantBtn;
+}
+- (ZFButton *)collectBtn{
+    if (!_collectBtn) {
+        _collectBtn = [self createZFButton:@"收 藏" image:[UIImage imageNamed:@"课程详情未收藏"] tag:1];
+    }
+    return _collectBtn;
+}
+- (UIButton *)appointmentBtn{
+    if (!_appointmentBtn) {
+        _appointmentBtn = [[UIButton alloc]initWithFrame:CGRectMake(150 * ScreenRatio_6, 0, 110 * ScreenRatio_6, 50)];
+        _appointmentBtn.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
+        [_appointmentBtn setTitle:@"预约试听" forState:UIControlStateNormal];
+        _appointmentBtn.backgroundColor = UIColorHex(f6c447);
+        _appointmentBtn.tag = 2;
+        [_appointmentBtn addTarget:self action:@selector(btnDidClick:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _appointmentBtn;
+}
+- (UIButton *)registerBtn{
+    if (!_registerBtn) {
+        _registerBtn = [[UIButton alloc]initWithFrame:CGRectMake(260 * ScreenRatio_6, 0, ScreenWidth - 260 * ScreenRatio_6, 50)];
+        _registerBtn.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
+        [_registerBtn setTitle:@"立即报名" forState:UIControlStateNormal];
+        _registerBtn.backgroundColor = UIColorHex(33c4da);
+        _registerBtn.tag = 3;
+        [_registerBtn addTarget:self action:@selector(btnDidClick:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _registerBtn;
+}
+
+@end

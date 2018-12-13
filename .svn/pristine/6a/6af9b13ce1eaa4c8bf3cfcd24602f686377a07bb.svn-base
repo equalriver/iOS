@@ -1,0 +1,93 @@
+//
+//  WLKTLVLiveVC.m
+//  wlkt
+//
+//  Created by 尹平江 on 2018/4/26.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTLVLiveVC.h"
+#import "WLKTLiveVideoCell.h"
+#import "WLKTLiveVideoEmptyView.h"
+#import "WLKTTableviewRefresh.h"
+
+@interface WLKTLVLiveVC ()
+@property (strong, nonatomic) WLKTLiveVideoEmptyView *emptyView;
+
+@property (assign, nonatomic) NSInteger page;
+@property (strong, nonatomic) NSMutableArray *dataArr;
+@end
+
+@implementation WLKTLVLiveVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.tableView.backgroundColor = kMainBackgroundColor;
+#warning test
+    [self.view addSubview:self.emptyView];
+    self.emptyView.url = @"";
+//test end
+    
+    self.page = 1;
+    [self setRefresh];
+    
+}
+
+- (void)setRefresh{
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^{
+        weakSelf.page = 1;
+        [weakSelf loadData];
+    }];
+    
+    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableView block:^{
+        weakSelf.page++;
+        [weakSelf loadData];
+        
+    }];
+    self.tableView.mj_footer.backgroundColor = kMainBackgroundColor;
+}
+
+- (void)loadData{
+    
+}
+
+#pragma mark - Table view data source
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return self.dataArr.count;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return 160 *ScreenRatio_6;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    WLKTLiveVideoCell *cell = [tableView dequeueReusableCellWithIdentifier:@"WLKTLiveVideoCell"];
+    if (cell == nil) {
+        cell = [[WLKTLiveVideoCell alloc]init];
+        
+    }
+
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+}
+
+#pragma mark - get
+- (WLKTLiveVideoEmptyView *)emptyView{
+    if (!_emptyView) {
+        _emptyView = [[WLKTLiveVideoEmptyView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, self.tableView.size.height)];
+    }
+    return _emptyView;
+}
+- (NSMutableArray *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray arrayWithCapacity:10];
+    }
+    return _dataArr;
+}
+@end

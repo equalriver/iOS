@@ -1,0 +1,290 @@
+//
+//  WLKTCourseDetailCouponAlert.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/23.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+#import "WLKTCourseDetailCouponAlert.h"
+#import "WLKTCourseDetailGetCouponApi.h"
+
+@interface CouponTableViewCell : UITableViewCell
+@property (strong, nonatomic) UIImageView *bgIV;
+@property (strong, nonatomic) UILabel *priceLabel;
+@property (strong, nonatomic) UILabel *priceRuleLabel;
+@property (strong, nonatomic) UILabel *useRuleLabel;
+@property (strong, nonatomic) UILabel *useTimeLabel;
+@property (strong, nonatomic) UILabel *getCouponLabel;
+- (void)setCellData:(WLKTCourseCouponData *)data isGetCoupon:(BOOL)isGetCoupon;
+
+@end
+
+@implementation CouponTableViewCell
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        self.backgroundColor = [UIColor whiteColor];
+        [self.contentView addSubview:self.bgIV];
+        [self.contentView addSubview:self.priceLabel];
+        [self.contentView addSubview:self.priceRuleLabel];
+        [self.contentView addSubview:self.useRuleLabel];
+        [self.contentView addSubview:self.useTimeLabel];
+        [self makeConstraints];
+        
+    }
+    return self;
+}
+
+- (void)setCellData:(WLKTCourseCouponData *)data isGetCoupon:(BOOL)isGetCoupon{
+    NSMutableAttributedString *str = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"¥%@", data.money]];
+    [str setAttributes:@{NSFontAttributeName : [UIFont systemFontOfSize:14 * ScreenRatio_6 weight:UIFontWeightSemibold]} range:NSMakeRange(0, 1)];
+    [str setAttributes:@{NSFontAttributeName : [UIFont systemFontOfSize:34 * ScreenRatio_6 weight:UIFontWeightSemibold]} range:NSMakeRange(1, str.length - 1)];
+    self.priceLabel.attributedText = str;
+    
+    self.priceRuleLabel.text = data.rule;
+    self.useRuleLabel.text = data.use;
+    self.useTimeLabel.text = data.time;
+    if (isGetCoupon) {
+        self.bgIV.image = [UIImage imageNamed:@"课程详情优惠券2"];
+    }
+    else{
+        self.bgIV.image = [UIImage imageNamed:@"确认订单优惠券"];
+    }
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.priceLabel.attributedText = nil;
+    self.priceRuleLabel.text = nil;
+    self.useRuleLabel.text = nil;
+    self.useTimeLabel.text = nil;
+}
+
+#pragma mark - make constraints
+- (void)makeConstraints{
+    [self.bgIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(350 * ScreenRatio_6, 90));
+        make.top.mas_equalTo(self.contentView);
+        make.left.mas_equalTo(self.contentView).offset(12 * ScreenRatio_6);
+    }];
+    [self.priceLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(110 * ScreenRatio_6, 35));
+        make.top.mas_equalTo(self.contentView).offset(20 * ScreenRatio_6);
+        make.left.mas_equalTo(self.bgIV);
+    }];
+    [self.priceRuleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerX.mas_equalTo(self.priceLabel);
+        make.top.mas_equalTo(self.priceLabel.mas_bottom).offset(8 * ScreenRatio_6);
+    }];
+    [self.useRuleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.priceLabel.mas_right).offset(9 * ScreenRatio_6);
+        make.top.mas_equalTo(self.contentView).offset(12 * ScreenRatio_6);
+    }];
+    [self.useTimeLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.priceLabel.mas_right).offset(9 * ScreenRatio_6);
+        make.top.mas_equalTo(self.useRuleLabel.mas_bottom).offset(38 * ScreenRatio_6);
+    }];
+}
+
+#pragma mark - get
+- (UIImageView *)bgIV{
+    if (!_bgIV) {
+        _bgIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"课程详情优惠券2"]];
+    }
+    return _bgIV;
+}
+- (UILabel *)priceLabel{
+    if (!_priceLabel) {
+        _priceLabel = [[UILabel alloc]init];
+        _priceLabel.textAlignment = NSTextAlignmentCenter;
+        _priceLabel.textColor = UIColorHex(ffffff);
+    }
+    return _priceLabel;
+}
+- (UILabel *)priceRuleLabel{
+    if (!_priceRuleLabel) {
+        _priceRuleLabel = [[UILabel alloc]init];
+        _priceRuleLabel.font = [UIFont systemFontOfSize:10 * ScreenRatio_6];
+        _priceRuleLabel.textColor = UIColorHex(ffffff);
+    }
+    return _priceRuleLabel;
+}
+- (UILabel *)useRuleLabel{
+    if (!_useRuleLabel) {
+        _useRuleLabel = [[UILabel alloc]init];
+        _useRuleLabel.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+        _useRuleLabel.textColor = KMainTextColor_3;
+    }
+    return _useRuleLabel;
+}
+- (UILabel *)useTimeLabel{
+    if (!_useTimeLabel) {
+        _useTimeLabel = [[UILabel alloc]init];
+        _useTimeLabel.font = [UIFont systemFontOfSize:10 * ScreenRatio_6];
+        _useTimeLabel.textColor = KMainTextColor_9;
+    }
+    return _useTimeLabel;
+}
+
+@end
+
+/*****************************************************************************************/
+@interface WLKTCourseDetailCouponAlert()<UITableViewDelegate, UITableViewDataSource>
+@property (strong, nonatomic) UIView *tapBgView;
+@property (strong, nonatomic) UIView *contentView;
+@property (strong, nonatomic) UILabel *titleLabel;
+@property (strong, nonatomic) UITableView *couponTV;
+@property (strong, nonatomic) UIButton *cancelBtn;
+@property (strong, nonatomic) UIViewController *currentVC;
+@property (copy, nonatomic) NSArray<WLKTCourseCouponData *> *dataArr;
+@property (nonatomic) BOOL isGetCoupon;
+@property (nonatomic) NSInteger couponIndex;
+@end
+
+@implementation WLKTCourseDetailCouponAlert
+
+- (instancetype)initWithData:(NSArray<WLKTCourseCouponData *> *)dataArray isGetCoupon:(BOOL)isGetCoupon couponIndex:(NSInteger)couponIndex Target:(UIViewController *)vc
+{
+    self = [super init];
+    if (self) {
+        _couponIndex = couponIndex;
+        _isGetCoupon = isGetCoupon;
+        _dataArr = [NSArray arrayWithArray:dataArray];
+        self.frame = CGRectMake(0, 0, ScreenWidth, ScreenHeight);
+        self.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.5];
+        [self addSubview:self.tapBgView];
+        [self addSubview:self.contentView];
+        [self.contentView addSubview:self.titleLabel];
+        [self.contentView addSubview:self.couponTV];
+        [self.contentView addSubview:self.cancelBtn];
+        [self makeConstraints];
+        
+        WS(weakSelf);
+        [self.tapBgView addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithActionBlock:^(id  _Nonnull sender) {
+            [UIView viewAnimateDismissWithDuration:0.7 delay:0.0 target:weakSelf.contentView completion:^(BOOL finished) {
+                if (finished) {
+                    [weakSelf endEditing:YES];
+                    [weakSelf removeFromSuperview];
+                }
+            }];
+        }]];
+        [UIView viewAnimateComeOutWithDuration:0.7 delay:0.0 target:self.contentView completion:^(BOOL finished) {
+            
+        }];
+        
+        _currentVC = vc;
+    }
+    return self;
+}
+
+- (void)cancelBtnAct:(UIButton *)sender{
+    [self removeFromSuperview];
+}
+
+#pragma mark - tableView
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return self.dataArr.count;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    CouponTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"CouponTableViewCell"];
+    if (cell == nil) {
+        cell = [[CouponTableViewCell alloc]init];
+    }
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    //set data
+    [cell setCellData:self.dataArr[indexPath.row] isGetCoupon:self.isGetCoupon];
+    return cell;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return 95;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTCourseDetailGetCouponApi *api = [[WLKTCourseDetailGetCouponApi alloc]initWithCouponId:self.dataArr[indexPath.row].cid];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if ([self.delegate respondsToSelector:@selector(courseDetailCouponSelected:couponIndex:complete:)]) {
+                [self.delegate courseDetailCouponSelected:self.dataArr[indexPath.row] couponIndex:self.couponIndex complete:^{
+                    [self removeFromSuperview];
+                }];
+            }
+        });
+    } failure:^(__kindof YTKBaseRequest *request) {
+        ShowApiError
+    }];
+    
+}
+
+#pragma mark - make constraints
+- (void)makeConstraints{
+    [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 55 * ScreenRatio_6));
+        make.top.mas_equalTo(self.contentView);
+        make.left.mas_equalTo(self.contentView);
+    }];
+    [self.couponTV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 323 * ScreenRatio_6));
+        make.top.mas_equalTo(self.titleLabel.mas_bottom);
+        make.left.mas_equalTo(self.contentView);
+    }];
+    [self.cancelBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 55 * ScreenRatio_6));
+        make.left.mas_equalTo(self.contentView);
+        make.top.mas_equalTo(self.couponTV.mas_bottom);
+    }];
+}
+
+#pragma mark - get
+- (UIView *)tapBgView{
+    if (!_tapBgView) {
+        _tapBgView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+        _tapBgView.userInteractionEnabled = YES;
+        _tapBgView.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.5];
+    }
+    return _tapBgView;
+}
+- (UIView *)contentView{
+    if (!_contentView) {
+        _contentView = [[UIView alloc]initWithFrame:CGRectMake(0, ScreenHeight, ScreenWidth, 433 * ScreenRatio_6)];
+        _contentView.backgroundColor = UIColorHex(ffffff);
+    }
+    return _contentView;
+}
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [[UILabel alloc]init];
+        _titleLabel.font = [UIFont systemFontOfSize:16 * ScreenRatio_6 weight:UIFontWeightSemibold];
+        _titleLabel.textColor = KMainTextColor_3;
+        _titleLabel.text = @"领取优惠券";
+        _titleLabel.textAlignment = NSTextAlignmentCenter;
+    }
+    return _titleLabel;
+}
+- (UITableView *)couponTV{
+    if (!_couponTV) {
+        _couponTV = [[UITableView alloc]init];
+        _couponTV.separatorStyle = UITableViewCellSeparatorStyleNone;
+        _couponTV.dataSource = self;
+        _couponTV.delegate = self;
+    }
+    return _couponTV;
+}
+- (UIButton *)cancelBtn{
+    if (!_cancelBtn) {
+        _cancelBtn = [[UIButton alloc]init];
+        [_cancelBtn setTitle:@"取消" forState:UIControlStateNormal];
+        [_cancelBtn setTitleColor:KMainTextColor_3 forState:UIControlStateNormal];
+        _cancelBtn.titleLabel.font = [UIFont systemFontOfSize:16 * ScreenRatio_6 weight:UIFontWeightSemibold];
+        _cancelBtn.layer.borderColor = separatorView_color.CGColor;
+        _cancelBtn.layer.borderWidth = 0.5;
+        [_cancelBtn addTarget:self action:@selector(cancelBtnAct:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _cancelBtn;
+}
+
+@end
+
+

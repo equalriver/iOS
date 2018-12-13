@@ -1,0 +1,490 @@
+//
+//  WLKTPasswordChangeVC.m
+//  wlkt
+//
+//  Created by 尹平江 on 17/3/21.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTPasswordChangeVC.h"
+#import "WLKTPasswordChangeCell.h"
+#import <SCLAlertView.h>
+#import "WLKTPsdCheckView.h"
+#import "WLKTDiscardChangeView.h"
+#import <AFNetworking.h>
+#import "WLKTLogin.h"
+#import "WLKTPsdChangeApi.h"
+#import "WLKTRegisterViewController.h"
+#import "WLKTLoginCoordinator.h"
+
+@interface WLKTPasswordChangeVC ()<UITableViewDelegate,UITableViewDataSource>
+@property (strong, nonatomic) UITableView *psdTableView;
+@property (strong, nonatomic) UIButton *commitButton;
+@property (strong, nonatomic) UIButton *showPasswordBtn;
+@property (strong, nonatomic) UIButton *unknowPsdBtn;
+@property (strong, nonatomic) UIImageView *showPsdImageView;
+@property (copy, nonatomic) NSString *oldPsdStr;
+@property (copy, nonatomic) NSString *otherPsdStr;
+@property (copy, nonatomic) NSString *confirmNewPsdStr;
+@property (strong, nonatomic) WLKTPasswordChangeCell *oldPsdCell;
+@property (strong, nonatomic) WLKTPasswordChangeCell *otherPsdCell;
+@property (strong, nonatomic) WLKTPasswordChangeCell *confirmNewPsdCell;
+@property (assign, nonatomic) BOOL isSecureText;
+@property (strong, nonatomic) WLKTPsdCheckView *successView;
+@property (strong, nonatomic) SCLAlertView *alertView;
+@property (strong, nonatomic) WLKTDiscardChangeView *discardChangeView;
+@property (strong, nonatomic) SCLAlertView *successAlertView;
+@property (strong, nonatomic) NSMutableArray *childCoordinator;
+@property (strong, nonatomic) WLKTLoginCoordinator *loginCoordinator;
+
+@end
+
+static NSString * const psdChangeCell = @"psdChangeCell";
+
+@implementation WLKTPasswordChangeVC
+
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        self.isSecureText = YES;
+        [self.view addSubview:self.psdTableView];
+        [self.view addSubview:self.commitButton];
+        [self.view addSubview:self.showPsdImageView];
+        [self.view addSubview:self.showPasswordBtn];
+        [self.view addSubview:self.unknowPsdBtn];
+        
+    }
+    [self.view setNeedsUpdateConstraints];
+    [self.view updateConstraintsIfNeeded];
+    
+    return self;
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    self.psdTableView.dataSource = self;
+    self.psdTableView.delegate = self;
+    self.navigationItem.title = @"修改密码";
+    self.view.backgroundColor = fillViewColor;
+    //设置导航title字体颜色和大小
+    [self.navigationController.navigationBar setTitleTextAttributes:@{
+                                                                      NSFontAttributeName:navigationTitleFont,
+                                                                      NSForegroundColorAttributeName:navigationTitleColor}];
+    [self.commitButton addTarget:self action:@selector(commitButtonAct:) forControlEvents:UIControlEventTouchUpInside];
+    [self.showPasswordBtn addTarget:self action:@selector(showPasswordBtnAct:) forControlEvents:UIControlEventTouchUpInside];
+    [self.unknowPsdBtn addTarget:self action:@selector(unknowPsdBtnAct:) forControlEvents:UIControlEventTouchUpInside];
+    
+    [self.oldPsdCell.psdTextField addTarget:self action:@selector(oldPsdTF:) forControlEvents:UIControlEventEditingChanged];
+    [self.otherPsdCell.psdTextField addTarget:self action:@selector(otherPsdTF:) forControlEvents:UIControlEventEditingChanged];
+    [self.confirmNewPsdCell.psdTextField addTarget:self action:@selector(confirmNewPsdTF:) forControlEvents:UIControlEventEditingChanged];
+    
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]initWithImage:[UIImage imageNamed:@"箭头左"] style:UIBarButtonItemStylePlain target:self action:@selector(backButtonAct)];
+    //self.navigationItem.leftItemsSupplementBackButton = YES;
+    
+}
+
+
+#pragma mark - buttonAction
+
+- (void)backButtonAct{
+    [self.view endEditing:YES];
+//    if (_successAlertView) {
+//        [_successAlertView hideView];
+//        _successAlertView = nil;
+//        _discardChangeView = nil;
+//    }
+//    self.successAlertView = [[SCLAlertView alloc]init];
+//    [self.discardChangeView.commitChangeBtn addTarget:self action:@selector(discardChangeAct:) forControlEvents:UIControlEventTouchUpInside];
+//    [self.discardChangeView.discardBtn addTarget:self action:@selector(discardBtnAct) forControlEvents:UIControlEventTouchUpInside];
+//    [self setSuccessCheckView:self.successAlertView withCheckView:self.discardChangeView];
+    [self.navigationController popViewControllerAnimated:YES];
+    
+}
+
+- (void)discardBtnAct{
+    [self.successAlertView hideView];
+    
+}
+
+- (void)discardChangeAct:(UIButton *)discardChangeBtn{
+    [self.successAlertView hideView];
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (void)setSuccessCheckView:(SCLAlertView *)alertView withCheckView:(WLKTDiscardChangeView *)checkView{
+    checkView.iconIV.image = [UIImage imageNamed:@"blueWaring"];
+    [alertView removeTopCircle];
+    [alertView addCustomView:checkView];
+    alertView.cornerRadius = 15;
+    alertView.showAnimationType = SCLAlertViewShowAnimationSlideInToCenter;
+    alertView.backgroundViewColor = [UIColor whiteColor];
+    alertView.backgroundType = SCLAlertViewBackgroundShadow;
+    [alertView showCustom:self image:nil color:nil title:nil subTitle:nil closeButtonTitle:nil duration:0];
+}
+- (void)commitButtonAct:(UIButton *)commitButton{
+    [commitButton becomeFirstResponder];
+    WLKTPsdCheckView *checkView = [[WLKTPsdCheckView alloc]initWithFrame:CGRectMake(0, 0, 240, 80)];
+    //原始密码为空
+    if (self.alertView) {
+        self.alertView = nil;
+    }
+    if (self.oldPsdStr.length == 0) {
+        checkView.warningLabel.text = @"请输入原始密码";
+        [self setAlertCheckView:self.alertView withCheckView:checkView];
+        
+        return;
+    }
+    //密码长度不够
+    else if (self.oldPsdStr.length < 6 || self.otherPsdStr.length < 6 || self.confirmNewPsdStr.length < 6) {
+        checkView.warningLabel.text = @"密码长度不够";
+        [self setAlertCheckView:self.alertView withCheckView:checkView];
+        return;
+        
+    }else{
+        //原始密码错误
+        if (![self.oldPsdStr isEqualToString:[WLKTLogin lastPassword]]) {
+            checkView.warningLabel.text = @"原始密码错误";
+            [self setAlertCheckView:self.alertView withCheckView:checkView];
+            return;
+        }
+        //新旧密码一致
+        if ([self.oldPsdStr isEqualToString:self.otherPsdStr]) {
+            checkView.warningLabel.text = @"新密码与原密码不能相同";
+            [self setAlertCheckView:self.alertView withCheckView:checkView];
+            return;
+        }
+        //两次密码不一致
+        if (![self.otherPsdStr isEqualToString:self.confirmNewPsdStr]) {
+            checkView.warningLabel.text = @"两次输入的密码不一致";
+            [self setAlertCheckView:self.alertView withCheckView:checkView];
+            return;
+        }
+    }
+    
+    WLKTPsdChangeApi *api = [[WLKTPsdChangeApi alloc]initWithOldPassword:self.oldPsdStr otherPassword:self.otherPsdStr];
+    if (![SVProgressHUD isVisible]) {
+        [SVProgressHUD show];
+    }
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        //修改成功
+        [SVProgressHUD dismiss];
+        self.successView = [[WLKTPsdCheckView alloc]initWithFrame:CGRectMake(0, 0, 240, 110)];
+        self.successView.warningLabel.text = @"修改密码成功!";
+        [self.successView.commitButton addTarget:self action:@selector(successCommitAct:) forControlEvents:UIControlEventTouchUpInside];
+        [self setAlertSuccessView:self.alertView withCheckView:self.successView];
+        [WLKTLogin savePassword:self.otherPsdStr username:[WLKTLogin lastUsername]];
+        [self.navigationController popViewControllerAnimated:YES];
+    } failure:^(__kindof YTKBaseRequest *request) {
+        //ShowApiError;
+        [SVProgressHUD showErrorWithStatus:@"修改密码失败"];
+    }];
+
+}
+
+- (void)successCommitAct:(UIButton *)successCommitBtn{
+    [self.alertView hideView];
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (void)setAlertSuccessView:(SCLAlertView *)alertView withCheckView:(WLKTPsdCheckView *)checkView{
+    checkView.iconIV.image = [UIImage imageNamed:@"success"];
+    checkView.warningLabel.textColor = [UIColor blackColor];
+    [alertView removeTopCircle];
+    [alertView addCustomView:checkView];
+    alertView.cornerRadius = 15;
+    alertView.showAnimationType = SCLAlertViewShowAnimationSlideInToCenter;
+    alertView.backgroundViewColor = [UIColor whiteColor];
+    alertView.backgroundType = SCLAlertViewBackgroundShadow;
+    [alertView showCustom:self image:nil color:nil title:nil subTitle:nil closeButtonTitle:nil duration:0];
+    /*
+     alertView.attributedFormatBlock = ^NSAttributedString* (NSString *value)
+    {
+        NSMutableAttributedString *subTitle = [[NSMutableAttributedString alloc]initWithString:value];
+        
+        NSRange range = [value rangeOfString:@"我知道了" options:NSCaseInsensitiveSearch];
+        [subTitle addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithRed:0 green:152/255.0 blue:240/255.0 alpha:1.0] range:range];
+        
+        NSRange greenRange = [value rangeOfString:@"successfully" options:NSCaseInsensitiveSearch];
+        [subTitle addAttribute:NSForegroundColorAttributeName value:[UIColor greenColor] range:greenRange];
+        
+        NSRange underline = [value rangeOfString:@"completed" options:NSCaseInsensitiveSearch];
+        [subTitle addAttributes:@{NSUnderlineStyleAttributeName:@(NSUnderlineStyleSingle)} range:underline];
+        
+        return subTitle;
+    };
+    */
+}
+
+- (void)setAlertCheckView:(SCLAlertView *)alertView withCheckView:(WLKTPsdCheckView *)checkView{
+    checkView.iconIV.image = [UIImage imageNamed:@"whiteWaring"];
+    checkView.separatorView_one.hidden = YES;
+    checkView.commitButton.hidden = YES;
+    [alertView removeTopCircle];
+    [alertView addCustomView:checkView];
+    alertView.cornerRadius = 15;
+    alertView.showAnimationType = SCLAlertViewShowAnimationSlideInToCenter;
+    alertView.backgroundViewColor = [UIColor colorWithRed:50/255.0 green:50/255.0 blue:50/255.0 alpha:0.8];
+    alertView.backgroundType = SCLAlertViewBackgroundTransparent;
+    [alertView showCustom:self image:nil color:nil title:nil subTitle:nil closeButtonTitle:nil duration:2];
+}
+
+- (void)showPasswordBtnAct:(UIButton *)showPasswordBtn{
+    if (self.isSecureText) {
+        //显示密码
+        self.showPsdImageView.image = [UIImage imageNamed:@"select"];
+            }
+        else{
+            
+        self.showPsdImageView.image = [UIImage imageNamed:@"unselect"];
+    }
+    self.isSecureText = !self.isSecureText;
+    self.oldPsdCell.psdTextField.secureTextEntry = !self.oldPsdCell.psdTextField.secureTextEntry;
+    self.otherPsdCell.psdTextField.secureTextEntry = !self.otherPsdCell.psdTextField.secureTextEntry;
+    self.confirmNewPsdCell.psdTextField.secureTextEntry = !self.confirmNewPsdCell.psdTextField.secureTextEntry;
+    [self.psdTableView reloadData];
+}
+- (void)unknowPsdBtnAct:(UIButton *)unknowPsdBtn{
+    WLKTRegisterViewController *vc = [[WLKTRegisterViewController alloc] initWithViewControllerType:WLKTRegisterOrForgetPasswordVCTypeForgetPassword];
+    vc.delegate = self.loginCoordinator;
+    [self.childCoordinator addObject:self.loginCoordinator];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+#pragma mark - psdTextFieldAction
+
+- (void)oldPsdTF:(UITextField *)oldPsdTF{
+    self.oldPsdStr = oldPsdTF.text;
+}
+
+- (void)otherPsdTF:(UITextField *)otherPsdTF{
+    self.otherPsdStr = otherPsdTF.text;
+}
+
+- (void)confirmNewPsdTF:(UITextField *)confirmNewPsdTF{
+    self.confirmNewPsdStr = confirmNewPsdTF.text;
+}
+
+#pragma mark - updateViewConstraints
+
+- (void)updateViewConstraints{
+    [self.psdTableView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(self.view);
+        make.size.mas_equalTo(CGSizeMake(self.view.width, 163 * ScreenRatio_6));
+    }];
+    [self.commitButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth * 0.83, 40 * ScreenRatio_6));
+        make.top.mas_equalTo(self.psdTableView.mas_bottom).offset(70 * ScreenRatio_6);
+        make.left.mas_equalTo(self.view).offset(30 * ScreenRatio_6);
+    }];
+    [self.showPsdImageView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(15 * ScreenRatio_6, 15 * ScreenRatio_6));
+        make.top.mas_equalTo(self.commitButton.mas_bottom).offset(20 * ScreenRatio_6);
+        make.left.mas_equalTo(self.view).offset(30 * ScreenRatio_6);
+    }];
+    [self.showPasswordBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(60 * ScreenRatio_6, 15 * ScreenRatio_6));
+        make.left.mas_equalTo(self.showPsdImageView.mas_right).offset(3 * ScreenRatio_6);
+        make.top.mas_equalTo(self.commitButton.mas_bottom).offset(20 * ScreenRatio_6);
+    }];
+    [self.unknowPsdBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(80 * ScreenRatio_6, 15 * ScreenRatio_6));
+        make.right.mas_equalTo(self.view.mas_right).offset(-30 * ScreenRatio_6);
+        make.top.mas_equalTo(self.commitButton.mas_bottom).offset(20 * ScreenRatio_6);
+    }];
+    
+    [super updateViewConstraints];
+}
+
+#pragma mark - tableview
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return 2;
+}
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    if (section == 0) {
+        return 1;
+    }else
+        return 2;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (self.isSecureText) {
+        self.oldPsdCell.psdTextField.secureTextEntry = YES;
+        self.otherPsdCell.psdTextField.secureTextEntry = YES;
+        self.confirmNewPsdCell.psdTextField.secureTextEntry = YES;
+    }else{
+        self.oldPsdCell.psdTextField.secureTextEntry = NO;
+        self.otherPsdCell.psdTextField.secureTextEntry = NO;
+        self.confirmNewPsdCell.psdTextField.secureTextEntry = NO;
+    }
+        if (indexPath.section == 0) {
+            //旧密码
+            self.oldPsdCell.headLabel.text = @"原始登录密码";
+            self.oldPsdCell.psdTextField.placeholder = @"请输入当前登录密码";
+            
+            return self.oldPsdCell;
+        }else{
+            if (indexPath.row == 0) {
+                //新密码
+                self.otherPsdCell.headLabel.text = @"请输入新密码";
+                self.otherPsdCell.psdTextField.placeholder = @"6-20个字符,区分大小写";
+                
+                return self.otherPsdCell;
+            }
+            if (indexPath.row == 1) {
+                //新密码确认
+                self.confirmNewPsdCell.headLabel.text = @"请确认新密码";
+                self.confirmNewPsdCell.psdTextField.placeholder = @"6-20个字符,区分大小写";
+                
+            }
+             return self.confirmNewPsdCell;
+        }
+  
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    return 0;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    if (section == 0) {
+        return 18 * ScreenRatio_6;
+    }else
+        return 12 * ScreenRatio_6;
+}
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return 44 * ScreenRatio_6;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+
+
+}
+
+-(void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if ([cell respondsToSelector:@selector(setSeparatorInset:)]) {
+        [cell setSeparatorInset:UIEdgeInsetsZero];
+    }
+    
+    if ([cell respondsToSelector:@selector(setLayoutMargins:)]) {
+        [cell setLayoutMargins:UIEdgeInsetsZero];
+    }
+}
+
+#pragma mark - get
+
+- (UITableView *)psdTableView{
+    if (!_psdTableView) {
+        _psdTableView = [[UITableView alloc]init];
+        _psdTableView.scrollEnabled = NO;
+    }
+    return _psdTableView;
+}
+
+- (UIButton *)commitButton{
+    if (!_commitButton) {
+        _commitButton = [[UIButton alloc]init];
+        _commitButton.layer.masksToBounds = YES;
+        _commitButton.layer.cornerRadius = 20 * ScreenRatio_6;
+        _commitButton.backgroundColor = [UIColor colorWithRed:0/255.0 green:198/255.0 blue:225/255.0 alpha:1.0];
+        [_commitButton setTitle:@"确认修改" forState:UIControlStateNormal];
+        [_commitButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal] ;
+    }
+    return _commitButton;
+}
+
+- (UIButton *)showPasswordBtn{
+    if (!_showPasswordBtn) {
+        _showPasswordBtn = [[UIButton alloc]init];
+        [_showPasswordBtn setTitle:@"显示密码" forState:UIControlStateNormal];
+        [_showPasswordBtn setTitleColor:[UIColor colorWithRed:0/255.0 green:198/255.0 blue:225/255.0 alpha:1.0] forState:UIControlStateNormal];
+        _showPasswordBtn.titleLabel.font = [UIFont systemFontOfSize:14 * ScreenRatio_6];
+    }
+    return _showPasswordBtn;
+}
+
+- (UIButton *)unknowPsdBtn{
+    if (!_unknowPsdBtn) {
+        _unknowPsdBtn = [[UIButton alloc]init];
+        [_unknowPsdBtn setTitle:@"忘记密码?" forState:UIControlStateNormal];
+        [_unknowPsdBtn setTitleColor:[UIColor colorWithRed:0/255.0 green:198/255.0 blue:225/255.0 alpha:1.0] forState:UIControlStateNormal];
+        _unknowPsdBtn.titleLabel.textAlignment = NSTextAlignmentRight;
+        _unknowPsdBtn.titleLabel.font = [UIFont systemFontOfSize:14 * ScreenRatio_6];
+    }
+    return _unknowPsdBtn;
+}
+
+- (UIImageView *)showPsdImageView{
+    if (!_showPsdImageView) {
+        _showPsdImageView = [[UIImageView alloc]init];
+        _showPsdImageView.image = [UIImage imageNamed:@"unselect"];
+    }
+    return _showPsdImageView;
+}
+
+- (WLKTPasswordChangeCell *)oldPsdCell{
+    if (!_oldPsdCell) {
+        _oldPsdCell = [[WLKTPasswordChangeCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:psdChangeCell];
+    }
+    return _oldPsdCell;
+}
+
+- (WLKTPasswordChangeCell *)otherPsdCell{
+    if (!_otherPsdCell) {
+        _otherPsdCell = [[WLKTPasswordChangeCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:psdChangeCell];
+    }
+    return _otherPsdCell;
+}
+
+- (WLKTPasswordChangeCell *)confirmNewPsdCell{
+    if (!_confirmNewPsdCell) {
+        _confirmNewPsdCell = [[WLKTPasswordChangeCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:psdChangeCell];
+    }
+    return _confirmNewPsdCell;
+}
+- (WLKTDiscardChangeView *)discardChangeView{
+    if (!_discardChangeView) {
+        _discardChangeView = [[WLKTDiscardChangeView alloc]initWithFrame:CGRectMake(0, 0, 240, 110)];
+    }
+    return _discardChangeView;
+}
+- (SCLAlertView *)alertView{
+    if (!_alertView) {
+        _alertView = [[SCLAlertView alloc]init];
+    }
+    return _alertView;
+}
+
+- (NSMutableArray *)childCoordinator {
+    if (!_childCoordinator) {
+        _childCoordinator = [NSMutableArray array];
+    }
+    return _childCoordinator;
+}
+
+- (WLKTLoginCoordinator *)loginCoordinator {
+    if (!_loginCoordinator) {
+        _loginCoordinator = [WLKTLoginCoordinator new];
+    }
+    return _loginCoordinator;
+}
+
+#pragma mark - touch
+
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event{
+    [self.view endEditing:YES];
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

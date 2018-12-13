@@ -1,0 +1,20 @@
+//
+//  WLKTCourseDetailMoreBrowseCell.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/1.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourseDetailNewHot_school.h"
+
+@protocol WLKTCourseDetailGoTopDelegate <NSObject>
+- (void)didSelectedHotSchool:(NSString *)suid;
+@end
+
+@interface WLKTCourseDetailMoreBrowseCell : UITableViewCell
+@property (weak, nonatomic) id<WLKTCourseDetailGoTopDelegate> delegate;
+- (instancetype)initWithData:(NSArray<WLKTCourseDetailNewHot_school *> *)data;
+
+@end

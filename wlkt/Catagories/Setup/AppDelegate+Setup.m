@@ -1,0 +1,190 @@
+//
+//  AppDelegate+Setup.m
+//  wlkt
+//
+//  Created by slovelys on 17/3/19.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "AppDelegate+Setup.h"
+
+#import "UIApplication+YYAdd.h"
+#import <Aspects.h>
+#import <NSString+YYAdd.h>
+#import <UMSocialCore/UMSocialCore.h>
+//#import <Bugly/Bugly.h>
+
+
+#import <ShareSDK/ShareSDK.h>
+#import <ShareSDKConnector/ShareSDKConnector.h>
+//腾讯开放平台（对应QQ和QQ空间）SDK头文件
+#import <TencentOpenAPI/TencentOAuth.h>
+#import <TencentOpenAPI/QQApiInterface.h>
+#import <WeiboSDK.h>
+#import <WechatAuthSDK.h>
+
+//  Network
+#import "YTKNetworkAgent.h"
+#import "YTKNetworkConfig.h"
+#import "AFNetworkActivityIndicatorManager.h"
+#import "AFNetworking.h"
+
+//#define kSinaRedirectURL @"http://www.sharesdk.cn"
+#define kSinaRedirectURL @"http://sns.whalecloud.com/sina2/callback"
+
+
+@implementation AppDelegate (Setup)
+
++ (void)load {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        [self aspect_hookSelector:@selector(application:didFinishLaunchingWithOptions:) withOptions:AspectPositionBefore usingBlock:^(id<AspectInfo> aspectInfo, UIApplication *application, NSDictionary *launchOptions) {
+            AppDelegate *delegate = aspectInfo.instance;
+            [delegate setupAppearance];
+            [delegate setupNetwork];
+            [delegate setupUM];
+            [delegate setupShareSDK];
+//            [delegate setupBugly];
+        }error:NULL];
+
+    });
+}
+
+
+- (void)setupAppearance {
+    [SVProgressHUD setDefaultStyle:SVProgressHUDStyleCustom];
+    [SVProgressHUD setDefaultMaskType:SVProgressHUDMaskTypeClear];
+    [SVProgressHUD setCornerRadius:10];
+    [SVProgressHUD setForegroundColor:kHUDForegroundColor];
+    [SVProgressHUD setBackgroundColor:kHUDBackgroundColor];
+    [SVProgressHUD setMinimumDismissTimeInterval:1.5];
+//    [SVProgressHUD setOffsetFromCenter:UIOffsetMake(0, -100 *ScreenRatio_6)];
+    
+    if (IsIOS_11_Later) {
+        [[UITableView appearance] setEstimatedRowHeight:0];
+        [[UITableView appearance] setEstimatedSectionFooterHeight:0];
+        [[UITableView appearance] setEstimatedSectionHeaderHeight:0];
+    }
+    [[UITableView appearance] setBackgroundColor:[UIColor whiteColor]];
+    
+    [[UITableViewCell appearance] setBackgroundColor:[UIColor whiteColor]];
+    
+    [[UINavigationBar appearance] setBackgroundImage:[UIImage imageWithColor:kNavBarBackgroundColor] forBarMetrics:UIBarMetricsDefault];
+    [[UINavigationBar appearance] setShadowImage:[UIImage imageWithColor:kNavBarShadowImageColor]];
+    [[UINavigationBar appearance] setBarStyle:UIBarStyleBlack];
+    [[UINavigationBar appearance] setTintColor:KNavBarTintColor];
+    [[UINavigationBar appearance] setTitleTextAttributes:@{NSForegroundColorAttributeName: KNavBarTintColor, NSFontAttributeName: [UIFont boldSystemFontOfSize:18 *ScreenRatio_6]}];
+
+    
+    [[UITabBarItem appearance] setTitleTextAttributes:@{ NSForegroundColorAttributeName : UIColorHex(33c4da) }
+                                             forState:UIControlStateSelected];
+    NSDictionary *barButtonAttributes = @{
+                                          NSFontAttributeName: [UIFont systemFontOfSize:16 *ScreenRatio_6]
+                                          };
+    if (kiOS9Later) {
+        [[UIBarButtonItem appearanceWhenContainedInInstancesOfClasses:@[[UINavigationBar class]]] setTitleTextAttributes:barButtonAttributes forState:UIControlStateNormal];
+    } else {
+        [[UIBarButtonItem appearanceWhenContainedIn: [UINavigationBar class], nil] setTitleTextAttributes:barButtonAttributes forState:UIControlStateNormal];
+    }
+    
+    [[UITextField appearance]setTintColor:UIColorHex(999999)];
+    
+    [[UITextView appearance]setTintColor:UIColorHex(999999)];
+    
+    [[UICollectionView appearance] setBackgroundColor:[UIColor whiteColor]];
+    
+    [[UIImageView appearance] setOpaque:YES];
+    [[UIImageView appearance].layer setShouldRasterize:YES];
+}
+
+- (void)setupNetwork {
+    [[AFNetworkActivityIndicatorManager sharedManager] setEnabled:YES];
+    [[AFNetworkReachabilityManager sharedManager] startMonitoring];
+    
+    AFHTTPSessionManager *manager = [[YTKNetworkAgent sharedInstance] valueForKey:@"_manager"];
+    manager.responseSerializer.acceptableContentTypes =
+    [NSSet setWithObjects:@"application/json", @"text/json",
+     @"text/javascript", @"text/html", nil];
+    NSOperationQueue *operationQueue = manager.operationQueue;
+    [[AFNetworkReachabilityManager sharedManager] setReachabilityStatusChangeBlock:^(AFNetworkReachabilityStatus status) {
+        switch (status) {
+            case AFNetworkReachabilityStatusUnknown:
+            case AFNetworkReachabilityStatusNotReachable: {
+                operationQueue.suspended = YES;
+            } break;
+            case AFNetworkReachabilityStatusReachableViaWWAN:
+            case AFNetworkReachabilityStatusReachableViaWiFi: {
+                operationQueue.suspended = NO;
+            } break;
+        }
+    }];
+    
+    YTKNetworkConfig *config = [YTKNetworkConfig sharedInstance];
+    config.baseUrl = kBaseURL;
+
+}
+
+- (void)setupUM {
+    UMSocialManager *manager = [UMSocialManager defaultManager];
+    [manager setUmSocialAppkey:kUMAppKey];
+//    [manager openLog:YES];
+    [UMSocialGlobal shareInstance].isClearCacheWhenGetUserInfo = false;
+    
+    [manager setPlaform:UMSocialPlatformType_QQ appKey:kQQAppId appSecret:nil redirectURL:nil];
+    [manager setPlaform:UMSocialPlatformType_Sina appKey:kSinaAppKey appSecret:kSinaAppSecret redirectURL:kSinaRedirectURL];
+    [manager setPlaform:UMSocialPlatformType_WechatSession appKey:kWeChatAppId appSecret:kWeChatAppSecret redirectURL:nil];
+    [manager setPlaform:UMSocialPlatformType_WechatTimeLine appKey:kWeChatAppId appSecret:kWeChatAppSecret redirectURL:nil];
+}
+
+- (void)setupShareSDK{
+    [ShareSDK registerActivePlatforms:@[
+                                        @(SSDKPlatformTypeSinaWeibo),
+                                        @(SSDKPlatformTypeWechat),
+                                        @(SSDKPlatformTypeQQ)
+                                        ]
+                             onImport:^(SSDKPlatformType platformType)
+     {
+         switch (platformType)
+         {
+             case SSDKPlatformTypeWechat:
+                 [ShareSDKConnector connectWeChat:[WechatAuthSDK class]];
+                 break;
+             case SSDKPlatformTypeQQ:
+                 [ShareSDKConnector connectQQ:[QQApiInterface class] tencentOAuthClass:[TencentOAuth class]];
+                 break;
+             case SSDKPlatformTypeSinaWeibo:
+                 [ShareSDKConnector connectWeibo:[WeiboSDK class]];
+                 break;
+             default:
+                 break;
+         }
+     } onConfiguration:^(SSDKPlatformType platformType, NSMutableDictionary *appInfo){
+         
+         switch (platformType){
+             case SSDKPlatformTypeSinaWeibo:
+                 //设置新浪微博应用信息,其中authType设置为使用SSO＋Web形式授权
+                 [appInfo SSDKSetupSinaWeiboByAppKey:kSinaAppKey
+                                           appSecret:kSinaAppSecret
+                                         redirectUri:kSinaRedirectURL
+                                            authType:SSDKAuthTypeBoth];
+                 break;
+             case SSDKPlatformTypeWechat:
+                 [appInfo SSDKSetupWeChatByAppId:kWeChatAppId
+                                       appSecret:kWeChatAppSecret];
+                 break;
+             case SSDKPlatformTypeQQ:
+                 [appInfo SSDKSetupQQByAppId:kQQAppId
+                                      appKey:kQQAppKey
+                                    authType:SSDKAuthTypeBoth];
+                 break;
+            default:
+                   break;
+                   }
+    }];
+}
+
+- (void)setupBugly {
+//    [Bugly startWithAppId:@"a57e50a3b0"];
+}
+
+@end

@@ -1,0 +1,20 @@
+//
+//  WLKTCourseDetail_Q_A_2_headerQuestionView.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/3.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourseDetailNewCourse_QA_question.h"
+
+@protocol WLKTCourseDetail_Q_A_2_headerQuestionDelegate <NSObject>
+- (void)didSelectedAnswerButtonAtIndex:(NSInteger)index;
+@end
+
+@interface WLKTCourseDetail_Q_A_2_headerQuestionView : UIView
+- (instancetype)initWithIndex:(NSInteger)index frame:(CGRect)frame;
+@property (weak, nonatomic) id<WLKTCourseDetail_Q_A_2_headerQuestionDelegate> delegate;
+- (void)setCellData:(WLKTCourseDetailNewCourse_QA_question *)data;
+@end

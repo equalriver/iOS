@@ -1,0 +1,21 @@
+//
+//  WLKTCourseDetailPhotoCell.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/10/30.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "LGPhoto.h"
+#import "WLKTCourseDetailNewPhoto.h"
+
+@protocol WLKTCourseDetailPhotoDelegate <NSObject>
+- (void)didSelectedPhotoItem:(NSIndexPath *)indexPath type:(LGShowImageType)type;
+@end
+
+@interface WLKTCourseDetailPhotoCell : UITableViewCell
+- (instancetype)initWithImageArray:(NSArray<WLKTCourseDetailNewPhoto *> *)imageArray;
+@property (weak, nonatomic) id<WLKTCourseDetailPhotoDelegate> delegate;
+
+@end

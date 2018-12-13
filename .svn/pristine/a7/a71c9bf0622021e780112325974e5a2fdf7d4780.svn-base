@@ -1,0 +1,191 @@
+//
+//  WLKTActiveCollectTVC.m
+//  wlkt
+//
+//  Created by 尹平江 on 2017/7/10.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTActiveCollectTVC.h"
+#import "WLKTActiveCollectCell.h"
+#import "WLKTTableviewRefresh.h"
+#import <MJRefresh.h>
+#import "WLKTActiveCollectApi.h"
+#import "WLKTActiveCollectData.h"
+#import "WLKTActiveCollectListData.h"
+#import "WLKTActivityDetailVC.h"
+#import "WLKTActivityCollectionCancelApi.h"
+
+typedef void(^refreshBlock)(void);
+
+@interface WLKTActiveCollectTVC ()
+//@property (assign, nonatomic) int page;
+@property (strong, nonatomic) NSMutableArray<WLKTActiveCollectData *> *dataArr;
+
+@end
+
+static NSString * const activeCollectCell = @"activeCollectCell";
+
+@implementation WLKTActiveCollectTVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    
+    //self.page = 1;
+    
+    [self setHeaderRefreshing];
+    //[self setFooterRefreshing];
+    [self.tableView.mj_header beginRefreshing];
+}
+
+#pragma mark - Table view data source
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return self.dataArr.count;
+}
+
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    WLKTActiveCollectCell *cell = [tableView dequeueReusableCellWithIdentifier:activeCollectCell];
+    if (cell == nil) {
+        cell = [[WLKTActiveCollectCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:activeCollectCell];
+    }
+    if (self.dataArr.count > 0) {
+        [cell setCellContent:self.dataArr[indexPath.row]];
+    }
+
+    //cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return 112 * ScreenRatio_6;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 5;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 5)];
+    v.backgroundColor = fillViewColor;
+    return v;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [self setHidesBottomBarWhenPushed:YES];
+    if (self.dataArr.count > 0) {
+        WLKTActiveCollectData *data = self.dataArr[indexPath.row];
+        if (data.valid.intValue == 1) {
+            WLKTActivityDetailVC *vc = [[WLKTActivityDetailVC alloc]initWithActivityId:data.aid];
+            [self.navigationController pushViewController:vc animated:YES];
+        }
+        else{
+            [SVProgressHUD showInfoWithStatus:@"该活动已结束或下架"];
+        }
+        
+    }
+}
+
+- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath{
+    return YES;
+}
+
+- (UITableViewCellEditingStyle)tableView:(UITableView *)tableView editingStyleForRowAtIndexPath:(NSIndexPath *)indexPath{
+    //return UITableViewCellEditingStyleDelete | UITableViewCellEditingStyleInsert;
+    return UITableViewCellEditingStyleDelete;
+}
+
+- (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (editingStyle == UITableViewCellEditingStyleDelete) {
+        [self collectCancelReqWithID:self.dataArr[indexPath.row].aid];
+        [self.dataArr removeObjectAtIndex:indexPath.row];
+        [tableView deleteRowAtIndexPath:indexPath withRowAnimation:UITableViewRowAnimationRight];
+    }
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath *)indexPath{
+    return @"取消收藏";
+}
+
+#pragma mark - network
+
+- (void)request {
+    //WS(weakSelf);
+    WLKTActiveCollectApi *api = [[WLKTActiveCollectApi alloc]init];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_header endRefreshing];
+        
+        [self.dataArr removeAllObjects];
+        
+        WLKTActiveCollectListData *data = [WLKTActiveCollectListData modelWithDictionary:request.responseJSONObject[@"result"]];
+        if (data.list.count) {
+            [self.dataArr addObjectsFromArray:data.list];
+        }
+        else{
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (!self.dataArr.count) {
+                    self.tableView.state = WLKTViewStateEmpty;
+                    self.tableView.imageForStateEmpty = [UIImage imageNamed:@"收藏-缺省"];
+                    //self.tableView.buttonColorForStateEmpty = navigationBgColor;
+                    self.tableView.buttonTitleForStateEmpty = @"暂无收藏活动";
+                    self.tableView.emptyButtonClickBlock = ^{
+                        
+                    };
+                }
+            });
+        }
+        [self.tableView reloadData];
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_header endRefreshing];
+        self.tableView.state = WLKTViewStateError;
+        WS(weakSelf);
+        self.tableView.emptyButtonClickBlock = ^{
+            [weakSelf request];
+        };
+    }];
+}
+
+- (void)collectCancelReqWithID:(NSString *)aid {
+
+    WLKTActivityCollectionCancelApi *api = [[WLKTActivityCollectionCancelApi alloc]initWithActivituId:aid];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        NSLog(@"取消收藏成功");
+    } failure:^(__kindof YTKBaseRequest *request) {
+        NSLog(@"取消收藏失败：%@", request.requestOperationError.localizedDescription);
+    }];
+}
+
+#pragma mark - refresh
+- (void)setHeaderRefreshing{
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^() {
+
+        [weakSelf request];
+    }];
+    
+}
+
+//- (void)setFooterRefreshing{
+//    WS(weakSelf);
+//    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableView block:^() {
+//        [weakSelf requestWithRefreshBlock:^{
+//            dispatch_async(dispatch_get_main_queue(), ^{
+//                [weakSelf.tableView.mj_footer endRefreshing];
+//                [weakSelf.tableView reloadData];
+//            });
+//        }];
+//    }];
+//    
+//}
+
+- (NSMutableArray *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray array];
+    }
+    return _dataArr;
+}
+
+@end

@@ -1,0 +1,141 @@
+//
+//  WLKTHPBannerView.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/1/25.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTHPBannerView.h"
+#import <TYCyclePagerView.h>
+#import "TYPageControl.h"
+
+@interface HPBannerViewCell: UICollectionViewCell
+@property (strong, nonatomic) UIImageView *imgIV;
+@end
+
+@implementation HPBannerViewCell
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self.contentView addSubview:self.imgIV];
+        [self.imgIV mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.center.mas_equalTo(self.contentView);
+            make.size.mas_equalTo(self.contentView);
+        }];
+    }
+    return self;
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.imgIV.image = nil;
+}
+
+- (UIImageView *)imgIV{
+    if (!_imgIV) {
+        _imgIV = [UIImageView new];
+        _imgIV.layer.cornerRadius = 5 *ScreenRatio_6;
+        _imgIV.layer.masksToBounds = YES;
+        _imgIV.contentMode = UIViewContentModeScaleToFill;
+    }
+    return _imgIV;
+}
+@end
+
+///////////////////////////////////////////////////////////
+@interface WLKTHPBannerView () <TYCyclePagerViewDataSource, TYCyclePagerViewDelegate>
+
+@property (nonatomic, strong) TYCyclePagerView *pagerView;
+@property (nonatomic, strong) TYPageControl *pageControl;
+
+@end
+
+@implementation WLKTHPBannerView
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self addPagerView];
+        [self addPageControl];
+    }
+    return self;
+}
+
+- (void)addPagerView {
+    _pagerView = [[TYCyclePagerView alloc]init];
+    _pagerView.isInfiniteLoop = YES;
+    _pagerView.autoScrollInterval = 2;
+    _pagerView.dataSource = self;
+    _pagerView.delegate = self;
+    // registerClass or registerNib
+    [_pagerView registerClass:[HPBannerViewCell class] forCellWithReuseIdentifier:@"HPBannerViewCell"];
+    [self addSubview:_pagerView];
+    [_pagerView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(self);
+        make.center.mas_equalTo(self);
+    }];
+}
+
+- (void)addPageControl {
+    _pageControl = [[TYPageControl alloc]init];
+    //pageControl.numberOfPages = _datas.count;
+    _pageControl.currentPageIndicatorSize = CGSizeMake(8, 8);
+    _pageControl.userInteractionEnabled = false;
+    //    pageControl.pageIndicatorImage = [UIImage imageNamed:@"Dot"];
+    //    pageControl.currentPageIndicatorImage = [UIImage imageNamed:@"DotSelected"];
+    //    pageControl.contentInset = UIEdgeInsetsMake(0, 20, 0, 20);
+    //    pageControl.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;
+    //    pageControl.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
+    //    [pageControl addTarget:self action:@selector(pageControlValueChangeAction:) forControlEvents:UIControlEventValueChanged];
+    _pageControl.pageIndicatorTintColor = UIColorHex(999999);
+    _pageControl.currentPageIndicatorTintColor = [UIColor whiteColor];
+    [_pagerView addSubview:_pageControl];
+    [_pageControl mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(self.size.width, 20));
+        make.centerX.mas_equalTo(_pagerView);
+        make.bottom.mas_equalTo(_pagerView.mas_bottom);
+    }];
+}
+
+- (void)setBannerArr:(NSArray *)bannerArr{
+    _bannerArr = bannerArr;
+    self.pageControl.numberOfPages = self.bannerArr.count;
+    [self.pagerView reloadData];
+}
+
+#pragma mark - TYCyclePagerViewDataSource
+- (NSInteger)numberOfItemsInPagerView:(TYCyclePagerView *)pageView {
+    return self.bannerArr.count;
+}
+
+- (UICollectionViewCell *)pagerView:(TYCyclePagerView *)pagerView cellForItemAtIndex:(NSInteger)index {
+    HPBannerViewCell *cell = [pagerView dequeueReusableCellWithReuseIdentifier:@"HPBannerViewCell" forIndex:index];
+    [cell.imgIV setImageURL:[NSURL URLWithString:self.bannerArr[index]]];
+    return cell;
+}
+
+- (void)pagerView:(TYCyclePagerView *)pageView didSelectedItemCell:(__kindof UICollectionViewCell *)cell atIndex:(NSInteger)index{
+    if ([self.delegate respondsToSelector:@selector(didSelectedBannerItem:)]) {
+        [self.delegate didSelectedBannerItem:index];
+    }
+}
+
+- (TYCyclePagerViewLayout *)layoutForPagerView:(TYCyclePagerView *)pageView {
+    TYCyclePagerViewLayout *layout = [[TYCyclePagerViewLayout alloc]init];
+    layout.itemSize = CGSizeMake(CGRectGetWidth(pageView.frame) *0.8, CGRectGetHeight(pageView.frame));
+    layout.itemSpacing = 15;
+    //layout.minimumAlpha = 0.3;
+    layout.itemHorizontalCenter = YES;
+    return layout;
+}
+
+- (void)pagerView:(TYCyclePagerView *)pageView didScrollFromIndex:(NSInteger)fromIndex toIndex:(NSInteger)toIndex {
+    _pageControl.currentPage = toIndex;
+    //[_pageControl setCurrentPage:newIndex animate:YES];
+//    NSLog(@"%ld ->  %ld",fromIndex,toIndex);
+}
+
+@end
+

@@ -1,0 +1,88 @@
+//
+//  WLKTCDPageController.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/3/30.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTCDPageController.h"
+#import "WLKTCDViewController.h"
+#import "WLKTCDMoreIntroVC.h"
+#import "WLKTCDMore_QA_VC.h"
+#import "WLKTCDMoreEvaluationVC.h"
+
+@interface WLKTCDPageController ()
+@property (copy, nonatomic) NSString *courseId;
+@end
+
+@implementation WLKTCDPageController
+- (instancetype)initWithCourseId:(NSString *)courseId;
+{
+    self = [super init];
+    if (self) {
+        _courseId = courseId;
+        self.menuItemWidth = 40 *ScreenRatio_6;
+        self.titleColorNormal = KMainTextColor_3;
+        self.titleColorSelected = kMainTextColor_lightRed;
+        self.titleSizeSelected = 18 *ScreenRatio_6;
+        self.titleSizeNormal = 18 *ScreenRatio_6;
+        self.showOnNavigationBar = YES;
+        self.scrollEnable = false;
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    
+}
+
+#pragma mark - action
+
+
+
+#pragma mark - page controller delegate
+- (NSInteger)numbersOfChildControllersInPageController:(WMPageController *)pageController{
+    return 4;
+}
+
+- (NSString *)pageController:(WMPageController *)pageController titleAtIndex:(NSInteger)index{
+    return @[@"课程", @"介绍", @"问答", @"评价"][index];
+}
+
+- (UIViewController *)pageController:(WMPageController *)pageController viewControllerAtIndex:(NSInteger)index{
+    
+    if (index == 0) {//课程
+        WLKTCDViewController *vc = [[WLKTCDViewController alloc]initWithCourseId:self.courseId];
+        return vc;
+    }
+    
+    if (index == 1) {//介绍
+        WLKTCDMoreIntroVC *vc = [[WLKTCDMoreIntroVC alloc]init];
+        return vc;
+    }
+    
+    if (index == 2) {//问答
+        WLKTCDMore_QA_VC *vc = [[WLKTCDMore_QA_VC alloc]init];
+        return vc;
+    }
+    
+    if (index == 3) {//评价
+        WLKTCDMoreEvaluationVC *vc = [[WLKTCDMoreEvaluationVC alloc]init];
+        return vc;
+    }
+    
+    return [UIViewController new];
+}
+
+- (CGRect)pageController:(WMPageController *)pageController preferredFrameForMenuView:(WMMenuView *)menuView{
+    return CGRectMake(0, 0, kScreenWidth * 0.6, 44);
+}
+
+- (CGRect)pageController:(WMPageController *)pageController preferredFrameForContentView:(WMScrollView *)contentView{
+    return CGRectMake(0, 0, kScreenWidth, kScreenHeight);
+}
+
+@end

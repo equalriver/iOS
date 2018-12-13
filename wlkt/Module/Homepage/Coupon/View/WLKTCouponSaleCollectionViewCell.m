@@ -1,0 +1,180 @@
+//
+//  WLKTCouponSaleCollectionViewCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/18.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTCouponSaleCollectionViewCell.h"
+
+@implementation WLKTCouponSaleCollectionViewCell
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        self.backgroundColor = [UIColor whiteColor];
+        [self.contentView addSubview:self.iconIV];
+        [self.contentView addSubview:self.titleLabel];
+        [self.contentView addSubview:self.rawPriceLabel];
+        [self.contentView addSubview:self.currentPriceLabel];
+        [self.contentView addSubview:self.saleIV];
+        [self.saleIV addSubview:self.saleLabel];
+        [self.contentView addSubview:self.priceTypeLabel];
+        [self.contentView addSubview:self.clickLabel];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)prepareForReuse{
+    self.iconIV.image = nil;
+    self.titleLabel.text = nil;
+    self.rawPriceLabel.attributedText = nil;
+    self.currentPriceLabel.text = nil;
+    self.saleLabel.text = nil;
+    self.priceTypeLabel.text = nil;
+}
+
+- (void)setCellData:(WLKTSaleCourseData *)data{
+    [self.iconIV setImageURL:[NSURL URLWithString:data.img]];
+    self.titleLabel.text = data.coursename;
+    self.currentPriceLabel.text = data.showprice;
+    self.saleLabel.text = [NSString stringWithFormat:@"%@折", data.discount];
+    self.priceTypeLabel.text = data.target;
+    if (data.oldprice && ![data.oldprice containsString:@"null"]) {
+        NSMutableAttributedString *attStr = [[NSMutableAttributedString alloc]initWithString:data.oldprice];
+        [attStr setAttributes:@{NSStrikethroughStyleAttributeName : @(NSUnderlinePatternSolid | NSUnderlineStyleSingle)} range:NSMakeRange(0, data.oldprice.length)];
+        self.rawPriceLabel.attributedText = attStr;
+    }
+    if (data.youhui.count > 0) {
+        [data.youhui enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            UILabel *l = [UILabel itemLabelWithText:[NSString stringWithFormat:@"%@", obj]];
+            [self.contentView addSubview:l];
+            [l mas_makeConstraints:^(MASConstraintMaker *make) {
+                make.size.mas_equalTo(CGSizeMake(12, 12));
+                make.left.mas_equalTo(self.contentView).offset(idx * 13 + 5);
+                make.top.mas_equalTo(self.iconIV.mas_bottom).offset(7);
+            }];
+            [self.titleLabel mas_updateConstraints:^(MASConstraintMaker *make) {
+                make.left.mas_equalTo(self.contentView).offset(data.youhui.count * 13.5 + 5);
+            }];
+        }];
+    }
+}
+
+#pragma mark - make constraints
+- (void)makeConstraints{
+    [self.iconIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(170 * ScreenRatio_6, 90 * ScreenRatio_6));
+        make.top.mas_equalTo(self.contentView).offset(5);
+        make.centerX.mas_equalTo(self.contentView);
+    }];
+    [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(135 * ScreenRatio_6, 15));
+        make.left.mas_equalTo(self.contentView).offset(5);
+        make.top.mas_equalTo(self.iconIV.mas_bottom).offset(5);
+    }];
+    [self.saleIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(41, 16));
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-5);
+        make.top.mas_equalTo(self.titleLabel.mas_bottom).offset(10 * ScreenRatio_6);
+    }];
+    [self.saleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(self.saleIV);
+        make.center.mas_equalTo(self.saleIV);
+    }];
+    [self.rawPriceLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(120 * ScreenRatio_6, 15));
+        make.left.mas_equalTo(self.contentView).offset(5);
+        make.centerY.mas_equalTo(self.saleIV);
+    }];
+    [self.priceTypeLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(35, 15));
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-5);
+        make.top.mas_equalTo(self.saleIV.mas_bottom).offset(7);
+    }];
+    [self.currentPriceLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(self.rawPriceLabel);
+        make.left.mas_equalTo(self.contentView).offset(5);
+        make.centerY.mas_equalTo(self.priceTypeLabel);
+    }];
+    [self.clickLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(165 * ScreenRatio_6, 20 * ScreenRatio_6));
+        make.centerX.mas_equalTo(self.contentView);
+        make.top.mas_equalTo(self.priceTypeLabel.mas_bottom).offset(9 * ScreenRatio_6);
+    }];
+}
+
+#pragma mark - get
+- (UIImageView *)iconIV{
+    if (!_iconIV) {
+        _iconIV = [[UIImageView alloc]init];
+//        _iconIV.contentMode = UIViewContentModeScaleAspectFill;
+        _iconIV.layer.contentMode = UIViewContentModeScaleAspectFill;
+        _iconIV.layer.masksToBounds = YES;
+    }
+    return _iconIV;
+}
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [[UILabel alloc]init];
+        _titleLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        _titleLabel.textColor = [UIColor colorWithHexString:@"#4d4d4d"];
+    }
+    return _titleLabel;
+}
+- (UILabel *)rawPriceLabel{
+    if (!_rawPriceLabel) {
+        _rawPriceLabel = [[UILabel alloc]init];
+        _rawPriceLabel.font = [UIFont systemFontOfSize:13 *ScreenRatio_6];
+        _rawPriceLabel.textColor = [UIColor colorWithHexString:@"#c0c0c0"];
+    }
+    return _rawPriceLabel;
+}
+-(UILabel *)currentPriceLabel{
+    if (!_currentPriceLabel) {
+        _currentPriceLabel = [[UILabel alloc]init];
+        _currentPriceLabel.textColor = [UIColor colorWithHexString:@"#ee402d"];
+        _currentPriceLabel.font = [UIFont systemFontOfSize:15 *ScreenRatio_6];
+    }
+    return _currentPriceLabel;
+}
+- (UIImageView *)saleIV{
+    if (!_saleIV) {
+        _saleIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"折扣课程标签"]];
+    }
+    return _saleIV;
+}
+- (UILabel *)saleLabel{
+    if (!_saleLabel) {
+        _saleLabel = [[UILabel alloc]init];
+        _saleLabel.font = [UIFont systemFontOfSize:11 *ScreenRatio_6];
+        _saleLabel.textColor = [UIColor colorWithHexString:@"#ffffff"];
+        _saleLabel.textAlignment = NSTextAlignmentCenter;
+    }
+    return _saleLabel;
+}
+- (UILabel *)priceTypeLabel{
+    if (!_priceTypeLabel) {
+        _priceTypeLabel = [[UILabel alloc]init];
+        _priceTypeLabel.font = [UIFont systemFontOfSize:10 *ScreenRatio_6];
+        _priceTypeLabel.textColor = [UIColor colorWithHexString:@"#c0c0c0"];
+        _priceTypeLabel.textAlignment = NSTextAlignmentRight;
+    }
+    return _priceTypeLabel;
+}
+- (UILabel *)clickLabel{
+    if (!_clickLabel) {
+        _clickLabel = [[UILabel alloc]init];
+        _clickLabel.font = [UIFont systemFontOfSize:13 *ScreenRatio_6];
+        _clickLabel.textColor = [UIColor colorWithHexString:@"#ffffff"];
+        _clickLabel.textAlignment = NSTextAlignmentCenter;
+        _clickLabel.backgroundColor = [UIColor colorWithHexString:@"#ee402d"];
+        _clickLabel.text = @"点击了解";
+    }
+    return _clickLabel;
+}
+
+@end

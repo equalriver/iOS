@@ -1,0 +1,46 @@
+//
+//  WLKTCourseDetailMoreBrowseCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/1.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTCourseDetailMoreBrowseCell.h"
+
+@interface WLKTCourseDetailMoreBrowseCell ()
+@property (copy, nonatomic) NSArray<WLKTCourseDetailNewHot_school *> *dataArr;
+@end
+
+@implementation WLKTCourseDetailMoreBrowseCell
+- (instancetype)initWithData:(NSArray<WLKTCourseDetailNewHot_school *> *)data
+{
+    self = [super init];
+    if (self) {
+        _dataArr = [NSArray arrayWithArray:data];
+        //create items
+        for (int i = 0; i < _dataArr.count; i++) {
+            [self createSchoolItemWithName:_dataArr[i].schoolname index:i];
+        }
+    }
+    return self;
+}
+
+- (void)schoolItemTap:(UITapGestureRecognizer *)sender{
+    if ([self.delegate respondsToSelector:@selector(didSelectedHotSchool:)]) {
+        [self.delegate didSelectedHotSchool:self.dataArr[sender.view.tag].suid];
+    }
+}
+
+- (void)createSchoolItemWithName:(NSString *)name index:(NSInteger)index{
+    UILabel *l = [[UILabel alloc]initWithFrame:CGRectMake(10 * ScreenRatio_6, 18 * index, ScreenWidth - 20 * ScreenRatio_6, 18)];
+    l.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+    l.textColor = KMainTextColor_3;
+    l.tag = index;
+    l.text = [NSString stringWithFormat:@"· %@", name];
+    l.userInteractionEnabled = YES;
+    [l addGestureRecognizer:[[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(schoolItemTap:)]];
+    [self.contentView addSubview:l];
+}
+
+@end

@@ -1,0 +1,365 @@
+//
+//  AppDelegate.m
+//  wlkt
+//
+//  Created by slovelys on 17/3/19.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "AppDelegate.h"
+#import "WLKTLogin.h"
+#import "WLKTUserController.h"
+#import <AlipaySDK/AlipaySDK.h>
+#import <UMSocialCore/UMSocialCore.h>
+#import "WLKTCDPageController.h"
+#import "WLKTSchoolNewsDetailVC.h"
+#import "WLKTSchoolVC.h"
+#import "WLKTActivityDetailVC.h"
+#import "WLKTMsgNotiTVC.h"
+#import "WLKTIntroManager.h"
+#import "WLKTAdvertisingView.h"
+
+#import <AFNetworking.h>
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_10_0
+
+#import <UserNotifications/UserNotifications.h>
+@interface AppDelegate() <UNUserNotificationCenterDelegate>
+@end
+#endif
+
+@implementation AppDelegate
+
+
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    // Override point for customization after application launch.
+    [self QQPushSettingWithOptions:launchOptions];
+    [WeiboSDK registerApp:kSinaAppKey];
+    [WXApi registerApp:kWeChatAppId enableMTA:YES];
+    
+    [application setMinimumBackgroundFetchInterval:UIApplicationBackgroundFetchIntervalMinimum];
+    self.window = [[UIWindow alloc] initWithFrame:kMainScreen.bounds];
+    self.appCoordinator = [[WLKTAppCoordinator alloc] initWithWindow:self.window options:launchOptions];
+    [self.appCoordinator start];
+    
+    NSDictionary *userInfo = launchOptions[UIApplicationLaunchOptionsRemoteNotificationKey];
+    if (userInfo != nil) {
+        //如果有值，说明是通过远程推送来启动的
+        [self appReceiveRemoteNotification:userInfo];
+    }
+    [UIApplication sharedApplication].applicationIconBadgeNumber = 0;
+    [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"isSNSPush"];
+    if (![WLKTIntroManager needDisplayIntroView] && ![[NSUserDefaults standardUserDefaults] boolForKey:@"isSNSPush"]) {
+        WLKTAdvertisingView *v = [[WLKTAdvertisingView alloc]init];
+        [[UIApplication sharedApplication].keyWindow addSubview:v];
+    }
+    
+    return YES;
+}
+
+#pragma mark - WeiboSDKDelegate
+- (void)didReceiveWeiboRequest:(WBBaseRequest *)request
+{
+    
+}
+
+- (void)didReceiveWeiboResponse:(WBBaseResponse *)response
+{
+    NSLog(@"token %@", [(WBAuthorizeResponse *) response accessToken]);
+    NSLog(@"uid %@", [(WBAuthorizeResponse *) response userID]);
+    
+    [self getWeiBoUserInfo:[(WBAuthorizeResponse *) response userID] token:[(WBAuthorizeResponse *) response accessToken]];
+}
+
+- (void)getWeiBoUserInfo:(NSString *)uid token:(NSString *)token
+{
+    NSString *url = [NSString stringWithFormat:@"https://api.weibo.com/2/users/show.json?uid=%@&access_token=%@&source=%@",uid,token,kSinaAppKey];
+        //创建会话管理员
+    AFHTTPSessionManager *manager = [AFHTTPSessionManager manager];
+        //设置响应序列化 让响应格式统一
+    manager.responseSerializer = [AFHTTPResponseSerializer serializer];
+        //发出请求
+    [manager GET:url parameters:nil progress:^(NSProgress * _Nonnull downloadProgress) {
+        
+    } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
+        NSDictionary *dic = [NSJSONSerialization JSONObjectWithData:responseObject options:kNilOptions error:nil];
+        NSDictionary *paramter = @{@"idstr" : [dic valueForKeyPath:@"idstr"],
+                                   @"screen_name" : [dic valueForKeyPath:@"screen_name"],
+                                   @"avatar_hd":[dic valueForKeyPath:@"avatar_hd"]
+                                   };
+        if (self.weiboAuthoHandler) {
+            self.weiboAuthoHandler(paramter);
+        }
+
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        
+    }];
+}
+
+#pragma mark - weixin pay delegate
+-(void)onResp:(BaseResp *)resp{
+    if ([resp isKindOfClass:[PayResp class]]){
+        PayResp *response = (PayResp *)resp;
+        switch(response.errCode){
+            case WXSuccess:
+                [SVProgressHUD showSuccessWithStatus:@"订单支付成功"];
+                [[NSNotificationCenter defaultCenter]postNotification:[NSNotification notificationWithName:@"paySuccess" object:nil]];
+                break;
+            default:
+                NSLog(@"支付失败，retcode=%d",resp.errCode);
+                break;
+        }
+    }
+}
+
+#pragma mark - url 系统回调
+- (BOOL)application:(UIApplication *)application openURL:(NSURL *)url sourceApplication:(NSString *)sourceApplication
+         annotation:(id)annotation {
+    [UIApplication sharedApplication].applicationIconBadgeNumber = 0;
+    [WXApi handleOpenURL:url delegate:self];
+    [WeiboSDK handleOpenURL:url delegate:self];
+    [[UMSocialManager defaultManager] handleOpenURL:url sourceApplication:sourceApplication annotation:annotation];
+    [self alipayWithopenURL:url];
+    
+    //页面跳转
+    [self goDetailPageWithURL:url];
+    
+    return YES;
+}
+
+// NOTE: 9.0以后使用新API接口
+- (BOOL)application:(UIApplication *)app openURL:(NSURL *)url options:(NSDictionary<NSString*, id> *)options
+{
+    [UIApplication sharedApplication].applicationIconBadgeNumber = 0;
+    [WXApi handleOpenURL:url delegate:self];
+    [WeiboSDK handleOpenURL:url delegate:self];
+    [[UMSocialManager defaultManager] handleOpenURL:url options:options];
+    [self alipayWithopenURL:url];
+    
+    //页面跳转
+    [self goDetailPageWithURL:url];
+    
+    return YES;
+}
+
+- (BOOL)application:(UIApplication *)application handleOpenURL:(NSURL *)url{
+    
+    [UIApplication sharedApplication].applicationIconBadgeNumber = 0;
+    [WXApi handleOpenURL:url delegate:self];
+    [WeiboSDK handleOpenURL:url delegate:self];
+    [[UMSocialManager defaultManager] handleOpenURL:url];
+    [self alipayWithopenURL:url];
+    
+    //页面跳转
+    [self goDetailPageWithURL:url];
+    
+    return YES;
+}
+
+- (void)goDetailPageWithURL:(NSURL *)url{
+    if ([url.absoluteString containsString:WLKT_SHARE_URL]) {
+        NSString *shareId = [[url.absoluteString componentsSeparatedByString:@"?"].lastObject componentsSeparatedByString:@"="].lastObject;
+        UIViewController *vc;
+        
+        if ([url.absoluteString containsString:@"course"]) {
+            vc = [[WLKTCDPageController alloc]initWithCourseId:shareId];
+
+        }
+        if ([url.absoluteString containsString:@"news"]) {
+            vc = [[WLKTSchoolNewsDetailVC alloc]initWithNewsId:shareId];
+
+        }
+        if ([url.absoluteString containsString:@"school"]) {
+            vc = [[WLKTSchoolVC alloc]initWithSchoolId:shareId];
+ 
+        }
+        vc.hidesBottomBarWhenPushed = YES;
+        UITabBarController *tabVC = (UITabBarController *)self.window.rootViewController;
+        UIViewController *currentVC = tabVC.childViewControllers[tabVC.selectedIndex];
+        if ([currentVC isKindOfClass:[UINavigationController class]]) {
+            [(UINavigationController *)currentVC pushViewController:vc animated:YES];
+        }
+    }
+}
+
+#pragma mark -
+- (void)applicationWillResignActive:(UIApplication *)application {
+    // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
+    // Use this method to pause ongoing tasks, disable timers, and invalidate graphics rendering callbacks. Games should use this method to pause the game.
+}
+
+
+- (void)applicationDidEnterBackground:(UIApplication *)application {
+    // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later.
+    // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
+}
+
+
+- (void)applicationWillEnterForeground:(UIApplication *)application {
+    // Called as part of the transition from the background to the active state; here you can undo many of the changes made on entering the background.
+    if (![WLKTIntroManager needDisplayIntroView] && ![[NSUserDefaults standardUserDefaults] boolForKey:@"isSNSPush"]) {
+        WLKTAdvertisingView *v = [[WLKTAdvertisingView alloc]init];
+        int r = arc4random() % 10;
+        if (r % 3 == 0) {
+            [[UIApplication sharedApplication].keyWindow addSubview:v];
+        }
+        
+    }
+}
+
+- (void)applicationDidBecomeActive:(UIApplication *)application {
+    [UIApplication sharedApplication].applicationIconBadgeNumber = 0;
+}
+
+- (void)applicationWillTerminate:(UIApplication *)application {
+    // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
+    [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"isSNSPush"];
+}
+
+#pragma mark - notification
+// 此方法现在不是必须的，SDK内部已经在内部处理
+- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
+    [[XGPushTokenManager defaultTokenManager] registerDeviceToken:deviceToken];
+    NSLog(@"[XGDemo] device token is %@", [[XGPushTokenManager defaultTokenManager] deviceTokenString]);
+}
+
+- (void)QQPushSettingWithOptions:(NSDictionary *)launchOptions {
+    [[XGPush defaultManager] setEnableDebug:YES];
+    XGNotificationConfigure *configure = [XGNotificationConfigure configureNotificationWithCategories:nil types:XGUserNotificationTypeAlert | XGUserNotificationTypeBadge | XGUserNotificationTypeSound];
+    [[XGPush defaultManager] setNotificationConfigure:configure];
+    [[XGPush defaultManager] startXGWithAppID:QQ_PUSH_ID appKey:QQ_PUSH_KEY delegate:self];
+    [[XGPush defaultManager] reportXGNotificationInfo:launchOptions];
+    
+}
+
+/**
+ iOS 8 + 收到静默推送的回调
+ 
+ @param application  UIApplication 实例
+ @param userInfo 推送时指定的参数
+ @param completionHandler 完成回调
+ */
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
+    NSLog(@"[XGDemo] receive slient Notification");
+    NSLog(@"[XGDemo] userinfo %@", userInfo);
+    [[XGPush defaultManager] reportXGNotificationInfo:userInfo];
+    completionHandler(UIBackgroundFetchResultNewData);
+    [self appReceiveRemoteNotification:userInfo];
+}
+// iOS 10 新增 API
+// iOS 10 会走新 API, iOS 10 以前会走到老 API
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_10_0
+// App 用户点击通知
+// App 用户选择通知中的行为
+// App 用户在通知中心清除消息
+// 无论本地推送还是远程推送都会走这个回调
+- (void)xgPushUserNotificationCenter:(UNUserNotificationCenter *)center didReceiveNotificationResponse:(UNNotificationResponse *)response withCompletionHandler:(void (^)(void))completionHandler {
+    
+    [[XGPush defaultManager]reportXGNotificationInfo:response.notification.request.content.userInfo];
+    completionHandler();
+    [self appReceiveRemoteNotification:response.notification.request.content.userInfo];
+}
+
+// App 在前台弹通知需要调用这个接口
+- (void)xgPushUserNotificationCenter:(UNUserNotificationCenter *)center willPresentNotification:(UNNotification *)notification withCompletionHandler:(void (^)(UNNotificationPresentationOptions))completionHandler {
+    [[XGPush defaultManager] reportXGNotificationInfo:notification.request.content.userInfo];
+    completionHandler(UNNotificationPresentationOptionBadge | UNNotificationPresentationOptionSound | UNNotificationPresentationOptionAlert);
+}
+#endif
+
+- (void)appReceiveRemoteNotification:(NSDictionary *)userInfo{
+    NSArray *keys = userInfo.allKeys;
+    UIViewController *vc;
+    
+    if ([keys containsObject:@"message"]) {
+        if (self.window.rootViewController.childViewControllers.count < 4) {
+            return;
+        }
+        WLKTMsgNotiTVC *msgNotiTVC = [[WLKTMsgNotiTVC alloc]init];
+        msgNotiTVC.hidesBottomBarWhenPushed = YES;
+        UIViewController *tab = self.window.rootViewController.childViewControllers[3];
+        if ([tab isKindOfClass:[UINavigationController class]]) {
+            [(UINavigationController *)tab pushViewController:msgNotiTVC animated:YES];
+        }
+        return;
+    }
+    else if ([keys containsObject:@"actdetail"]) {
+        vc = [[WLKTActivityDetailVC alloc]initWithActivityId:userInfo[@"actdetail"]];
+
+    }
+    else if ([keys containsObject:@"coursedetail"]) {
+        vc = [[WLKTCDPageController alloc]initWithCourseId:userInfo[@"coursedetail"]];
+
+    }
+    else if ([keys containsObject:@"schooldetail"]) {
+        vc = [[WLKTSchoolVC alloc]initWithSchoolId:userInfo[@"schooldetail"]];
+
+    }
+    else if ([keys containsObject:@"news"]) {
+        vc = [[WLKTSchoolNewsDetailVC alloc]initWithNewsId:userInfo[@"news"]];
+        
+    }
+    vc.hidesBottomBarWhenPushed = YES;
+    UITabBarController *tabVC = (UITabBarController *)self.window.rootViewController;
+    UIViewController *currentVC = tabVC.childViewControllers[tabVC.selectedIndex];
+    if ([currentVC isKindOfClass:[UINavigationController class]]) {
+        [(UINavigationController *)currentVC pushViewController:vc animated:YES];
+    }
+
+}
+
+#pragma mark -
+- (void)alipayWithopenURL:(NSURL *)url {
+    if ([url.host isEqualToString:@"safepay"]) {
+        // 支付跳转支付宝钱包(app)进行支付，处理支付结果
+        [[AlipaySDK defaultService] processOrderWithPaymentResult:url standbyCallback:^(NSDictionary *resultDic) {
+            if (resultDic[@"resultStatus"]){
+                
+                if ([resultDic[@"resultStatus"] isEqualToString:@"9000"]) {//订单支付成功
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [SVProgressHUD showSuccessWithStatus:@"订单支付成功"];
+                        [[NSNotificationCenter defaultCenter]postNotification:[NSNotification notificationWithName:@"paySuccess" object:nil]];
+                    });
+                }
+                else if ([resultDic[@"resultStatus"] isEqualToString:@"8000"] || [resultDic[@"resultStatus"] isEqualToString:@"6004"]) {//正在处理中
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [SVProgressHUD showSuccessWithStatus:@"正在处理中..."];
+                    });
+                }
+                else if ([resultDic[@"resultStatus"] isEqualToString:@"4000"]) {//订单支付失败
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [SVProgressHUD showErrorWithStatus:@"订单支付失败"];
+                        [[NSNotificationCenter defaultCenter]postNotification:[NSNotification notificationWithName:@"payFail" object:nil]];
+                    });
+                }
+                else if ([resultDic[@"resultStatus"] isEqualToString:@"5000"]) {//重复请求
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [SVProgressHUD showErrorWithStatus:@"重复请求"];
+                        [[NSNotificationCenter defaultCenter]postNotification:[NSNotification notificationWithName:@"payFail" object:nil]];
+                    });
+                }
+                else if ([resultDic[@"resultStatus"] isEqualToString:@"6001"]) {//用户中途取消
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [SVProgressHUD showErrorWithStatus:@"取消支付"];
+                        [[NSNotificationCenter defaultCenter]postNotification:[NSNotification notificationWithName:@"payFail" object:nil]];
+                    });
+                }
+                else if ([resultDic[@"resultStatus"] isEqualToString:@"6002"]) {//网络连接出错
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [SVProgressHUD showErrorWithStatus:@"网络连接出错"];
+                        //[[NSNotificationCenter defaultCenter]postNotification:[NSNotification notificationWithName:@"payFail" object:nil]];
+                    });
+                }
+                else{//其他错误
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [SVProgressHUD showErrorWithStatus:@"其它支付错误"];
+                        [[NSNotificationCenter defaultCenter]postNotification:[NSNotification notificationWithName:@"payFail" object:nil]];
+                    });
+                    
+                }
+            }
+        }];
+        
+    }
+}
+
+@end

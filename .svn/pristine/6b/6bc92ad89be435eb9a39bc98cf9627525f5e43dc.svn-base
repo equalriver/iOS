@@ -1,0 +1,16 @@
+//
+//  WLKTCourseDetailGoAnswerVC.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/3.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourseDetailNewCourse_QA_question.h"
+#import "WLKTCourse.h"
+
+@interface WLKTCourseDetailGoAnswerVC : UIViewController
+- (instancetype)initWithQuestion:(WLKTCourseDetailNewCourse_QA_question *)question course:(WLKTCourse *)course;
+
+@end

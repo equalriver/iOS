@@ -1,0 +1,222 @@
+//
+//  WLKTLoginViewController.m
+//  wlkt
+//
+//  Created by slovelys on 17/3/21.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTLoginViewController.h"
+#import "WLKTLogin.h"
+
+#import "UITextField+Validate.h"
+#import "WLKTPhoneValidator.h"
+#import "WLKTPasswordValidator.h"
+
+
+@interface WLKTLoginViewController ()
+@property (weak, nonatomic) IBOutlet UIImageView *iconIV;
+@property (weak, nonatomic) IBOutlet UIImageView *login_account;
+@property (weak, nonatomic) IBOutlet UIImageView *loginAccountIV;
+@property (weak, nonatomic) IBOutlet UILabel *lineOneLabel;
+@property (weak, nonatomic) IBOutlet UILabel *lineTwolabel;
+@property (weak, nonatomic) IBOutlet UIImageView *register_passwordIV;
+@property (weak, nonatomic) IBOutlet UIButton *registerBtn;
+@property (weak, nonatomic) IBOutlet UIButton *forgetBtn;
+@property (weak, nonatomic) IBOutlet UILabel *thirdLoginLabel;
+@property (weak, nonatomic) IBOutlet UIButton *qqButton;
+@property (weak, nonatomic) IBOutlet UIButton *wxButton;
+@property (weak, nonatomic) IBOutlet UIButton *wbButton;
+
+@property (weak, nonatomic) IBOutlet UITextField *phoneTextField;
+@property (weak, nonatomic) IBOutlet UITextField *passwordTextField;
+@property (copy, nonatomic) NSString *defaultUsername;
+@property (weak, nonatomic) IBOutlet UIButton *loginButton;
+@property (weak, nonatomic) IBOutlet UIButton *showPasswordButton;
+
+@end
+
+@implementation WLKTLoginViewController
+
+#pragma mark - Init
+- (instancetype)init {
+    WLKTLoginViewController *vc = [[UIStoryboard storyboardWithName:kLaunchStoryboardName bundle:nil] instantiateViewControllerWithIdentifier:kLoginIdentifier];
+    vc.defaultUsername = [WLKTLogin lastUsername];
+    return vc;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+    self.loginButton.layer.cornerRadius = 17;
+    [self setupTextField];
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"取消" style:UIBarButtonItemStylePlain target:self action:@selector(didTapCancel:)];
+    [self.showPasswordButton setImage:[UIImage imageNamed:@"button_checkpassword_selected"] forState:UIControlStateSelected];
+    [self makeConstraints];
+
+}
+
+- (void)setupTextField {
+    self.phoneTextField.text = self.defaultUsername;
+    self.phoneTextField.clearButtonMode = UITextFieldViewModeWhileEditing;
+    self.phoneTextField.validator = [WLKTPhoneValidator new];
+    self.passwordTextField.validator = [WLKTPasswordValidator new];
+}
+
+- (void)makeConstraints{
+    [self.iconIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerX.mas_equalTo(self.view);
+        make.top.mas_equalTo(self.view).offset(50 *ScreenRatio_6);
+        make.size.mas_equalTo(CGSizeMake(168 *ScreenRatio_6, 62 *ScreenRatio_6));
+    }];
+    [self.login_account mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.view).offset(15);
+        make.top.mas_equalTo(self.iconIV.mas_bottom).offset(50 *ScreenRatio_6);
+    }];
+    [self.phoneTextField mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.login_account);
+        make.left.mas_equalTo(self.login_account.mas_right).offset(10);
+        make.right.mas_equalTo(self.view.mas_right).offset(-15 *ScreenRatio_6);
+    }];
+    [self.lineOneLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth - 20 *ScreenRatio_6, 0.5));
+        make.centerX.mas_equalTo(self.view);
+        make.top.mas_equalTo(self.login_account.mas_bottom).offset(8);
+    }];
+    [self.register_passwordIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.view).offset(15);
+        make.top.mas_equalTo(self.lineOneLabel.mas_bottom).offset(15 *ScreenRatio_6);
+    }];
+    [self.passwordTextField mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.register_passwordIV);
+        make.left.mas_equalTo(self.register_passwordIV.mas_right).offset(10);
+        make.width.mas_equalTo(280 *ScreenRatio_6);
+    }];
+    [self.showPasswordButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.register_passwordIV);
+        make.left.mas_equalTo(self.passwordTextField.mas_right).offset(5);
+    }];
+    [self.lineTwolabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth - 20 *ScreenRatio_6, 0.5));
+        make.centerX.mas_equalTo(self.view);
+        make.top.mas_equalTo(self.passwordTextField.mas_bottom).offset(8);
+    }];
+    [self.registerBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.view).offset(40 *ScreenRatio_6);
+        make.top.mas_equalTo(self.lineTwolabel.mas_bottom).offset(10);
+    }];
+    [self.forgetBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.right.mas_equalTo(self.view.mas_right).offset(-40 *ScreenRatio_6);
+        make.top.mas_equalTo(self.lineTwolabel.mas_bottom).offset(10);
+    }];
+    [self.loginButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(self.forgetBtn.mas_bottom).offset(20);
+        make.centerX.mas_equalTo(self.view);
+        make.size.mas_equalTo(CGSizeMake(300 *ScreenRatio_6, 35 *ScreenRatio_6));
+    }];
+    [self.thirdLoginLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(self.loginButton.mas_bottom).offset(30);
+        make.centerX.mas_equalTo(self.view);
+    }];
+    [self.qqButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.view).offset(40 *ScreenRatio_6);
+        make.top.mas_equalTo(self.thirdLoginLabel.mas_bottom).offset(20);
+    }];
+    [self.wxButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.qqButton);
+        make.left.mas_equalTo(self.qqButton.mas_right).offset(70 *ScreenRatio_6);
+    }];
+    [self.wbButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.qqButton);
+        make.left.mas_equalTo(self.wxButton.mas_right).offset(70 *ScreenRatio_6);
+    }];
+}
+
+#pragma mark - UITextFieldDelegate
+
+- (BOOL)textFieldShouldReturn:(UITextField *)textField {
+    [self.view endEditing:YES];
+    return YES;
+}
+
+- (BOOL)textField:(UITextField *)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString *)string {
+    return [textField validateRange:range replacementString:string];
+}
+
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    [self.phoneTextField resignFirstResponder];
+    [self.passwordTextField resignFirstResponder];
+}
+
+#pragma mark - third login action
+- (IBAction)qqLoginAction:(UIButton *)sender {
+//    if (![[UMSocialManager defaultManager] isInstall:UMSocialPlatformType_QQ]) {
+//        [SVProgressHUD showInfoWithStatus:@"未安装QQ"];
+//        return;
+//    }
+    if ([self.delegate respondsToSelector:@selector(loginViewController:didRequestLoginWithSNSType:)]) {
+        [self.delegate loginViewController:self didRequestLoginWithSNSType:SSDKPlatformTypeQQ];
+    }
+}
+
+- (IBAction)weixinLoginAction:(UIButton *)sender {
+//    if (![[UMSocialManager defaultManager] isInstall:UMSocialPlatformType_WechatSession]) {
+//        [SVProgressHUD showInfoWithStatus:@"未安装微信"];
+//        return;
+//    }
+    if ([self.delegate respondsToSelector:@selector(loginViewController:didRequestLoginWithSNSType:)]) {
+        [self.delegate loginViewController:self didRequestLoginWithSNSType:SSDKPlatformTypeWechat];
+    }
+}
+
+- (IBAction)weiboLoginAction:(UIButton *)sender {
+//    if (![[UMSocialManager defaultManager] isInstall:UMSocialPlatformType_Sina]) {
+//        [SVProgressHUD showInfoWithStatus:@"未安装新浪微博"];
+//        return;
+//    }
+    if ([self.delegate respondsToSelector:@selector(loginViewController:didRequestLoginWithSNSType:)]) {
+        [self.delegate loginViewController:self didRequestLoginWithSNSType:SSDKPlatformTypeSinaWeibo];
+    }
+}
+
+#pragma mark - Action
+- (IBAction)textDidChange:(UITextField *)textField {
+    if (self.phoneTextField == textField) {
+        self.passwordTextField.text = nil;
+    }
+    self.loginButton.enabled = [self.phoneTextField.text isNotBlank] && (self.passwordTextField.text.length >= kPasswordMinLength);
+}
+
+- (IBAction)didTapLoginButton:(UIButton *)sender {
+    if ([self.delegate respondsToSelector:@selector(loginViewController:didRequestLoginWithUsername:password:)]) {
+        [self.delegate loginViewController:self didRequestLoginWithUsername:self.phoneTextField.text password:self.passwordTextField.text];
+    }
+}
+
+- (IBAction)didTapShowPasswordButton:(UIButton *)sender {
+    sender.selected = !sender.selected;
+    self.passwordTextField.secureTextEntry = !self.passwordTextField.secureTextEntry;
+    [self.passwordTextField resignFirstResponder];
+    [self.passwordTextField becomeFirstResponder];
+}
+
+- (IBAction)didTapRegisterButton:(UIButton *)sender {
+    if ([self.delegate respondsToSelector:@selector(loginViewControllerDidTapRegister:)]) {
+        [self.delegate loginViewControllerDidTapRegister:self];
+    }
+}
+
+- (IBAction)didTapForgertPasswordButton:(UIButton *)sender {
+    if ([self.delegate respondsToSelector:@selector(loginViewControllerDidTapForgetPassword:)]) {
+        [self.delegate loginViewControllerDidTapForgetPassword:self];
+    }
+}
+
+- (IBAction)didTapCancel:(id)sender {
+    if ([self.delegate respondsToSelector:@selector(loginViewControllerDidTapCancel:)]) {
+        [self.delegate loginViewControllerDidTapCancel:self];
+    }
+}
+
+
+@end

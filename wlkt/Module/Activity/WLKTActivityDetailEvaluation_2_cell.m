@@ -1,0 +1,226 @@
+//
+//  WLKTActivityDetailEvaluation_2_cell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/13.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTActivityDetailEvaluation_2_cell.h"
+#import "WLKTCourseDetailImagesCollectionCell.h"
+#import "MIPhotoBrowser.h"
+@interface WLKTActivityDetailEvaluation_2_cell ()<MIPhotoBrowserDelegate, UICollectionViewDelegate, UICollectionViewDataSource>
+@property (strong, nonatomic) UILabel *usernameLabel;
+@property (strong, nonatomic) UIImageView *starIV;
+@property (strong, nonatomic) UILabel *scoreLabel;
+@property (strong, nonatomic) UILabel *detailLabel;
+@property (strong, nonatomic) UICollectionView *imageCV;
+@property (strong, nonatomic) UICollectionViewFlowLayout *layout;
+@property (strong, nonatomic) UILabel *time_schoolNameLabel;
+@property (strong, nonatomic) UIView *separatorView;
+
+@property (strong, nonatomic) WLKTActivityCommentList *data;
+@end
+
+@implementation WLKTActivityDetailEvaluation_2_cell
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        [self.contentView addSubview:self.usernameLabel];
+        [self.contentView addSubview:self.starIV];
+        [self.contentView addSubview:self.scoreLabel];
+        [self.contentView addSubview:self.detailLabel];
+        [self.contentView addSubview:self.imageCV];
+        [self.contentView addSubview:self.time_schoolNameLabel];
+        [self.contentView addSubview:self.separatorView];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)setCellData:(WLKTActivityCommentList *)data{
+    _data = data;
+    self.usernameLabel.text = [NSString stringWithFormat:@"%@(用户名)", data.username];
+    if (data.total_score.floatValue >= 4.5) {
+        self.starIV.image = [UIImage imageNamed:@"5星"];
+    }
+    if (data.total_score.floatValue >= 3.5 && data.total_score.floatValue < 4.5) {
+        self.starIV.image = [UIImage imageNamed:@"4星"];
+    }
+    if (data.total_score.floatValue >= 2.5 && data.total_score.floatValue < 3.5) {
+        self.starIV.image = [UIImage imageNamed:@"3星"];
+    }
+    if (data.total_score.floatValue >= 1.5 && data.total_score.floatValue < 2.5) {
+        self.starIV.image = [UIImage imageNamed:@"2星"];
+    }
+    if (data.total_score.floatValue < 1.5) {
+        self.starIV.image = [UIImage imageNamed:@"1星"];
+    }
+    self.scoreLabel.text = [NSString stringWithFormat:@"效果：%@  师资：%@  环境：%@", data.effect, data.teacher, data.environment];
+    self.detailLabel.text = data.content;
+    self.time_schoolNameLabel.text = [NSString stringWithFormat:@"%@   %@", data.create_time, data.schoolname];
+    if (data.picture.count == 0) {
+        self.imageCV.hidden = YES;
+        [self.time_schoolNameLabel mas_remakeConstraints:^(MASConstraintMaker *make) {
+            make.top.mas_equalTo(self.detailLabel.mas_bottom).offset(10 * ScreenRatio_6);
+            make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+            make.right.mas_equalTo(self.contentView).offset(-10 * ScreenRatio_6);
+        }];
+    }
+    else{
+        self.imageCV.hidden = false;
+        [self.imageCV mas_remakeConstraints:^(MASConstraintMaker *make) {
+            make.left.mas_equalTo(self.contentView);
+            make.top.mas_equalTo(self.detailLabel.mas_bottom).offset(2);
+            make.size.mas_equalTo(CGSizeMake(ScreenWidth, ((self.data.picture.count + 2) /3)* 115 * ScreenRatio_6));
+        }];
+        [self.time_schoolNameLabel mas_remakeConstraints:^(MASConstraintMaker *make) {
+            make.top.mas_equalTo(self.imageCV.mas_bottom).offset(15 * ScreenRatio_6);
+            make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+            make.right.mas_equalTo(self.contentView).offset(-10 * ScreenRatio_6);
+        }];
+        [self.imageCV reloadData];
+    }
+}
+
+#pragma mark - collection view
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    return self.data.thumb_picture.count;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTCourseDetailImagesCollectionCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"WLKTCourseDetailImagesCollectionCell" forIndexPath:indexPath];
+    [cell setCellData:self.data.thumb_picture[indexPath.item]];
+    return cell;
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTCourseDetailImagesCollectionCell *cell = (WLKTCourseDetailImagesCollectionCell *)[collectionView cellForItemAtIndexPath:indexPath];
+    MIPhotoBrowser *photoBrowser = [[MIPhotoBrowser alloc] init];
+    photoBrowser.delegate = self;
+    photoBrowser.sourceImagesContainerView = cell.contentView;
+    photoBrowser.imageCount = self.data.picture.count;
+    photoBrowser.currentImageIndex = indexPath.item;
+    [photoBrowser show];
+}
+
+#pragma mark - photo browser
+- (NSString *)photoBrowser:(MIPhotoBrowser *)photoBrowser URLImageForIndex:(NSInteger)index{
+    return self.data.picture[index];
+}
+
+#pragma mark -
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.usernameLabel.text = nil;
+    self.starIV.image = nil;
+    self.scoreLabel.text = nil;
+    self.detailLabel.text = nil;
+    self.time_schoolNameLabel.text = nil;
+    
+}
+
+- (void)makeConstraints{
+    [self.usernameLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.contentView).offset(5);
+    }];
+    [self.starIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.usernameLabel.mas_bottom).offset(10 * ScreenRatio_6);
+    }];
+    [self.scoreLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.starIV.mas_right).offset(15 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.starIV);
+    }];
+    [self.detailLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.starIV.mas_bottom).offset(15 * ScreenRatio_6);
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-10 * ScreenRatio_6);
+    }];
+    [self.imageCV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 0));
+        make.left.mas_equalTo(self.contentView);
+        make.top.mas_equalTo(self.detailLabel.mas_bottom).offset(10 * ScreenRatio_6);
+    }];
+    [self.time_schoolNameLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(self.imageCV.mas_bottom).offset(15 * ScreenRatio_6);
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.right.mas_equalTo(self.contentView).offset(-10 * ScreenRatio_6);
+    }];
+    [self.separatorView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 5));
+        make.left.bottom.mas_equalTo(self.contentView);
+    }];
+}
+
+#pragma mark - get
+- (UILabel *)usernameLabel{
+    if (!_usernameLabel) {
+        _usernameLabel = [UILabel new];
+        _usernameLabel.font = [UIFont systemFontOfSize:13 * ScreenRatio_6];
+        _usernameLabel.textColor = KMainTextColor_3;
+    }
+    return _usernameLabel;
+}
+- (UIImageView *)starIV{
+    if (!_starIV) {
+        _starIV = [UIImageView new];
+    }
+    return _starIV;
+}
+- (UILabel *)scoreLabel{
+    if (!_scoreLabel) {
+        _scoreLabel = [UILabel new];
+        _scoreLabel.font = [UIFont systemFontOfSize:11 * ScreenRatio_6];
+        _scoreLabel.textColor = KMainTextColor_9;
+    }
+    return _scoreLabel;
+}
+- (UILabel *)detailLabel{
+    if (!_detailLabel) {
+        _detailLabel = [UILabel new];
+        _detailLabel.font = [UIFont systemFontOfSize:12 * ScreenRatio_6];
+        _detailLabel.textColor = KMainTextColor_3;
+        _detailLabel.numberOfLines = 0;
+    }
+    return _detailLabel;
+}
+- (UICollectionView *)imageCV{
+    if (!_imageCV) {
+        _imageCV = [[UICollectionView alloc]initWithFrame:CGRectNull collectionViewLayout:self.layout];
+        _imageCV.backgroundColor = [UIColor whiteColor];
+        _imageCV.scrollEnabled = false;
+        _imageCV.dataSource = self;
+        _imageCV.delegate = self;
+        [_imageCV registerClass:[WLKTCourseDetailImagesCollectionCell class] forCellWithReuseIdentifier:@"WLKTCourseDetailImagesCollectionCell"];
+    }
+    return _imageCV;
+}
+- (UICollectionViewFlowLayout *)layout{
+    if (!_layout) {
+        _layout = [UICollectionViewFlowLayout new];
+        _layout.itemSize = CGSizeMake(115 * ScreenRatio_6, 115 * ScreenRatio_6);
+        _layout.minimumInteritemSpacing = 2 * ScreenRatio_6;
+        _layout.sectionInset = UIEdgeInsetsMake(0, 10 * ScreenRatio_6, 0, 10 * ScreenRatio_6);
+    }
+    return _layout;
+}
+- (UILabel *)time_schoolNameLabel{
+    if (!_time_schoolNameLabel) {
+        _time_schoolNameLabel = [UILabel new];
+        _time_schoolNameLabel.font = [UIFont systemFontOfSize:11 * ScreenRatio_6];
+        _time_schoolNameLabel.textColor = KMainTextColor_9;
+    }
+    return _time_schoolNameLabel;
+}
+- (UIView *)separatorView{
+    if (!_separatorView) {
+        _separatorView = [UIView new];
+        _separatorView.backgroundColor = separatorView_color;
+    }
+    return _separatorView;
+}
+@end
+

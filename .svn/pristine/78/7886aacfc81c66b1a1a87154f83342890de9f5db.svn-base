@@ -1,0 +1,23 @@
+//
+//  WLKTCourseDetailGoEvaluationView.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/3.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourse.h"
+
+@protocol WLKTCourseDetailGoEvaluationDelegate <NSObject>
+- (void)didSelectedPingjiaStar:(NSInteger)starIndex;
+- (void)didSelectedXiaoguoNumber:(NSInteger)number;
+- (void)didSelectedShiziNumber:(NSInteger)number;
+- (void)didSelectedHuanjingNumber:(NSInteger)number;
+- (void)didEnterPingjia:(NSString *)text;
+@end
+
+@interface WLKTCourseDetailGoEvaluationView : UIView
+@property (weak, nonatomic) id<WLKTCourseDetailGoEvaluationDelegate> delegate;
+- (instancetype)initWithSchoolName:(NSString *)schoolName;
+@end

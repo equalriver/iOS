@@ -1,0 +1,224 @@
+//
+//  WLKTCouponUnuseCell.m
+//  wlkt
+//
+//  Created by 尹平江 on 2017/8/11.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTCouponUnuseCell.h"
+
+@implementation WLKTCouponUnuseCell
+
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier{
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        [self addview];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)addview{
+    [self.contentView addSubview:self.bgIV];
+    [self.bgIV addSubview:self.titleLabel];
+    [self.bgIV addSubview:self.separatorView_1];
+    [self.bgIV addSubview:self.priceLabel];
+    [self.bgIV addSubview:self.discountLabel];
+    [self.bgIV addSubview:self.useButton];
+    [self.bgIV addSubview:self.separatorView_2];
+    [self.bgIV addSubview:self.conditionLabel];
+    [self.bgIV addSubview:self.useTimeLabel];
+    [self.bgIV addSubview:self.useRuleBtn];
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.titleLabel.text = nil;
+    self.priceLabel.attributedText = nil;
+    self.discountLabel.text = nil;
+    self.conditionLabel.text = nil;
+    self.useTimeLabel.text = nil;
+}
+
+-(void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated {
+    [super setHighlighted:highlighted animated:animated];
+    self.discountLabel.backgroundColor = [UIColor colorWithHexString:@"#e6fbff"];
+    self.separatorView_1.backgroundColor = separatorView_color;
+    self.separatorView_2.backgroundColor = separatorView_color;
+}
+
+-(void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+    self.discountLabel.backgroundColor = [UIColor colorWithHexString:@"#e6fbff"];
+    self.separatorView_1.backgroundColor = separatorView_color;
+    self.separatorView_2.backgroundColor = separatorView_color;
+}
+
+- (void)setCellData:(WLKTMycouponListData *)data{
+    self.titleLabel.text = data.name;
+    self.discountLabel.text = data.rule;
+    self.conditionLabel.text = [NSString stringWithFormat:@"优惠限制：%@", data.title];
+    self.useTimeLabel.text = [NSString stringWithFormat:@"有效时间：%@ 至 %@", data.starttime, data.endtime];
+    
+    NSMutableAttributedString *str = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"¥%@", data.money]];
+    [str setAttributes:@{NSFontAttributeName : [UIFont systemFontOfSize:12], NSForegroundColorAttributeName : KMainTextColor_3} range:NSMakeRange(0, 1)];
+    [str setAttributes:@{NSFontAttributeName : [UIFont systemFontOfSize:18], NSForegroundColorAttributeName : KMainTextColor_3} range:NSMakeRange(1, data.money.length)];
+    self.priceLabel.attributedText = str;
+
+}
+
+- (void)makeConstraints {
+    [self.bgIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(355 * ScreenRatio_6, 138));
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.contentView).offset(5);
+    }];
+    [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(300 * ScreenRatio_6, 20));
+        make.left.mas_equalTo(self.bgIV).offset(12 * ScreenRatio_6);
+        make.top.mas_equalTo(self.bgIV).offset(10);
+    }];
+    [self.separatorView_1 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(325 * ScreenRatio_6, 0.5));
+        make.left.mas_equalTo(self.bgIV).offset(8 * ScreenRatio_6);
+        make.top.mas_equalTo(self.titleLabel.mas_bottom).offset(10);
+    }];
+    [self.priceLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(70, 20));
+        make.left.mas_equalTo(self.bgIV).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.separatorView_1.mas_bottom).offset(10);
+    }];
+    [self.discountLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.priceLabel);
+        make.left.mas_equalTo(self.priceLabel.mas_right).offset(7);
+    }];
+    [self.useButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(65, 25));
+        make.top.mas_equalTo(self.separatorView_1.mas_bottom).offset(15);
+        make.right.mas_equalTo(self.bgIV.mas_right).offset(-13);
+    }];
+    [self.separatorView_2 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(325 * ScreenRatio_6, 0.5));
+        make.left.mas_equalTo(self.bgIV).offset(8 * ScreenRatio_6);
+        make.top.mas_equalTo(self.useButton.mas_bottom).offset(15);
+    }];
+    [self.conditionLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(300 * ScreenRatio_6, 15));
+        make.left.mas_equalTo(self.bgIV).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.separatorView_2.mas_bottom).offset(5);
+    }];
+    [self.useTimeLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(300 * ScreenRatio_6, 15));
+        make.left.mas_equalTo(self.bgIV).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.conditionLabel.mas_bottom);
+    }];
+    [self.useRuleBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.mas_equalTo(self.useTimeLabel);
+        make.right.mas_equalTo(self.bgIV.mas_right).offset(-10);
+    }];
+}
+
+- (void)didTransitionToState:(UITableViewCellStateMask)state{
+    [super didTransitionToState:state];
+    if (state == UITableViewCellStateShowingEditControlMask) {
+        for (UIView *v in self.subviews) {
+            if ([NSStringFromClass([v class]) isEqualToString:@"UITableViewCellEditControl"]) {
+                for (UIView *subview in v.subviews) {
+                    if ([subview isKindOfClass:[UIImageView class]]) {
+                        [subview setValue:[UIColor colorWithHexString:@"#33c4da"] forKey:@"tintColor"];
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+#pragma mark - get
+- (UIImageView *)bgIV{
+    if (!_bgIV) {
+        _bgIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"1 优惠券"]];
+        _bgIV.userInteractionEnabled = YES;
+    }
+    return _bgIV;
+}
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [[UILabel alloc]init];
+        _titleLabel.font = [UIFont systemFontOfSize:13];
+        _titleLabel.textColor = [UIColor colorWithHexString:@"#333333"];
+    }
+    return _titleLabel;
+}
+- (UIView *)separatorView_1{
+    if (!_separatorView_1) {
+        _separatorView_1 = [[UIView alloc]init];
+        _separatorView_1.backgroundColor = separatorView_color;
+    }
+    return _separatorView_1;
+}
+- (UILabel *)priceLabel{
+    if (!_priceLabel) {
+        _priceLabel = [[UILabel alloc]init];
+        
+    }
+    return _priceLabel;
+}
+- (UILabel *)discountLabel{
+    if (!_discountLabel) {
+        _discountLabel = [[UILabel alloc]init];
+        _discountLabel.font = [UIFont systemFontOfSize:11];
+        _discountLabel.textColor = [UIColor colorWithHexString:@"#33c4da"];
+        _discountLabel.backgroundColor = [UIColor colorWithHexString:@"#e6fbff"];
+        _discountLabel.textAlignment = NSTextAlignmentCenter;
+    }
+    return _discountLabel;
+}
+- (UIButton *)useButton{
+    if (!_useButton) {
+        _useButton = [[UIButton alloc]init];
+        _useButton.backgroundColor = [UIColor colorWithHexString:@"#33c4da"];
+        [_useButton setTitle:@"立即使用" forState:UIControlStateNormal];
+        [_useButton setTitleColor:[UIColor colorWithHexString:@"#ffffff"] forState:UIControlStateNormal];
+        _useButton.titleLabel.font = [UIFont systemFontOfSize:12];
+        _useButton.layer.masksToBounds = YES;
+        _useButton.layer.cornerRadius = 3;
+    }
+    return _useButton;
+}
+- (UIView *)separatorView_2{
+    if (!_separatorView_2) {
+        _separatorView_2 = [[UIView alloc]init];
+        _separatorView_2.backgroundColor = separatorView_color;
+    }
+    return _separatorView_2;
+}
+- (UILabel *)conditionLabel{
+    if (!_conditionLabel) {
+        _conditionLabel = [[UILabel alloc]init];
+        _conditionLabel.font = [UIFont systemFontOfSize:11];
+        _conditionLabel.textColor = [UIColor colorWithHexString:@"#666666"];
+    }
+    return _conditionLabel;
+}
+- (UILabel *)useTimeLabel{
+    if (!_useTimeLabel) {
+        _useTimeLabel = [[UILabel alloc]init];
+        _useTimeLabel.font = [UIFont systemFontOfSize:11];
+        _useTimeLabel.textColor = [UIColor colorWithHexString:@"#666666"];
+    }
+    return _useTimeLabel;
+}
+- (WLKTExchangeButton *)useRuleBtn{
+    if (!_useRuleBtn) {
+        _useRuleBtn = [WLKTExchangeButton new];
+        [_useRuleBtn setTitle:@"使用规则" forState:UIControlStateNormal];
+        [_useRuleBtn setTitleColor:UIColorHex(666666) forState:UIControlStateNormal];
+        _useRuleBtn.titleLabel.font = [UIFont systemFontOfSize:10];
+        [_useRuleBtn setImage:[UIImage imageNamed:@"course右箭头"] forState:UIControlStateNormal];
+    }
+    return _useRuleBtn;
+}
+
+@end

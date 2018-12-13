@@ -1,0 +1,188 @@
+PODS:
+  - AFNetworking (3.1.0):
+    - AFNetworking/NSURLSession (= 3.1.0)
+    - AFNetworking/Reachability (= 3.1.0)
+    - AFNetworking/Security (= 3.1.0)
+    - AFNetworking/Serialization (= 3.1.0)
+    - AFNetworking/UIKit (= 3.1.0)
+  - AFNetworking/NSURLSession (3.1.0):
+    - AFNetworking/Reachability
+    - AFNetworking/Security
+    - AFNetworking/Serialization
+  - AFNetworking/Reachability (3.1.0)
+  - AFNetworking/Security (3.1.0)
+  - AFNetworking/Serialization (3.1.0)
+  - AFNetworking/UIKit (3.1.0):
+    - AFNetworking/NSURLSession
+  - AliPay (2.1.2)
+  - AliyunPlayer_iOS (3.3.0):
+    - AliyunPlayer_iOS/AliyunPlayerSDK (= 3.3.0)
+    - AliyunPlayer_iOS/AliyunVodPlayerSDK (= 3.3.0)
+  - AliyunPlayer_iOS/AliyunPlayerSDK (3.3.0)
+  - AliyunPlayer_iOS/AliyunVodPlayerSDK (3.3.0):
+    - AliyunPlayer_iOS/AliyunPlayerSDK
+  - Aspects (1.4.1)
+  - BlocksKit (2.2.5):
+    - BlocksKit/All (= 2.2.5)
+  - BlocksKit/All (2.2.5):
+    - BlocksKit/Core
+    - BlocksKit/DynamicDelegate
+    - BlocksKit/MessageUI
+    - BlocksKit/UIKit
+  - BlocksKit/Core (2.2.5)
+  - BlocksKit/DynamicDelegate (2.2.5)
+  - BlocksKit/MessageUI (2.2.5):
+    - BlocksKit/Core
+    - BlocksKit/DynamicDelegate
+  - BlocksKit/UIKit (2.2.5):
+    - BlocksKit/Core
+    - BlocksKit/DynamicDelegate
+  - CNPPopupController (0.3.3)
+  - CocoaLumberjack (3.4.0):
+    - CocoaLumberjack/Default (= 3.4.0)
+    - CocoaLumberjack/Extensions (= 3.4.0)
+  - CocoaLumberjack/Default (3.4.0)
+  - CocoaLumberjack/Extensions (3.4.0):
+    - CocoaLumberjack/Default
+  - DZNEmptyDataSet (1.8.1)
+  - EAIntroView (2.12.0):
+    - EARestrictedScrollView (~> 1.1.0)
+  - EARestrictedScrollView (1.1.0)
+  - FDFullscreenPopGesture (1.1)
+  - LTNavigationBar (2.1.9)
+  - Masonry (1.1.0)
+  - MJRefresh (3.1.15.1)
+  - mob_sharesdk (4.0.8):
+    - mob_sharesdk/ShareSDK (= 4.0.8)
+    - MOBFoundation
+  - mob_sharesdk/ShareSDK (4.0.8):
+    - MOBFoundation
+  - mob_sharesdk/ShareSDKPlatforms/QQ (4.0.8):
+    - mob_sharesdk/ShareSDK
+    - MOBFoundation
+  - mob_sharesdk/ShareSDKPlatforms/SinaWeibo (4.0.8):
+    - mob_sharesdk/ShareSDK
+    - MOBFoundation
+  - MOBFoundation (3.1.0)
+  - NIMSDK (5.0.1)
+  - pop (1.0.10)
+  - PYSearch (0.8.8)
+  - QQ_XGPush (3.0.1)
+  - ReactiveObjC (3.1.0)
+  - SCLAlertView-Objective-C (1.1.2)
+  - SDCycleScrollView (1.75):
+    - SDWebImage (>= 4.0.0)
+  - SDWebImage (4.2.3):
+    - SDWebImage/Core (= 4.2.3)
+  - SDWebImage/Core (4.2.3)
+  - SVProgressHUD (2.2.2)
+  - SVPullToRefresh (0.4.1)
+  - Toast (4.0.0)
+  - TYCyclePagerView (1.1.0)
+  - UITableView+FDTemplateLayoutCell (1.6)
+  - UMengUShare/Core (6.4.8.2):
+    - UMengUShare/Network
+  - UMengUShare/Network (6.4.8.2)
+  - UMengUShare/Social/Email (6.4.8.2):
+    - UMengUShare/Core
+  - UMengUShare/Social/ReducedQQ (6.4.8.2):
+    - UMengUShare/Core
+  - UMengUShare/Social/ReducedSina (6.4.8.2):
+    - UMengUShare/Core
+  - UMengUShare/Social/ReducedWeChat (6.4.8.2):
+    - UMengUShare/Core
+  - UMengUShare/Social/SMS (6.4.8.2):
+    - UMengUShare/Core
+  - UMengUShare/UI (6.4.8.2):
+    - UMengUShare/Core
+  - WechatOpenSDK (1.8.2)
+  - WMPageController (2.5.2)
+  - WZLBadge (1.2.6)
+  - YYKit (1.0.9):
+    - YYKit/no-arc (= 1.0.9)
+  - YYKit/no-arc (1.0.9)
+  - ZFPlayer (2.1.5):
+    - Masonry
+
+DEPENDENCIES:
+  - AFNetworking (~> 3.0)
+  - AliPay
+  - AliyunPlayer_iOS
+  - Aspects
+  - BlocksKit
+  - CNPPopupController
+  - CocoaLumberjack
+  - DZNEmptyDataSet
+  - EAIntroView
+  - FDFullscreenPopGesture
+  - LTNavigationBar
+  - Masonry
+  - MJRefresh
+  - mob_sharesdk
+  - mob_sharesdk/ShareSDKPlatforms/QQ
+  - mob_sharesdk/ShareSDKPlatforms/SinaWeibo
+  - NIMSDK
+  - pop
+  - PYSearch
+  - QQ_XGPush
+  - ReactiveObjC
+  - SCLAlertView-Objective-C
+  - SDCycleScrollView
+  - SDWebImage
+  - SVProgressHUD
+  - SVPullToRefresh
+  - Toast
+  - TYCyclePagerView
+  - UITableView+FDTemplateLayoutCell
+  - UMengUShare/Social/Email
+  - UMengUShare/Social/ReducedQQ
+  - UMengUShare/Social/ReducedSina
+  - UMengUShare/Social/ReducedWeChat
+  - UMengUShare/Social/SMS
+  - UMengUShare/UI
+  - WechatOpenSDK
+  - WMPageController
+  - WZLBadge
+  - YYKit
+  - ZFPlayer
+
+SPEC CHECKSUMS:
+  AFNetworking: 5e0e199f73d8626b11e79750991f5d173d1f8b67
+  AliPay: 2bd35a4e486d2a8c035043023cd846e886bb21d1
+  AliyunPlayer_iOS: fe756e8c9ce19ab809fdaf479326469a3e174ff9
+  Aspects: 7595ba96a6727a58ebcbfc954497fc5d2fdde546
+  BlocksKit: 7f422b971407001178d181a43b99014ea2591fe6
+  CNPPopupController: 59b06290762f68beab5fb0bbfa87eb4dcbefb7de
+  CocoaLumberjack: e033a5d8513357af2dd456eb66e202c325c30627
+  DZNEmptyDataSet: 9525833b9e68ac21c30253e1d3d7076cc828eaa7
+  EAIntroView: 249559079ddfdbe80e5bcb755c04c3b964b2ac27
+  EARestrictedScrollView: b0c2a3f92fb2610bb44d71c5e4893777c89e45ef
+  FDFullscreenPopGesture: a8a620179e3d9c40e8e00256dcee1c1a27c6d0f0
+  LTNavigationBar: c278785bed344862e18146b5f06792932e4feacc
+  Masonry: 678fab65091a9290e40e2832a55e7ab731aad201
+  MJRefresh: 5f8552bc25ca8751c010f621c1098dbdaacbccd6
+  mob_sharesdk: 5cb804ce6c5c04a3092de0c1de6c51823270548d
+  MOBFoundation: 2d0799b6ad2677fa28e4cf5bcb1de28b34788110
+  NIMSDK: 5dd9182d3c3a2c50504db47465b7da4d1f556fd5
+  pop: 82ca6b068ce9278fd350fd9dd09482a0ce9492e6
+  PYSearch: aa3704f283c67667808de6df514c24df03f5f116
+  QQ_XGPush: 2824cca429269a397cff8cf1028216412527c59e
+  ReactiveObjC: 2a38ea15335de4119d8b17caf1db1484f61db902
+  SCLAlertView-Objective-C: 0e54351fa4f98a5c7c6ad3727e6dbb46784534e5
+  SDCycleScrollView: 884b88f0266dd4708a0e1934975c69cb971707b1
+  SDWebImage: 791bb72962b3492327ddcac4b1880bd1b5458431
+  SVProgressHUD: 59b2d3dabacbd051576d21d32293ca7228dc18b0
+  SVPullToRefresh: ba2e718695a43253d8bea6852d2960097dc15d8c
+  Toast: 91b396c56ee72a5790816f40d3a94dd357abc196
+  TYCyclePagerView: b70858c9b5d0e80e1e3129ff5ceb027eb0f76d44
+  UITableView+FDTemplateLayoutCell: 5c949b4a5059c404b442926c0e80f81d10a2d66f
+  UMengUShare: 370d180101e13ee0227ae657ab119ba97243d2b3
+  WechatOpenSDK: 676feec516a11173eafd1fe64b10d27babf28701
+  WMPageController: 0c7624d2b48e4f1ab92371688cf6744ed701575d
+  WZLBadge: 9ec779dcfd94c825518b395e8315fccaabff1bfa
+  YYKit: 7cda43304a8dc3696c449041e2cb3107b4e236e7
+  ZFPlayer: 8a80bf8eb4638b97fbceaefcd3ca9978e9f17c9d
+
+PODFILE CHECKSUM: 5f7d412d5a281a6d0d8003133e58761b0a85a692
+
+COCOAPODS: 1.2.1.beta.1

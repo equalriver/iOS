@@ -1,0 +1,713 @@
+//
+//  WLKTOrderView.m
+//  wlkt
+//
+//  Created by 尹平江 on 17/4/8.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTOrderView.h"
+#import "WLKTTeachLocationCell.h"
+#import "WLKTConfirmOrderVC.h"
+#import "WLKTCoursePriceRange.h"
+#import "WLKTTeachLocationView.h"
+
+
+@interface WLKTOrderView ()
+/**
+ *  背景
+ */
+@property (strong, nonatomic) UIView *bgView;
+/**
+ *  课程图片
+ */
+@property (strong, nonatomic) UIImageView *courseImageView;
+/**
+ *  课程名
+ */
+@property (strong, nonatomic) UILabel *courseNameLabel;
+/**
+ *  课程单价
+ */
+@property (strong, nonatomic) UILabel *priceLabel;
+/**
+ *  授课类型
+ */
+@property (strong, nonatomic) UILabel *teachModelLabel;
+/**
+ *  班型title
+ */
+@property (strong, nonatomic) UILabel *courseTypeTitle;
+/**
+ *  班型(1对1)
+ */
+@property (strong, nonatomic) UIButton *courseTypeBtn_1V1;
+/**
+ *  班型(班课)
+ */
+@property (strong, nonatomic) UIButton *courseTypeBtn_n;
+/**
+ *  购买课时title
+ */
+@property (strong, nonatomic) UILabel *buyCourseTitle;
+/**
+ *  购买课时(-)
+ */
+@property (strong, nonatomic) UIButton *minusButton;
+/**
+ *  购买课时(+)
+ */
+@property (strong, nonatomic) UIButton *addButton;
+/**
+ *  购买课时TF
+ */
+@property (strong, nonatomic) UITextField *buyCourseTF;
+/**
+ *  授课点title
+ */
+@property (strong, nonatomic) UILabel *teachLocationTitle;
+/**
+ *  授课点CollectionView
+ */
+@property (strong, nonatomic) WLKTTeachLocationView *teachLocationCV;
+@property (strong, nonatomic) UIView *tapBgView;
+@property (strong, nonatomic) UIView *firstIndexView;
+@property (strong, nonatomic) UIButton *confirmBtn;
+
+@property (assign) int courseCount;
+@property (strong, nonatomic) UIViewController *vc;
+@property (copy, nonatomic) NSString *selectedLocation;
+@property (copy, nonatomic) NSString *classType;
+@property (strong, nonatomic) UICollectionViewFlowLayout *layout;
+@property (copy, nonatomic) NSString *schoolAddress;
+@property (copy, nonatomic) NSString *onecut;//能否选课时(1为不能选，2为可选)
+@property (assign) int heightTmp;
+@end
+
+@implementation WLKTOrderView
+
+- (instancetype)initWithCourseData:(WLKTCourse *)data
+                            target:(__kindof UIViewController *)vc
+{
+    self = [super init];
+    if (self) {
+        _schoolName = data.schoolname;
+        _schoolImage = data.img;
+        _courseName = data.coursename;
+        _price = [NSArray arrayWithArray:data.area];
+        [_price sortedArrayUsingComparator:^NSComparisonResult(id  _Nonnull obj1, id  _Nonnull obj2) {
+            WLKTCoursePriceRange *data_1 = [[WLKTCoursePriceRange alloc]init];
+            WLKTCoursePriceRange *data_2 = [[WLKTCoursePriceRange alloc]init];
+            obj1 = data_1.max;
+            obj2 = data_2.max;
+            return [obj1 compare:obj2];
+        }];
+        _teachLocationArr = [NSArray arrayWithArray:data.point];
+        _suid = data.suid;
+        _courseId = data.uid;
+        _bkprice = data.bkprice;
+        _oneByOnePrice = data.price;
+        _onecut = data.onecut;
+        _vc = vc;
+        _courseCount = self.buyCourseTF.text.intValue;
+        
+        self.frame = CGRectMake(0, 0, ScreenWidth, ScreenHeight);
+        self.backgroundColor = [UIColor clearColor];
+        [self priceCheck];
+        [self addview];
+        
+    }
+    
+    [UIView animateWithDuration:0.7f delay:0.0f usingSpringWithDamping:0.8f initialSpringVelocity:1.0f options:UIViewAnimationOptionCurveEaseInOut animations:^{
+        CGPoint center = self.firstIndexView.center;
+        center.y -= ScreenHeight * 0.79;
+        [self.firstIndexView setCenter:center];
+    } completion:^(BOOL finished) {
+        
+    }];
+
+    return self;
+}
+
+- (void)priceCheck{
+    BOOL isContain_BK = self.bkprice && ![self.bkprice  isEqual: @"0"] && ![self.bkprice  isEqual: @""];
+    BOOL isContain_1v1 = self.oneByOnePrice && ![self.oneByOnePrice  isEqual: @"0"] && ![self.oneByOnePrice  isEqual: @""];
+    if (_onecut.intValue == 1 && isContain_BK) {//只有班课
+        self.buyCourseTitle.hidden = YES;
+        self.buyCourseTF.hidden = YES;
+        self.addButton.hidden = YES;
+        self.minusButton.hidden = YES;
+    }
+    
+    NSMutableAttributedString *str = nil;
+    //只有班课
+    if (isContain_BK && !isContain_1v1) {//默认班课
+        self.classType = @"班课";
+        self.courseTypeBtn_1V1.hidden = YES;
+        if (self.onecut.intValue == 2) {
+            self.heightTmp = 20;
+            str = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"¥%@/课时",self.bkprice]];
+            [str setAttributes:@{NSForegroundColorAttributeName:userLabelColor} range:NSMakeRange(str.length - 3, 3)];
+            [str setAttributes:@{NSForegroundColorAttributeName:[UIColor redColor]} range:NSMakeRange(0, str.length - 3)];
+        }
+        if (self.onecut.intValue == 1) {
+            self.heightTmp = 0;
+            str = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"¥%@",self.bkprice]];
+            [str setAttributes:@{NSForegroundColorAttributeName:userLabelColor} range:NSMakeRange(0, str.length)];
+            [str setAttributes:@{NSForegroundColorAttributeName:[UIColor redColor]} range:NSMakeRange(0, str.length)];
+        }
+    }
+    //只有1v1
+    if (!isContain_BK && isContain_1v1) {
+        self.classType = @"一对一";
+        self.heightTmp = 20;
+        self.courseTypeBtn_1V1.hidden = YES;
+        [self.courseTypeBtn_n setTitle:@"一对一" forState:UIControlStateNormal];
+        
+        str = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"¥%@/课时",self.oneByOnePrice]];
+        [str setAttributes:@{NSForegroundColorAttributeName:userLabelColor} range:NSMakeRange(str.length - 3, 3)];
+        [str setAttributes:@{NSForegroundColorAttributeName:[UIColor redColor]} range:NSMakeRange(0, str.length - 3)];
+        
+    }
+    //两种都有
+    if (isContain_BK && isContain_1v1) {//默认班课
+        self.classType = @"班课";
+        
+        if (self.onecut.intValue == 2) {
+            self.heightTmp = 20;
+            str = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"¥%@/课时",self.bkprice]];
+            [str setAttributes:@{NSForegroundColorAttributeName:userLabelColor} range:NSMakeRange(str.length - 3, 3)];
+            [str setAttributes:@{NSForegroundColorAttributeName:[UIColor redColor]} range:NSMakeRange(0, str.length - 3)];
+        }
+        if (self.onecut.intValue == 1) {
+            self.heightTmp = 0;
+            str = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"¥%@",self.bkprice]];
+            [str setAttributes:@{NSForegroundColorAttributeName:userLabelColor} range:NSMakeRange(0, str.length)];
+            [str setAttributes:@{NSForegroundColorAttributeName:[UIColor redColor]} range:NSMakeRange(0, str.length)];
+        }
+    }
+    
+    self.priceLabel.attributedText = str;
+}
+
+- (void)addview{
+    [self addSubview:self.tapBgView];
+    [self addSubview:self.firstIndexView];
+    [self.firstIndexView addSubview:self.bgView];
+    [self.firstIndexView addSubview:self.courseImageView];
+    [self.firstIndexView addSubview:self.courseNameLabel];
+    [self.firstIndexView addSubview:self.priceLabel];
+    [self.firstIndexView addSubview:self.teachModelLabel];
+    [self.firstIndexView addSubview:self.courseTypeTitle];
+    [self.firstIndexView addSubview:self.courseTypeBtn_1V1];
+    [self.firstIndexView addSubview:self.courseTypeBtn_n];
+    [self.firstIndexView addSubview:self.buyCourseTitle];
+    [self.firstIndexView addSubview:self.minusButton];
+    [self.firstIndexView addSubview:self.addButton];
+    [self.firstIndexView addSubview:self.buyCourseTF];
+    [self.firstIndexView addSubview:self.teachLocationTitle];
+    [self.firstIndexView addSubview:self.separatorView_1];
+    [self.firstIndexView addSubview:self.separatorView_2];
+    [self.firstIndexView addSubview:self.separatorView_3];
+    [self.firstIndexView addSubview:self.separatorView_4];
+    [self.firstIndexView addSubview:self.teachLocationCV];
+    [self.firstIndexView addSubview:self.confirmBtn];
+    [self makeConstraints];
+    WS(weakSelf);
+    self.teachLocationCV.locationSelectedBlock = ^(NSString *locationTitle, NSString *schoolAddress) {
+        weakSelf.selectedLocation = locationTitle;
+        weakSelf.schoolAddress = schoolAddress;
+    };
+    
+    [self.courseTypeBtn_1V1 addTarget:self action:@selector(courseTypeAct:) forControlEvents:UIControlEventTouchUpInside];
+    [self.courseTypeBtn_n addTarget:self action:@selector(courseTypeAct:) forControlEvents:UIControlEventTouchUpInside];
+    
+    [self.minusButton addTarget:self action:@selector(buyCourseAct:) forControlEvents:UIControlEventTouchUpInside];
+    [self.addButton addTarget:self action:@selector(buyCourseAct:) forControlEvents:UIControlEventTouchUpInside];
+    [self.buyCourseTF addTarget:self action:@selector(courseTFAct:) forControlEvents:UIControlEventEditingChanged];
+    
+    [self.confirmBtn addTarget:self action:@selector(confirmBtnAct:) forControlEvents:UIControlEventTouchUpInside];
+    
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(viewDismiss)];
+    [self.tapBgView addGestureRecognizer:tap];
+}
+
+- (void)viewDismiss{
+    if (self.superview) {
+        [UIView animateWithDuration:0.7f delay:0.0f usingSpringWithDamping:0.8f initialSpringVelocity:8.0f options:UIViewAnimationOptionCurveEaseInOut animations:^{
+            CGPoint center = self.firstIndexView.center;
+            center.y += ScreenHeight * 0.79;
+            [self.firstIndexView setCenter:center];
+        } completion:^(BOOL finished) {
+            [self removeFromSuperview];
+        }];
+    }
+}
+
+#pragma mark - textfield
+
+- (void)courseTFAct:(UITextField *)sender{
+    self.courseCount = sender.text.intValue;
+    [self priceAreaCheck];
+}
+
+#pragma mark - button
+
+- (void)courseTypeAct:(UIButton *)sender{
+    NSMutableArray *subViewArr = [NSMutableArray arrayWithCapacity:20];
+    for (UIView *view in self.firstIndexView.subviews) {
+        [subViewArr addObject:view];
+        [view removeFromSuperview];
+    }
+    if (sender.tag == 0) {//1v1
+        self.heightTmp = 20;
+        self.buyCourseTitle.hidden = NO;
+        self.buyCourseTF.hidden = NO;
+        self.addButton.hidden = NO;
+        self.minusButton.hidden = NO;
+        
+        self.courseTypeBtn_n.selected = NO;
+        self.courseTypeBtn_1V1.selected = YES;
+        self.courseTypeBtn_1V1.layer.borderColor = wordBlueColor.CGColor;
+        self.courseTypeBtn_n.layer.borderColor = userLabelColor.CGColor;
+        self.classType = self.courseTypeBtn_1V1.currentTitle;
+        NSMutableAttributedString *str = nil;
+            str = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"¥%@/课时",self.oneByOnePrice]];
+            [str setAttributes:@{NSForegroundColorAttributeName:userLabelColor} range:NSMakeRange(str.length - 3, 3)];
+            [str setAttributes:@{NSForegroundColorAttributeName:[UIColor redColor]} range:NSMakeRange(0, str.length - 3)];
+        self.priceLabel.attributedText = str;
+    }
+    else{//班课
+        self.heightTmp = 20;
+        if (_onecut.intValue == 1 && self.bkprice) {
+            self.buyCourseTitle.hidden = YES;
+            self.buyCourseTF.hidden = YES;
+            self.addButton.hidden = YES;
+            self.minusButton.hidden = YES;
+            self.heightTmp = 0;
+        }
+        self.courseTypeBtn_n.selected = YES;
+        self.courseTypeBtn_1V1.selected = NO;
+        self.courseTypeBtn_n.layer.borderColor = wordBlueColor.CGColor;
+        self.courseTypeBtn_1V1.layer.borderColor = userLabelColor.CGColor;
+        self.classType = self.courseTypeBtn_n.currentTitle;
+        
+        NSMutableAttributedString *str = nil;
+        if (self.onecut.intValue == 2) {
+            str = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"¥%@/课时",self.bkprice]];
+            [str setAttributes:@{NSForegroundColorAttributeName:userLabelColor} range:NSMakeRange(str.length - 3, 3)];
+            [str setAttributes:@{NSForegroundColorAttributeName:[UIColor redColor]} range:NSMakeRange(0, str.length - 3)];
+        }
+        if (self.onecut.intValue == 1) {
+            str = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"¥%@",self.bkprice]];
+            [str setAttributes:@{NSForegroundColorAttributeName:userLabelColor} range:NSMakeRange(0, str.length)];
+            [str setAttributes:@{NSForegroundColorAttributeName:[UIColor redColor]} range:NSMakeRange(0, str.length)];
+        }
+        self.priceLabel.attributedText = str;
+    }
+    for (int i = 0; i < subViewArr.count; i++) {
+        [self.firstIndexView addSubview:subViewArr[i]];
+    }
+    [self makeConstraints];
+    [self priceAreaCheck];
+    
+}
+
+- (void)priceAreaCheck{
+    if ([self.classType isEqualToString:@"一对一"]) {
+        if (self.price.count) {
+            for (int i = 0; i < self.price.count; i++) {
+                WLKTCoursePriceRange *data = self.price[i];
+                if(self.courseCount > data.max.intValue && self.price[i] != self.price.lastObject){
+                    continue;
+                }
+                else{
+                    NSMutableAttributedString *str = nil;
+                        str = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"¥%@/课时",data.price]];
+                        [str setAttributes:@{NSForegroundColorAttributeName:userLabelColor} range:NSMakeRange(str.length - 3, 3)];
+                        [str setAttributes:@{NSForegroundColorAttributeName:[UIColor redColor]} range:NSMakeRange(0, str.length - 3)];
+
+                    self.priceLabel.attributedText = str;
+                    break;
+                }
+                
+            }
+        }
+        
+    }
+    if ([self.classType isEqualToString:@"班课"]) {
+        
+        NSMutableAttributedString *str = nil;
+        if (self.onecut.intValue == 2) {
+            str = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"¥%@/课时",self.bkprice]];
+            [str setAttributes:@{NSForegroundColorAttributeName:userLabelColor} range:NSMakeRange(str.length - 3, 3)];
+            [str setAttributes:@{NSForegroundColorAttributeName:[UIColor redColor]} range:NSMakeRange(0, str.length - 3)];
+        }
+        if (self.onecut.intValue == 1) {
+            str = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"¥%@",self.bkprice]];
+            [str setAttributes:@{NSForegroundColorAttributeName:userLabelColor} range:NSMakeRange(0, str.length)];
+            [str setAttributes:@{NSForegroundColorAttributeName:[UIColor redColor]} range:NSMakeRange(0, str.length)];
+        }
+        self.priceLabel.attributedText = str;
+    }
+    
+}
+
+- (void)buyCourseAct:(UIButton *)sender{
+    if (self.courseCount > 0) {
+        if (sender.tag == 0 && self.courseCount > 1) {//--
+            self.courseCount--;
+            self.buyCourseTF.text = [NSString stringWithFormat:@"%d",self.courseCount];
+            
+        }
+        if (sender.tag == 1) {//++
+            self.courseCount++;
+            self.buyCourseTF.text = [NSString stringWithFormat:@"%d",self.courseCount];
+        }
+        [self priceAreaCheck];
+    }
+   
+}
+
+- (void)confirmBtnAct:(UIButton *)sender{
+//    WLKTConfirmOrderVC *orderVC = [[WLKTConfirmOrderVC alloc]initWithSchoolName:self.schoolName schoolImage:self.schoolImage courseName:self.courseName price:self.price classType:self.classType teachLocation:self.selectedLocation address:self.schoolAddress suid:self.suid courseId:self.courseId courePrice:self.priceLabel.attributedText.string onecut:self.onecut courseCount:self.courseCount];
+//    
+//    [self.vc.navigationController pushViewController:orderVC animated:YES];
+    
+}
+
+#pragma mark - updateConstraints
+
+- (void)makeConstraints{
+    [self.tapBgView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, ScreenHeight));
+        make.left.mas_equalTo(self);
+        make.bottom.mas_equalTo(self.mas_bottom);
+    }];
+    [self.bgView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, self.size.height - 60 * ScreenRatio_6));
+        make.top.mas_equalTo(self.firstIndexView).offset(20 * ScreenRatio_6);
+        make.left.mas_equalTo(self.firstIndexView);
+    }];
+    [self.courseImageView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth /3 + 25 * ScreenRatio_6, 100 * ScreenRatio_6));
+        make.left.mas_equalTo(self.firstIndexView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.firstIndexView);
+    }];
+    [self.courseNameLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth * 0.6, 25 * ScreenRatio_6));
+        make.left.mas_equalTo(self.courseImageView.mas_right).offset(5 * ScreenRatio_6);
+        make.top.mas_equalTo(self.bgView.mas_top).offset(20 * ScreenRatio_6);
+    }];
+    NSString *price = self.oneByOnePrice.length > 0 ? self.oneByOnePrice : self.bkprice;
+    CGSize size = CGSizeMake((price.length + 1) * 10 * ScreenRatio_6, 20 * ScreenRatio_6);
+    if (self.onecut.intValue == 2 || self.oneByOnePrice){
+        size = CGSizeMake((price.length * 10 + 4 * 15) * ScreenRatio_6, 20 * ScreenRatio_6);
+    }
+    [self.priceLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(size);
+        make.left.mas_equalTo(self.courseImageView.mas_right).offset(5 * ScreenRatio_6);
+        make.top.mas_equalTo(self.courseNameLabel.mas_bottom).offset(15 * ScreenRatio_6);
+    }];
+
+    [self.teachModelLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(70 * ScreenRatio_6, 25 * ScreenRatio_6));
+        make.left.mas_equalTo(self.priceLabel.mas_right);
+        make.centerY.mas_equalTo(self.priceLabel);
+    }];
+    [self.separatorView_1 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 1));
+        make.top.mas_equalTo(self.courseImageView.mas_bottom).offset(20 * ScreenRatio_6);
+    }];
+    [self.courseTypeTitle mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(60 * ScreenRatio_6, 20 * ScreenRatio_6));
+        make.left.mas_equalTo(self.firstIndexView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.separatorView_1.mas_bottom).offset(20 * ScreenRatio_6);
+    }];
+    [self.courseTypeBtn_n mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(100 * ScreenRatio_6, 30 * ScreenRatio_6));
+        make.left.mas_equalTo(self.firstIndexView).offset(15 * ScreenRatio_6);
+        make.top.mas_equalTo(self.courseTypeTitle.mas_bottom).offset(10 * ScreenRatio_6);
+    }];
+    [self.courseTypeBtn_1V1 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(100 * ScreenRatio_6, 30 * ScreenRatio_6));
+        make.left.mas_equalTo(self.courseTypeBtn_n.mas_right).offset(10 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.courseTypeBtn_n);
+    }];
+    [self.separatorView_2 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 1));
+        make.top.mas_equalTo(self.courseTypeBtn_n.mas_bottom).offset(20 * ScreenRatio_6);
+    }];
+    [self.buyCourseTitle mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(60 * ScreenRatio_6, 20 * ScreenRatio_6));
+        make.left.mas_equalTo(self.firstIndexView).offset(15 * ScreenRatio_6);
+        make.top.mas_equalTo(self.separatorView_2.mas_bottom).offset(20 * ScreenRatio_6);
+    }];
+    [self.addButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(40 * ScreenRatio_6, 30 * ScreenRatio_6));
+        make.right.mas_equalTo(self.firstIndexView.mas_right).offset(-20 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.buyCourseTitle);
+    }];
+    [self.buyCourseTF mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(35 * ScreenRatio_6, 30 * ScreenRatio_6));
+        make.right.mas_equalTo(self.addButton.mas_left).offset(-2);
+        make.centerY.mas_equalTo(self.buyCourseTitle);
+    }];
+    [self.minusButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(40 * ScreenRatio_6, 30 * ScreenRatio_6));
+        make.centerY.mas_equalTo(self.buyCourseTitle);
+        make.right.mas_equalTo(self.buyCourseTF.mas_left).offset(-2);
+    }];
+    [self.separatorView_3 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 1));
+        make.top.mas_equalTo(self.separatorView_2).offset(self.heightTmp * 3 * ScreenRatio_6);
+    }];
+    [self.teachLocationTitle mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(150 * ScreenRatio_6, 20 * ScreenRatio_6));
+        make.left.mas_equalTo(self.firstIndexView).offset(10 * ScreenRatio_6);
+        make.top.mas_equalTo(self.separatorView_3.mas_bottom).offset(20 * ScreenRatio_6);
+    }];
+    [self.teachLocationCV mas_makeConstraints:^(MASConstraintMaker *make) {
+        if (self.teachLocationArr.count) {
+            if (self.teachLocationArr.count % 3 == 0) {
+                make.size.mas_equalTo(CGSizeMake(ScreenWidth, (self.teachLocationArr.count /3) * 55 *ScreenRatio_6 + 40 * ScreenRatio_6));
+            }
+            else{
+                make.size.mas_equalTo(CGSizeMake(ScreenWidth, (self.teachLocationArr.count /3 + 1) * 55 *ScreenRatio_6 + 40 * ScreenRatio_6));
+            }
+        }
+        else{
+            make.size.mas_equalTo(CGSizeMake(ScreenWidth, 100));
+        }
+        make.top.mas_equalTo(self.teachLocationTitle.mas_bottom).offset(10 * ScreenRatio_6);
+        make.left.mas_equalTo(self.firstIndexView);
+    }];
+    [self.separatorView_4 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 1));
+        make.bottom.mas_equalTo(self.teachLocationCV.mas_bottom);
+    }];
+    [self.confirmBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 55 * ScreenRatio_6));
+        make.bottom.mas_equalTo(self.firstIndexView.mas_bottom);
+    }];
+
+}
+
+#pragma mark - close keyboard
+
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event{
+    [self endEditing:YES];
+}
+
+#pragma mark - get
+
+- (UIView *)tapBgView{
+    if (!_tapBgView) {
+        _tapBgView = [[UIView alloc]init];
+        _tapBgView.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.7];
+        _tapBgView.userInteractionEnabled = YES;
+    }
+    return _tapBgView;
+}
+
+- (UIView *)firstIndexView{
+    if (!_firstIndexView) {
+        _firstIndexView = [[UIView alloc]initWithFrame:CGRectMake(0, ScreenHeight, ScreenWidth, ScreenHeight * 0.8)];
+        _firstIndexView.backgroundColor = [UIColor clearColor];
+    }
+    return _firstIndexView;
+}
+
+-(UIView *)bgView{
+    if (!_bgView) {
+        _bgView = [[UIView alloc]init];
+        _bgView.backgroundColor = [UIColor whiteColor];
+    }
+    return _bgView;
+}
+- (UIImageView *)courseImageView{
+    if (!_courseImageView) {
+        _courseImageView = [[UIImageView alloc]init];
+        [_courseImageView setImageWithURL:[NSURL URLWithString:self.schoolImage] placeholder:[UIImage imageNamed:@"blueWaring"]];
+    }
+    return _courseImageView;
+}
+- (UILabel *)courseNameLabel{
+    if (!_courseNameLabel) {
+        _courseNameLabel = [[UILabel alloc]init];
+        _courseNameLabel.textColor = [UIColor blackColor];
+        _courseNameLabel.font = [UIFont systemFontOfSize:17 * ScreenRatio_6];
+        _courseNameLabel.text = _courseName;
+    }
+    return _courseNameLabel;
+}
+- (UILabel *)priceLabel{
+    if (!_priceLabel) {
+        _priceLabel = [[UILabel alloc]init];
+        _priceLabel.font = [UIFont systemFontOfSize:14 * ScreenRatio_6];
+    }
+    return _priceLabel;
+}
+- (UILabel *)teachModelLabel{
+    if (!_teachModelLabel) {
+        _teachModelLabel = [[UILabel alloc]init];
+        _teachModelLabel.text = @"面授课程";
+        _teachModelLabel.textColor = wordBlueColor;
+        _teachModelLabel.textAlignment = NSTextAlignmentCenter;
+        _teachModelLabel.font = [UIFont systemFontOfSize:15 * ScreenRatio_6];
+        _teachModelLabel.layer.borderColor = wordBlueColor.CGColor;
+        _teachModelLabel.layer.borderWidth = 1;
+    }
+    return _teachModelLabel;
+}
+- (UILabel *)courseTypeTitle{
+    if (!_courseTypeTitle) {
+        _courseTypeTitle = [[UILabel alloc]init];
+        _courseTypeTitle.textColor = userLabelColor;
+        _courseTypeTitle.text = @"选择班型";
+        _courseTypeTitle.font = [UIFont systemFontOfSize:14 * ScreenRatio_6];
+    }
+    return _courseTypeTitle;
+}
+- (UIButton *)courseTypeBtn_1V1{
+    if (!_courseTypeBtn_1V1) {
+        _courseTypeBtn_1V1 = [[UIButton alloc]init];
+        //_courseTypeBtn_1V1.selected = YES;
+        _courseTypeBtn_1V1.titleLabel.font = [UIFont systemFontOfSize:15 * ScreenRatio_6];
+        [_courseTypeBtn_1V1 setTitle:@"一对一" forState:UIControlStateNormal];
+        [_courseTypeBtn_1V1 setTitleColor:userLabelColor forState:UIControlStateNormal];
+        [_courseTypeBtn_1V1 setTitleColor:wordBlueColor forState:UIControlStateSelected];
+        _courseTypeBtn_1V1.titleLabel.textAlignment = NSTextAlignmentCenter;
+        _courseTypeBtn_1V1.layer.borderWidth = 1;
+        _courseTypeBtn_1V1.layer.borderColor = orderBorderColor.CGColor;
+        _courseTypeBtn_1V1.layer.masksToBounds = YES;
+        _courseTypeBtn_1V1.layer.cornerRadius = 3;
+        _courseTypeBtn_1V1.tag = 0;
+    }
+    return _courseTypeBtn_1V1;
+}
+- (UIButton *)courseTypeBtn_n{
+    if (!_courseTypeBtn_n) {
+        _courseTypeBtn_n = [[UIButton alloc]init];
+        _courseTypeBtn_n.selected = YES;
+        _courseTypeBtn_n.titleLabel.font = [UIFont systemFontOfSize:15 * ScreenRatio_6];
+        [_courseTypeBtn_n setTitle:@"班课" forState:UIControlStateNormal];
+        [_courseTypeBtn_n setTitleColor:userLabelColor forState:UIControlStateNormal];
+        [_courseTypeBtn_n setTitleColor:wordBlueColor forState:UIControlStateSelected];
+        _courseTypeBtn_n.titleLabel.textAlignment = NSTextAlignmentCenter;
+        _courseTypeBtn_n.layer.borderWidth = 1;
+        _courseTypeBtn_n.layer.borderColor = wordBlueColor.CGColor;
+        _courseTypeBtn_n.layer.masksToBounds = YES;
+        _courseTypeBtn_n.layer.cornerRadius = 3;
+        _courseTypeBtn_n.tag = 1;
+    }
+    return _courseTypeBtn_n;
+}
+- (UILabel *)buyCourseTitle{
+    if (!_buyCourseTitle) {
+        _buyCourseTitle = [[UILabel  alloc]init];
+        _buyCourseTitle.textColor = userLabelColor;
+        _buyCourseTitle.text = @"购买课时";
+        _buyCourseTitle.font = [UIFont systemFontOfSize:14 * ScreenRatio_6];
+        
+    }
+    return _buyCourseTitle;
+}
+- (UIButton *)minusButton{
+    if (!_minusButton) {
+        _minusButton = [[UIButton alloc]init];
+        [_minusButton setTitle:@"－" forState:UIControlStateNormal];
+        [_minusButton setBackgroundColor:[UIColor colorWithWhite:0.85 alpha:1.0]];
+        [_minusButton setTitleColor:userLabelColor forState:UIControlStateNormal];
+        _minusButton.tag = 0;
+    }
+    return _minusButton;
+}
+- (UIButton *)addButton{
+    if (!_addButton) {
+        _addButton = [[UIButton alloc]init];
+        [_addButton setTitle:@"＋" forState:UIControlStateNormal];
+        [_addButton setBackgroundColor:[UIColor colorWithWhite:0.85 alpha:1.0]];
+        [_addButton setTitleColor:userLabelColor forState:UIControlStateNormal];
+        _addButton.tag = 1;
+    }
+    return _addButton;
+}
+- (UITextField *)buyCourseTF{
+    if (!_buyCourseTF) {
+        _buyCourseTF = [[UITextField alloc]init];
+        _buyCourseTF.textAlignment = NSTextAlignmentCenter;
+        _buyCourseTF.textColor = orderBorderColor;
+        _buyCourseTF.text = @"1";
+        _buyCourseTF.keyboardType = UIKeyboardTypeNumberPad;
+        _buyCourseTF.backgroundColor = fillViewColor;
+    }
+    return _buyCourseTF;
+}
+- (UILabel *)teachLocationTitle{
+    if (!_teachLocationTitle) {
+        _teachLocationTitle = [[UILabel alloc]init];
+        _teachLocationTitle.font = [UIFont systemFontOfSize:16 * ScreenRatio_6];
+        _teachLocationTitle.textColor = userLabelColor;
+        _teachLocationTitle.text = @"选择授课点";
+        
+    }
+    return _teachLocationTitle;
+}
+
+-(WLKTTeachLocationView *)teachLocationCV{
+    if (!_teachLocationCV) {
+        _teachLocationCV = [[WLKTTeachLocationView alloc]initWithFrame:CGRectNull collectionViewLayout:self.layout data:self.teachLocationArr];
+        _teachLocationCV.backgroundColor = [UIColor whiteColor];
+    }
+    return _teachLocationCV;
+}
+- (UICollectionViewFlowLayout *)layout{
+    if (!_layout) {
+        _layout = [[UICollectionViewFlowLayout alloc]init];
+        _layout.scrollDirection = UICollectionViewScrollDirectionVertical;
+        _layout.sectionInset = UIEdgeInsetsMake(0, 20 * ScreenRatio_6, 0, 20 * ScreenRatio_6);
+        _layout.itemSize = CGSizeMake(ScreenWidth /3 - 20 * ScreenRatio_6, 40 * ScreenRatio_6);
+    }
+    return _layout;
+}
+- (UIButton *)confirmBtn{
+    if (!_confirmBtn) {
+        _confirmBtn = [[UIButton alloc]init];
+        [_confirmBtn setTitle:@"确认" forState:UIControlStateNormal];
+        [_confirmBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        _confirmBtn.backgroundColor = navigationBgColor;
+        _confirmBtn.titleLabel.font = [UIFont systemFontOfSize:16 * ScreenRatio_6];
+    }
+    return _confirmBtn;
+}
+- (UIView *)separatorView_1{
+    if (!_separatorView_1) {
+        _separatorView_1 = [[UIView alloc]init];
+        _separatorView_1.backgroundColor = fillViewColor;
+    }
+    return _separatorView_1;
+}
+- (UIView *)separatorView_2{
+    if (!_separatorView_2) {
+        _separatorView_2 = [[UIView alloc]init];
+        _separatorView_2.backgroundColor = fillViewColor;
+    }
+    return _separatorView_2;
+}
+- (UIView *)separatorView_3{
+    if (!_separatorView_3) {
+        _separatorView_3 = [[UIView alloc]init];
+        _separatorView_3.backgroundColor = fillViewColor;
+    }
+    return _separatorView_3;
+}
+- (UIView *)separatorView_4{
+    if (!_separatorView_4) {
+        _separatorView_4 = [[UIView alloc]init];
+        _separatorView_4.backgroundColor = fillViewColor;
+    }
+    return _separatorView_4;
+}
+
+@end

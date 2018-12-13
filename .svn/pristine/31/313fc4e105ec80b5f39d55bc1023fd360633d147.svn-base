@@ -1,0 +1,131 @@
+//
+//  WLKTSearchResultOrganizationVC.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/30.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTSearchResultOrganizationVC.h"
+#import "WLKTSearchResultOrganizationCell.h"
+#import "WLKTTableviewRefresh.h"
+#import "WLKTSearchOrganizationData.h"
+#import "WLKTSearchSchoolApi.h"
+#import "WLKTSchoolVC.h"
+
+@interface WLKTSearchResultOrganizationVC ()
+@property (strong, nonatomic) NSMutableArray<WLKTSearchOrganizationData *> *dataArr;
+@property (assign, nonatomic) int page;
+
+@end
+
+@implementation WLKTSearchResultOrganizationVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.view.backgroundColor = [UIColor whiteColor];
+    [self setRefresh];
+}
+
+#pragma mark - network
+- (void)requestWithSearchText:(NSString *)searchText page:(int)page{
+    [SVProgressHUD show];
+    WLKTSearchSchoolApi *api = [[WLKTSearchSchoolApi alloc]initWithSearchText:searchText page:page];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        [SVProgressHUD dismiss];
+        NSArray *arr = [NSArray modelArrayWithClass:[WLKTSearchOrganizationData class] json:request.responseJSONObject[@"result"][@"list"]];
+        if (self.page == 1) {
+            [self.tableView.mj_footer endRefreshing];
+            if (!arr.count) {
+                self.tableView.state = WLKTViewStateEmpty;
+                self.tableView.imageForStateEmpty = [UIImage imageNamed:@"message_bg"];
+            }
+        }
+        else{
+            if (arr.count) {
+                [self.tableView.mj_footer endRefreshing];
+            }
+            else{
+                [self.tableView.mj_footer endRefreshingWithNoMoreData];
+            }
+        }
+        [self.dataArr addObjectsFromArray:arr];
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView reloadData];
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView.mj_footer endRefreshing];
+        ShowApiError
+    }];
+}
+
+- (void)setRefresh{
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^{
+        weakSelf.page = 1;
+        [weakSelf.dataArr removeAllObjects];
+        [weakSelf requestWithSearchText:weakSelf.searchText page:weakSelf.page];
+    }];
+    [WLKTTableviewRefresh tableviewRefreshFooterWithTaget:self.tableView block:^{
+        if (weakSelf.dataArr.count) {
+            weakSelf.page++;
+            [weakSelf requestWithSearchText:weakSelf.searchText page:weakSelf.page];
+        }
+        else{
+            weakSelf.tableView.mj_footer = nil;
+        }
+    }];
+    [self.tableView.mj_header beginRefreshing];
+}
+
+#pragma mark - Table view data source
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    return self.dataArr.count;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    WLKTSearchResultOrganizationCell *cell = [tableView dequeueReusableCellWithIdentifier:@"WLKTSearchResultOrganizationCell"];
+    if (cell == nil) {
+        cell = [[WLKTSearchResultOrganizationCell alloc]init];
+    }
+    [cell setCellData:self.dataArr[indexPath.row]];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    WLKTSchoolVC *vc = [[WLKTSchoolVC alloc]initWithSchoolId:self.dataArr[indexPath.row].suid];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    CGFloat h = 15;
+    if (self.dataArr[indexPath.row].introduce) {
+        h = [UILabel getSizeWithStr:self.dataArr[indexPath.row].introduce Width:ScreenWidth - 30 * ScreenRatio_6 Font:13].height;
+    }
+    return h + 45;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    return 5;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 5)];
+    v.backgroundColor = fillViewColor;
+    return v;
+}
+
+#pragma mark - get
+- (NSMutableArray<WLKTSearchOrganizationData *> *)dataArr{
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray array];
+    }
+    return _dataArr;
+}
+
+
+@end

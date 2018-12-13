@@ -1,0 +1,99 @@
+//
+//  WLKTClassroomCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/1/31.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTClassroomCell.h"
+
+@interface WLKTClassroomCell ()
+@property (strong, nonatomic) UILabel *titleLabel;
+@property (strong, nonatomic) UIView *separatorView;
+@property (strong, nonatomic) UIImageView *videoTagIV;
+@property (strong, nonatomic) UIImageView *videoIV;
+
+@end
+
+@implementation WLKTClassroomCell
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [self.contentView addSubview:self.titleLabel];
+        [self.contentView addSubview:self.separatorView];
+        [self.contentView addSubview:self.videoIV];
+        [self.contentView addSubview:self.videoTagIV];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)setCellData:(WLKTClassroomList *)data{
+    [self.videoIV setImageURL:[NSURL URLWithString:data.thumb_image]];
+    self.titleLabel.text = data.title;
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.titleLabel.text = nil;
+    self.videoIV.image = nil;
+}
+
+- (void)makeConstraints{
+    [self.videoIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth - 20 *ScreenRatio_6, 180 *ScreenRatio_6));
+        make.centerX.mas_equalTo(self.contentView);
+        make.top.mas_equalTo(self.contentView).offset(10 *ScreenRatio_6);
+    }];
+    [self.videoTagIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.center.mas_equalTo(self.videoIV);
+    }];
+    [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 *ScreenRatio_6);
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-10 *ScreenRatio_6);
+        make.top.mas_equalTo(self.videoIV.mas_bottom).offset(10 *ScreenRatio_6);
+    }];
+    [self.separatorView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 5));
+        make.bottom.mas_equalTo(self.contentView.mas_bottom);
+        make.left.mas_equalTo(self.contentView);
+    }];
+ 
+}
+
+#pragma mark - get
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [UILabel new];
+        _titleLabel.font = [UIFont systemFontOfSize:17 *ScreenRatio_6 weight:UIFontWeightSemibold];
+        _titleLabel.textColor = [UIColor blackColor];
+        _titleLabel.numberOfLines = 2;
+    }
+    return _titleLabel;
+}
+- (UIView *)separatorView{
+    if (!_separatorView) {
+        _separatorView = [UIView new];
+        _separatorView.backgroundColor = separatorView_color;
+    }
+    return _separatorView;
+}
+- (UIImageView *)videoTagIV{
+    if (!_videoTagIV) {
+        _videoTagIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"新闻视频"]];
+    }
+    return _videoTagIV;
+}
+- (UIImageView *)videoIV{
+    if (!_videoIV) {
+        _videoIV = [UIImageView new];
+        _videoIV.userInteractionEnabled = YES;
+        _videoIV.contentMode = UIViewContentModeScaleAspectFill;
+    }
+    return _videoIV;
+}
+
+@end
+

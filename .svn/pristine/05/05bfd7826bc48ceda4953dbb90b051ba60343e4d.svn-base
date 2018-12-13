@@ -1,0 +1,217 @@
+//
+//  WLKTLoginCoordinator.m
+//  wlkt
+//
+//  Created by slovelys on 17/3/22.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTLoginCoordinator.h"
+#import "WLKTLoginViewController.h"
+#import "WLKTUser.h"
+#import "WLKTLogin.h"
+#import <UIAlertView+BlocksKit.h>
+
+#import "WLKTRegisterApi.h"
+#import "WLKTForgetPasswordApi.h"
+#import "WLKTSMSManager.h"
+#import "WLKTSMSApi.h"
+#import <UMSocialCore/UMSocialCore.h>
+#import "WLKTSNSLoginPhoneBindingVC.h"
+#import "WLKTSetHobbyVC.h"
+#import <ShareSDK/ShareSDK.h>
+
+@interface WLKTLoginCoordinator () <WLKTLoginViewControllerDelegate>
+
+@property (strong, nonatomic, readwrite) UINavigationController *navigationController;
+@property (strong, nonatomic) NSMutableArray *childCoordinators;
+@property (strong, nonatomic) WLKTLoginViewController *loginViewController;
+@property (strong, nonatomic) WLKTUser *user;
+
+@end
+
+@implementation WLKTLoginCoordinator
+
+- (instancetype)init {
+    WLKT_INIT(
+              [self.childCoordinators addObject:self.navigationController];
+    )
+}
+
+#pragma mark - WLKTLoginViewControllerDelegate
+- (void)loginViewController:(WLKTLoginViewController *)loginViewController didRequestLoginWithUsername:(NSString *)username password:(NSString *)password {
+    CheckNetwork
+    @weakify(self)
+    [WLKTLogin loginWithUsername:username password:password completion:^(WLKTUser *user) {
+        @strongify(self)
+        [self finishLoginWithUser:user];
+    }];
+}
+
+- (void)loginViewController:(WLKTLoginViewController *)loginViewController didRequestLoginWithSNSType:(SSDKPlatformType)type{
+    CheckNetwork
+    @weakify(self)
+    [WLKTLogin loginWithSNSType:type completion:^(WLKTUser *user) {//已绑定
+        @strongify(self)
+        if (user) {
+            self.user = user;
+            if ([self.delegate respondsToSelector:@selector(loginCoordinatorDidFinishLogin:handler:)]) {
+                [self.delegate loginCoordinatorDidFinishLogin:self handler:^(UIViewController *vc) {
+                    
+                }];
+            }
+        }
+    } SNSPushHandler:^{//未绑定
+        @strongify(self)
+        if ([self.delegate respondsToSelector:@selector(loginCoordinatorDidFinishLogin:handler:)]) {
+            [self.delegate loginCoordinatorDidFinishLogin:self handler:^(UIViewController *vc) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    WLKTSNSLoginPhoneBindingVC *bindingVC = [[WLKTSNSLoginPhoneBindingVC alloc]init];
+                    bindingVC.hidesBottomBarWhenPushed = YES;
+                    [vc.navigationController pushViewController:bindingVC animated:YES];
+                });
+            }];
+        }
+    }];
+}
+
+- (void)loginViewControllerDidTapCancel:(WLKTLoginViewController *)loginViewController {
+    if ([self.delegate respondsToSelector:@selector(loginCoordinatorDidRequestDismissal:)]) {
+        [self.delegate loginCoordinatorDidRequestDismissal:self];
+    }
+}
+
+- (void)loginViewControllerDidTapRegister:(WLKTLoginViewController *)loginViewController {
+    WLKTRegisterViewController *vc = [[WLKTRegisterViewController alloc] initWithViewControllerType:WLKTRegisterOrForgetPasswordVCTypeRegister];
+    vc.delegate = self;
+    vc.title = @"注册";
+    vc.hidesBottomBarWhenPushed = YES;
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+- (void)loginViewControllerDidTapForgetPassword:(WLKTLoginViewController *)loginViewController {
+    WLKTRegisterViewController *vc = [[WLKTRegisterViewController alloc] initWithViewControllerType:WLKTRegisterOrForgetPasswordVCTypeForgetPassword];
+    vc.delegate = self;
+    vc.hidesBottomBarWhenPushed = YES;
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+- (void)finishLoginWithUser:(WLKTUser *)user{
+    if (user) {
+        self.user = user;
+        if ([self.delegate respondsToSelector:@selector(loginCoordinatorDidFinishLogin:)]) {
+            [self.delegate loginCoordinatorDidFinishLogin:self];
+        }
+    }
+}
+
+#pragma mark - WLKTRegisterViewControllerDelegate
+
+- (void)registerViewController:(WLKTRegisterViewController *)registerViewController didRequestRegisterWithUsername:(NSString *)username authCode:(NSString *)authCode password:(NSString *)password {
+//    @weakify(self)
+//    [WLKTSMSManager commitVerificationCode:authCode phoneNumber:username zone:@"86" completion:^{
+//         @strongify(self)
+//        WLKTRegisterApi *api = [[WLKTRegisterApi alloc] initWithUsername:username password:password authcode:authCode];
+//        [SVProgressHUD showWithStatus:@"请稍候..."];
+//        [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+//            [SVProgressHUD showSuccessWithStatus:@"注册成功"];
+//            [WLKTLogin loginWithUsername:username password:password completion:^(WLKTUser *user) {
+//                [self finishLoginWithUser:user];
+//            }];
+//        } failure:^(__kindof YTKBaseRequest *request) {
+//            ShowApiError
+//        }];
+//    }];
+    
+    @weakify(self)
+    WLKTSMSApi *api = [[WLKTSMSApi alloc] initWithWLKTSMSType:WLKTSMSTypeValidateCode parameter:authCode];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+
+        WLKTRegisterApi *api = [[WLKTRegisterApi alloc] initWithUsername:username password:password authcode:authCode];
+        [SVProgressHUD showWithStatus:@"请稍候..."];
+        [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+            [SVProgressHUD showSuccessWithStatus:@"注册成功"];
+
+            [WLKTLogin loginWithUsername:username password:password completion:^(WLKTUser *user) {
+                @strongify(self)
+//                [self finishLoginWithUser:user];
+                self.user = user;
+                WLKTSetHobbyVC *vc = [[WLKTSetHobbyVC alloc]initWithHandle:^{
+                    [registerViewController.navigationController dismissViewControllerAnimated:YES completion:nil];
+                }];
+                vc.hidesBottomBarWhenPushed = YES;
+                [registerViewController.navigationController presentViewController:vc animated:YES completion:nil];
+            }];
+        } failure:^(__kindof YTKBaseRequest *request) {
+            ShowApiError
+        }];
+    } failure:^(__kindof YTKBaseRequest *request) {
+        ShowApiError
+    }];
+}
+
+- (void)registerViewController:(WLKTRegisterViewController *)registerViewController didRequestResetPasswordWithUsername:(NSString *)username authCode:(NSString *)authCode password:(NSString *)password {
+//    [WLKTSMSManager commitVerificationCode:authCode phoneNumber:username zone:@"86" completion:^{
+//        WLKTForgetPasswordApi *api = [[WLKTForgetPasswordApi alloc] initWithUsername:username password:password authcode:authCode];
+//        [SVProgressHUD showWithStatus:@"请稍候..."];
+//        [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+//            [SVProgressHUD showSuccessWithStatus:@"密码修改成功"];
+//        } failure:^(__kindof YTKBaseRequest *request) {
+//            ShowApiError
+//        }];
+//    }];
+    WLKTSMSApi *api = [[WLKTSMSApi alloc] initWithWLKTSMSType:WLKTSMSTypeValidateCode parameter:authCode];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        WLKTForgetPasswordApi *api = [[WLKTForgetPasswordApi alloc] initWithUsername:username password:password authcode:authCode];
+        [SVProgressHUD showWithStatus:@"请稍候..."];
+        [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+            [SVProgressHUD showSuccessWithStatus:@"密码修改成功"];
+            [registerViewController.navigationController popViewControllerAnimated:YES];
+        } failure:^(__kindof YTKBaseRequest *request) {
+            ShowApiError
+        }];
+    } failure:^(__kindof YTKBaseRequest *request) {
+        ShowApiError
+    }];
+}
+
+- (void)registerViewController:(WLKTRegisterViewController *)registerViewController didRequestAuthCodeWithUsername:(NSString *)username WLKTRegisterOrForgetPasswordVCType:(WLKTRegisterOrForgetPasswordVCType)type {
+    WLKTSMSType smsType;
+    if (type == WLKTRegisterOrForgetPasswordVCTypeRegister) {
+        smsType = WLKTSMSTypeRegister;
+    } else {
+        smsType = WLKTSMSTypeForgetPassword;
+    }
+    WLKTSMSApi *api = [[WLKTSMSApi alloc] initWithWLKTSMSType:smsType parameter:username];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+       ShowApiError
+    }];
+    [registerViewController startCountForAuthCode];
+}
+
+#pragma mark - Getters & Setters
+- (NSMutableArray *)childCoordinators {
+    if(!_childCoordinators) {
+        _childCoordinators = [NSMutableArray array];
+    }
+    return _childCoordinators;
+}
+
+- (WLKTLoginViewController *)loginViewController {
+    if (!_loginViewController) {
+        _loginViewController = [[WLKTLoginViewController alloc] init];
+        _loginViewController.delegate = self;
+    }
+    return _loginViewController;
+}
+
+- (UINavigationController *)navigationController {
+    if (!_navigationController) {
+        _navigationController = [[UINavigationController alloc] initWithRootViewController:self.loginViewController];
+    }
+    return _navigationController;
+}
+
+@end

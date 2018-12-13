@@ -1,0 +1,15 @@
+//
+//  WLKTCourseDetailSaleAlert.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/8/23.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourseDetailData.h"
+
+@interface WLKTCourseDetailSaleAlert : UIView
+- (instancetype)initWithData:(WLKTCourseDetailData *)data;
+
+@end

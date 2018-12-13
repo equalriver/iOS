@@ -1,0 +1,24 @@
+//
+//  WLKTLiveVideoSchoolVC.m
+//  wlkt
+//
+//  Created by 尹平江 on 2018/5/14.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTLiveVideoSchoolVC.h"
+
+@interface WLKTLiveVideoSchoolVC ()
+
+@end
+
+@implementation WLKTLiveVideoSchoolVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+}
+
+
+
+@end

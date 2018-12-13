@@ -1,0 +1,221 @@
+//
+//  UITableView+State.m
+//  wlkt
+//
+//  Created by slovelys on 17/3/23.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "UITableView+State.h"
+#import "WLKTStateViewFactory.h"
+#import "DZNEmptyDataSetView.h"
+#import "UIButton+Category.h"
+
+NSString * const kButtonTitleForStateError = @"重新加载";
+
+@implementation UITableView (State)
+
+#pragma mark - DZNEmptyDataSetSource
+- (UIColor *)backgroundColorForEmptyDataSet:(UIScrollView *)scrollView {
+    return [UIColor whiteColor];
+}
+
+- (UIView *)customViewForEmptyDataSet:(UIScrollView *)scrollView {
+    if (self.state != WLKTViewStateLoading) {
+        return nil;
+    }
+    return [[NSBundle mainBundle] loadNibNamed:NSStringFromClass([WLKTLoadingView class]) owner:nil options:nil].firstObject;
+}
+
+- (NSAttributedString *)buttonTitleForEmptyDataSet:(UIScrollView *)scrollView forState:(UIControlState)state {
+    if (self.state != WLKTViewStateEmpty && self.state != WLKTViewStateError) {
+        return nil;
+    }
+    UIFont *font = [self buttonTitleFontForState:self.state];
+    if (self.state == WLKTViewStateError) {
+        return [[NSAttributedString alloc] initWithString:kButtonTitleForStateError attributes:@{                                       NSForegroundColorAttributeName: [UIColor darkTextColor], NSFontAttributeName: font                                     }];
+    } else {
+        if (![self.buttonTitleForStateEmpty isNotBlank]) {
+            return nil;
+        }
+        return [[NSAttributedString alloc] initWithString:self.buttonTitleForStateEmpty attributes:@{                                       NSForegroundColorAttributeName: [UIColor lightGrayColor], NSFontAttributeName: font                                     }];
+    }
+    return nil;
+}
+
+- (UIImage *)buttonBackgroundImageForEmptyDataSet:(UIScrollView *)scrollView forState:(UIControlState)state {
+    UIColor *color;
+    if (self.state == WLKTViewStateError) {
+        color = UIColorHex(f9f9f9);
+    } else if (self.state == WLKTViewStateEmpty) {
+        if (!self.buttonColorForStateEmpty) {
+            return nil;
+        }
+        color = self.buttonColorForStateEmpty;
+    }
+    
+    UIImage *image;
+    if (state == UIControlStateNormal) {
+        image = [UIImage imageWithColor:color];
+    } else if (state == UIControlStateHighlighted) {
+        image = [UIImage imageWithColor:[UIButton colorForHighlightedWithColor:color]];
+    }
+    return image;
+}
+
+- (CGFloat)verticalOffsetForEmptyDataSet:(UIScrollView *)scrollView {
+    DZNEmptyDataSetView *emptyView = [scrollView valueForKey:@"emptyDataSetView"];
+    return (self.tableHeaderView.height) / 2.0f - emptyView.top;
+}
+
+- (NSAttributedString *)titleForEmptyDataSet:(UIScrollView *)scrollView {
+    if (self.state == WLKTViewStateEmpty && [self.titleForStateEmpty isNotBlank]) {
+        NSMutableParagraphStyle *style = [NSMutableParagraphStyle new];
+        style.lineSpacing = 5;
+        style.alignment = NSTextAlignmentCenter;
+        
+        NSAttributedString *string = [[NSAttributedString alloc]
+                                      initWithString:self.titleForStateEmpty
+                                      attributes:@{
+                                                   NSForegroundColorAttributeName : UIColorHex(999999),
+                                                   NSFontAttributeName : [UIFont systemFontOfSize:16],
+                                                   NSParagraphStyleAttributeName : style
+                                                   }];
+        return string;
+    }
+    return nil;
+}
+
+- (NSAttributedString *)descriptionForEmptyDataSet:(UIScrollView *)scrollView {
+    if (self.state == WLKTViewStateEmpty) {
+        if ([self.descriptionForStateEmpty isNotBlank]) {
+            NSMutableParagraphStyle *style = [NSMutableParagraphStyle new];
+            style.lineSpacing = 5;
+            style.alignment = NSTextAlignmentCenter;
+            
+            NSAttributedString *string = [[NSAttributedString alloc]
+                                          initWithString:self.descriptionForStateEmpty
+                                          attributes:@{
+                                                       NSForegroundColorAttributeName : UIColorHex(999999),
+                                                       NSFontAttributeName : [UIFont systemFontOfSize:13],
+                                                       NSParagraphStyleAttributeName : style
+                                                       }];
+            return string;
+        }
+        return nil;
+    }
+    return nil;
+}
+
+- (UIImage *)imageForEmptyDataSet:(UIScrollView *)scrollView {
+    if (self.state == WLKTViewStateError) {
+        return [UIImage imageNamed:@""];
+    }
+    if (self.state == WLKTViewStateEmpty) {
+        return self.imageForStateEmpty;
+    }
+    return nil;
+}
+
+#pragma mark - DZNEmptyDataSetDelegate
+- (void)emptyDataSet:(UIScrollView *)scrollView didTapButton:(UIButton *)button {
+    if (self.state != WLKTViewStateEmpty && self.state != WLKTViewStateError) {
+        return;
+    }
+    if (self.emptyButtonClickBlock) {
+        self.emptyButtonClickBlock();
+    }
+}
+
+- (BOOL)emptyDataSetShouldAllowTouch:(UIScrollView *)scrollView {
+    return self.state != WLKTViewStateLoading;
+}
+
+- (BOOL)emptyDataSetShouldDisplay:(UIScrollView *)scrollView {
+    return self.state != WLKTViewStateIdle;
+}
+
+- (BOOL)emptyDataSetShouldAllowScroll:(UIScrollView *)scrollView {
+    return self.state != WLKTViewStateError;
+}
+
+#pragma mark - Getters & Setters
+- (WLKTViewState)state {
+    NSNumber *state = objc_getAssociatedObject(self, _cmd);
+    return (WLKTViewState)state.unsignedIntegerValue;
+}
+
+- (void)setState:(WLKTViewState)state {
+    if (self.state == state) {
+        return;
+    }
+    objc_setAssociatedObject(self, @selector(state), @(state), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    self.emptyDataSetSource = self;
+    self.emptyDataSetDelegate = self;
+    DZNEmptyDataSetView *view = [self valueForKey:@"emptyDataSetView"];
+    view.tableView = self;
+    [self reloadEmptyDataSet];
+}
+
+- (NSString *)titleForStateEmpty {
+    return objc_getAssociatedObject(self, _cmd);
+}
+
+- (void)setTitleForStateEmpty:(NSString *)titleForStateEmpty {
+    objc_setAssociatedObject(self, @selector(titleForStateEmpty), titleForStateEmpty, OBJC_ASSOCIATION_COPY_NONATOMIC);
+}
+
+- (NSString *)descriptionForStateEmpty {
+    return objc_getAssociatedObject(self, _cmd);
+}
+
+- (void)setDescriptionForStateEmpty:(NSString *)descriptionForStateEmpty {
+    objc_setAssociatedObject(self, @selector(descriptionForStateEmpty), descriptionForStateEmpty, OBJC_ASSOCIATION_COPY_NONATOMIC);
+}
+
+- (NSString *)buttonTitleForStateEmpty {
+    return objc_getAssociatedObject(self, _cmd);
+}
+
+- (void)setButtonTitleForStateEmpty:(NSString *)buttonTitleForStateEmpty {
+    objc_setAssociatedObject(self, @selector(buttonTitleForStateEmpty), buttonTitleForStateEmpty, OBJC_ASSOCIATION_COPY_NONATOMIC);
+}
+
+- (NSString *)buttonColorForStateEmpty {
+    return objc_getAssociatedObject(self, _cmd);
+}
+
+- (void)setButtonColorForStateEmpty:(NSString *)buttonColorForStateEmpty {
+    objc_setAssociatedObject(self, @selector(buttonColorForStateEmpty),
+                             buttonColorForStateEmpty,
+                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+- (UIImage *)imageForStateEmpty {
+    return objc_getAssociatedObject(self, _cmd);
+}
+
+- (void)setImageForStateEmpty:(UIImage *)imageForStateEmpty {
+    objc_setAssociatedObject(self, @selector(imageForStateEmpty), imageForStateEmpty, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+- (void (^)(void))emptyButtonClickBlock {
+    return objc_getAssociatedObject(self, _cmd);
+}
+
+- (void)setEmptyButtonClickBlock:(void (^)(void))emptyButtonClickBlock {
+    objc_setAssociatedObject(self, @selector(emptyButtonClickBlock),
+                             emptyButtonClickBlock,
+                             OBJC_ASSOCIATION_COPY_NONATOMIC);
+}
+
+- (UIFont *)buttonTitleFontForState:(WLKTViewState)state {
+    if (state == WLKTViewStateEmpty) {
+        return [UIFont systemFontOfSize:16];
+    } else if (state == WLKTViewStateError) {
+        return [UIFont systemFontOfSize:14];
+    }
+    return nil;
+}
+
+@end

@@ -1,0 +1,259 @@
+//
+//  MIPhotoBrowser.m
+//  PhotoBrowser
+//
+//  Created by zc on 16/8/11.
+//  Copyright © 2016年 zcDong. All rights reserved.
+//
+
+#import "MIPhotoBrowser.h"
+#import "MIBrowserImageView.h"
+
+#define kPhotoBrowserImageViewMargin 10
+@interface MIPhotoBrowser ()
+@property(nonatomic, strong) UIScrollView *scrollView;
+@property(nonatomic, assign) BOOL hasShowedFirstView;
+@property(nonatomic, strong) UILabel *indexLabel;
+@property (strong, nonatomic) UIPageControl *pageControl;
+@end
+@implementation MIPhotoBrowser
+- (instancetype)initWithFrame:(CGRect)frame{
+    self = [super initWithFrame:frame];
+    if (self) {
+        self.backgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:1];
+    }
+    return self;
+}
+
+- (void)didMoveToSuperview{
+    [self setupScrollView];
+}
+
+- (void)setupScrollView{
+    self.scrollView = [[UIScrollView alloc] init];
+    self.scrollView.delegate = self;
+    self.scrollView.showsHorizontalScrollIndicator = NO;
+    self.scrollView.showsVerticalScrollIndicator = NO;
+    self.scrollView.pagingEnabled = YES;
+    [self addSubview:self.scrollView];
+    
+    _pageControl = [[UIPageControl alloc] init];
+    _pageControl.frame = CGRectMake(ScreenWidth / 2 - 10, 600 * ScreenRatio_6, 20, 20);//指定位置大小
+    _pageControl.numberOfPages = self.imageCount;//指定页面个数
+    _pageControl.currentPage = self.currentImageIndex;//指定pagecontroll的值，默认选中的小白点
+    //添加委托方法，当点击小白点就执行此方法
+    
+    _pageControl.pageIndicatorTintColor = [UIColor lightGrayColor];// 设置非选中页的圆点颜色
+    _pageControl.currentPageIndicatorTintColor = [UIColor whiteColor]; // 设置选中页的圆点颜色
+    [self addSubview:_pageControl];
+    
+    for (NSInteger i = 0; i < self.imageCount; i++) {
+        MIBrowserImageView *imageView = [[MIBrowserImageView alloc] init];
+        imageView.tag = i;
+        imageView.userInteractionEnabled = YES;
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(photoClick:)];
+        
+        UITapGestureRecognizer *doubleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTapAction:)];
+        doubleTap.numberOfTapsRequired = 2;
+        [tap requireGestureRecognizerToFail:doubleTap];
+        
+        [imageView addGestureRecognizer:tap];
+        [imageView addGestureRecognizer:doubleTap];
+        [self.scrollView addSubview:imageView];
+    }
+    [self setupImageOfImageViewForIndex:self.currentImageIndex];
+}
+
+- (void)setupImageOfImageViewForIndex:(NSInteger)index{
+    MIBrowserImageView *imageView = self.scrollView.subviews[index];
+    self.currentImageIndex = index;
+//    if (imageView.hasLoadedImage) return;
+//    if ([self highQualityImageURLForIndex:index]) {
+//        [imageView setImageWithURL:[self highQualityImageURLForIndex:index] placeholderImage:[self placeholderImageForIndex:index]];
+//    } else {
+    if ([self placeholderImageForIndex:index]) {
+        imageView.image = [self placeholderImageForIndex:index];
+    }
+    else{
+        [imageView setImageURL:[NSURL URLWithString:[self URLImageForIndex:index]]];
+    }
+//    }
+//    imageView.hasLoadedImage = YES;
+}
+
+- (void)photoClick:(UIGestureRecognizer *)gesture{
+    
+    self.scrollView.hidden = YES;
+    MIBrowserImageView *currentImageView = (MIBrowserImageView *)gesture.view;
+//    NSInteger currentIndex = currentImageView.tag;
+//
+    UIView *sourceView = self.sourceImagesContainerView;
+    CGRect rect = [sourceView convertRect:sourceView.frame toView:sourceView.superview];
+    CGRect targetTemp = [self.sourceImagesContainerView convertRect:rect toView:self];
+    
+    UIImageView *tempView = [[UIImageView alloc] init];
+    tempView.contentMode = sourceView.contentMode;
+    tempView.clipsToBounds = YES;
+    tempView.image = currentImageView.image;
+    CGFloat h = (self.bounds.size.width / currentImageView.image.size.width) * currentImageView.image.size.height;
+    
+    if (!currentImageView.image) { // 防止 因imageview的image加载失败 导致 崩溃
+        h = self.bounds.size.height;
+    }
+    
+    tempView.bounds = CGRectMake(0, 0, self.bounds.size.width, h);
+    tempView.center = self.center;
+    
+    [self addSubview:tempView];
+    
+    [UIView animateWithDuration:0.0 animations:^{
+        tempView.frame = targetTemp;
+        self.backgroundColor = [UIColor clearColor];
+    } completion:^(BOOL finished) {
+        [self removeFromSuperview];
+    }];
+}
+
+- (void)handleDoubleTapAction:(UIGestureRecognizer *)gesture{
+    MIBrowserImageView *imageView = (MIBrowserImageView *)gesture.view;
+    CGFloat scale;
+    if (imageView.isScaled) {
+        scale = 1.0;
+    } else {
+        scale = 2.0;
+    }
+    
+    MIBrowserImageView *view = (MIBrowserImageView *)gesture.view;
+    
+    [view doubleTapToZoomWithScale:scale ];
+}
+
+- (void)showFirstImage{
+    UIView *source = self.sourceImagesContainerView;
+    CGRect rect = [self.sourceImagesContainerView convertRect:source.frame toView:self];
+
+    UIImageView *tmpImageView = [[UIImageView alloc] init];
+    tmpImageView.frame = rect;
+    if ([self placeholderImageForIndex:self.currentImageIndex]) {
+        tmpImageView.image = [self placeholderImageForIndex:self.currentImageIndex];
+    }
+    else{
+        @weakify(self);
+        @weakify(tmpImageView);
+        [tmpImageView setImageWithURL:[NSURL URLWithString:[self URLImageForIndex:self.currentImageIndex]] placeholder:nil options:YYWebImageOptionProgressive progress:^(NSInteger receivedSize, NSInteger expectedSize) {
+            [SVProgressHUD showProgress:(float)(receivedSize / expectedSize)];
+        } transform:nil completion:^(UIImage * _Nullable image, NSURL * _Nonnull url, YYWebImageFromType from, YYWebImageStage stage, NSError * _Nullable error) {
+            @strongify(self);
+            @strongify(tmpImageView);
+            tmpImageView.contentMode = self.scrollView.subviews[self.currentImageIndex].contentMode;
+            [self addSubview:tmpImageView];
+            
+            CGRect targetTemp = [self.scrollView.subviews[self.currentImageIndex] bounds];
+            self.scrollView.hidden = YES;
+            
+            [UIView animateWithDuration:0.3 animations:^{
+                tmpImageView.center = self.center;
+                tmpImageView.bounds = CGRectMake(0, 0, targetTemp.size.width,targetTemp.size.height);
+            } completion:^(BOOL finished) {
+                _hasShowedFirstView = YES;
+                [tmpImageView removeFromSuperview];
+                self.scrollView.hidden = NO;
+            }];
+        }];
+    }
+//    tmpImageView.contentMode = self.scrollView.subviews[self.currentImageIndex].contentMode;
+//    [self addSubview:tmpImageView];
+//
+//    CGRect targetTemp = [self.scrollView.subviews[self.currentImageIndex] bounds];
+//    self.scrollView.hidden = YES;
+//
+//    [UIView animateWithDuration:0.3 animations:^{
+//        tmpImageView.center = self.center;
+//        tmpImageView.bounds = CGRectMake(0, 0, targetTemp.size.width,targetTemp.size.height);
+//    } completion:^(BOOL finished) {
+//        _hasShowedFirstView = YES;
+//        [tmpImageView removeFromSuperview];
+//        self.scrollView.hidden = NO;
+//    }];
+}
+
+- (void)layoutSubviews{
+    [super layoutSubviews];
+    
+    CGRect rect = self.bounds;
+    rect.size.width += kPhotoBrowserImageViewMargin * 2;
+    
+    self.scrollView.bounds = rect;
+    self.scrollView.center = self.center;
+    
+    CGFloat y = 0;
+    CGFloat w = self.scrollView.frame.size.width - kPhotoBrowserImageViewMargin * 2;
+    CGFloat h = self.scrollView.frame.size.height;
+    
+    
+    [self.scrollView.subviews enumerateObjectsUsingBlock:^(MIBrowserImageView *obj, NSUInteger idx, BOOL *stop) {
+        CGFloat x = kPhotoBrowserImageViewMargin + idx * (kPhotoBrowserImageViewMargin * 2 + w);
+        obj.frame = CGRectMake(x, y, w, h);
+    }];
+    
+    self.scrollView.contentSize = CGSizeMake(self.scrollView.subviews.count * self.scrollView.frame.size.width, 0);
+    self.scrollView.contentOffset = CGPointMake(self.currentImageIndex * self.scrollView.frame.size.width, 0);
+    
+    
+    if (!_hasShowedFirstView) {
+        [self showFirstImage];
+    }
+}
+
+- (void)show{
+    UIWindow *window = [UIApplication sharedApplication].keyWindow;
+    self.frame = window.bounds;
+    [window addSubview:self];
+}
+
+#pragma mark - delegate
+- (UIImage *)placeholderImageForIndex:(NSInteger)index{
+    if ([self.delegate respondsToSelector:@selector(photoBrowser:placeholderImageForIndex:)]) {
+       return  [self.delegate photoBrowser:self placeholderImageForIndex:self.currentImageIndex];
+    }
+    return nil;
+}
+
+- (NSString *)URLImageForIndex:(NSInteger)index{
+    if ([self.delegate respondsToSelector:@selector(photoBrowser:URLImageForIndex:)]) {
+        return  [self.delegate photoBrowser:self URLImageForIndex:self.currentImageIndex];
+    }
+    return nil;
+}
+
+#pragma mark -
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView
+{
+    int index = (scrollView.contentOffset.x + self.scrollView.bounds.size.width * 0.5) / self.scrollView.bounds.size.width;
+    
+    // 有过缩放的图片在拖动一定距离后清除缩放
+    CGFloat margin = 150;
+    CGFloat x = scrollView.contentOffset.x;
+    if ((x - index * self.bounds.size.width) > margin || (x - index * self.bounds.size.width) < - margin) {
+        MIBrowserImageView *imageView = self.scrollView.subviews[index];
+//        if (imageView.isScaled) {
+            [UIView animateWithDuration:0.5 animations:^{
+                imageView.transform = CGAffineTransformIdentity;
+            } completion:^(BOOL finished) {
+//                [imageView eliminateScale];
+            }];
+//        }
+    }
+    
+    
+//    if (!_willDisappear) {
+//        _indexLabel.text = [NSString stringWithFormat:@"%d/%ld", index + 1, (long)self.imageCount];
+//    }
+    [self setupImageOfImageViewForIndex:index];
+    
+    
+    int page = scrollView.contentOffset.x / scrollView.frame.size.width;
+    // 设置页码
+    _pageControl.currentPage = page;
+}
+@end

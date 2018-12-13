@@ -1,0 +1,16 @@
+//
+//  WLKTCourseDetialComplaintCell.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/1.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourseDetailNewCourse_complaint.h"
+#import "MIPhotoBrowser.h"
+
+@interface WLKTCourseDetialComplaintCell : UITableViewCell
+- (void)setCellData:(WLKTCourseDetailNewCourse_complaint *)data index:(NSInteger)index;
+
+@end

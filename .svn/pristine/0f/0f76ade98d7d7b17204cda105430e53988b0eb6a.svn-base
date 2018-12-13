@@ -1,0 +1,961 @@
+//
+//  WLKTCDViewController.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/3/16.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTCDViewController.h"
+#import "WLKTCDHeader.h"
+
+@interface WLKTCDViewController ()<UITableViewDelegate, UITableViewDataSource, CLLocationManagerDelegate, UIScrollViewDelegate, CDBottomButtonDelegate, WLKTLoginCoordinatorDelegate, CDHeaderCellDelegate, CDPhoneAlertDelegate, CDEvaluationDelegate, LGPhotoPickerBrowserViewControllerDelegate, LGPhotoPickerBrowserViewControllerDataSource, CDOtherCourseDelegate, CDTeacherCellDelegate>
+@property (strong, nonatomic) UIScrollView *contentScroll;
+@property (strong, nonatomic) UITableView *tableView;
+@property (strong, nonatomic) CLLocationManager *locationManager;
+@property (strong, nonatomic) WLKTCDBottomButtons *bottomBtns;
+@property (strong, nonatomic) UIButton *backButton;
+@property (strong, nonatomic) UIButton *popoverButton;
+@property (strong, nonatomic) WLKTCDHeaderCell *headerCell;
+@property (strong, nonatomic) UILabel *footerView;
+
+@property (strong, nonatomic) WLKTCDData *data;
+@property (strong, nonatomic) NSMutableArray *childCoordinator;
+@property (copy, nonatomic) void (^loginBlock)(void);
+@property (nonatomic, assign) LGShowImageType showType;
+@property (nonatomic, strong) NSMutableArray *LGPhotoPickerBrowserPhotoArray;
+@property (copy, nonatomic) NSArray *sectionArr;
+@property (copy, nonatomic) NSString *courseId;
+@property (nonatomic) CGFloat currentAlpha;
+@property (nonatomic) CLLocationCoordinate2D currentCoordinate;
+@property (nonatomic) BOOL isHidden;
+@property (nonatomic) BOOL isMorePoint;
+@property (nonatomic) BOOL isShowIntro;
+@end
+
+@implementation WLKTCDViewController
+- (instancetype)initWithCourseId:(NSString *)courseId
+{
+    self = [super init];
+    if (self) {
+        _courseId = courseId;
+    }
+    return self;
+}
+
+#pragma mark - life cycle
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self.view addSubview:self.contentScroll];
+    [self.contentScroll addSubview:self.tableView];
+    [self.view addSubview:self.backButton];
+    [self.view addSubview:self.popoverButton];
+    [self.view addSubview:self.bottomBtns];
+    self.isHidden = YES;
+
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(introTableViewScrollNoti) name:@"kCourseDetailIntroScrollNoti" object:nil];
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(courseIntroBackToDetailNoti) name:@"kCourseIntroBackToDetailNoti" object:nil];
+    
+    [self setCLLocation];
+    WS(weakSelf);
+    [WLKTTableviewRefresh tableviewRefreshHeaderWithTaget:self.tableView request:^{
+        [weakSelf loadData];
+    }];
+    
+    [self loadData];
+}
+
+-(void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    //启动跟踪定位
+    [self.locationManager startUpdatingLocation];
+    //截屏
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(userDidTakeScreenshot:)
+                                                 name:UIApplicationUserDidTakeScreenshotNotification object:nil];
+    if (IsIOS_11_Later) {
+        if (!IsIphoneX) {
+            self.tableView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+        }
+    }
+    else{
+        self.automaticallyAdjustsScrollViewInsets = NO;
+    }
+    [self.navigationController.navigationBar setBackgroundImage:[UIImage imageWithColor:[UIColor colorWithWhite:1.0 alpha:self.currentAlpha >= 1 ? 0.99 : self.currentAlpha]] forBarMetrics:UIBarMetricsDefault];
+    [self.navigationController.navigationBar setShadowImage:[UIImage imageWithColor:[UIColor colorWithWhite:1.0 alpha:self.currentAlpha >= 1 ? 0.99 : self.currentAlpha]]];
+    self.navigationController.navigationBar.titleTextAttributes = @{NSForegroundColorAttributeName: [UIColor colorWithWhite:1.0 alpha:self.currentAlpha]};
+//    self.navigationItem.hidesBackButton = YES;
+    
+}
+
+- (void)viewDidAppear:(BOOL)animated{
+    [super viewDidAppear:animated];
+    if (self.tableView.contentOffset.y < 1) {
+        [self.navigationController setNavigationBarHidden:YES animated:NO];
+    }
+
+}
+
+- (void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+
+    self.navigationController.navigationBar.titleTextAttributes = @{NSForegroundColorAttributeName: KMainTextColor_3};
+    [self.navigationController.navigationBar setBackgroundImage:[UIImage imageWithColor:kNavBarBackgroundColor] forBarMetrics:UIBarMetricsDefault];
+    [self.navigationController.navigationBar setShadowImage:[UIImage imageWithColor:kNavBarShadowImageColor]];
+    [self.navigationController setNavigationBarHidden:NO animated:NO];
+
+    [[NSNotificationCenter defaultCenter]removeObserver:self name:UIApplicationUserDidTakeScreenshotNotification object:nil];
+}
+
+- (void)dealloc{
+    [[NSNotificationCenter defaultCenter]removeObserver:self];
+}
+
+#pragma mark - network
+- (void)loadData{
+    self.tableView.state = WLKTViewStateLoading;
+    WLKTCourseDetailApi *api = [[WLKTCourseDetailApi alloc] initWithCourseId:_courseId latitude:[NSString stringWithFormat:@"%f", self.currentCoordinate.latitude] longitude:[NSString stringWithFormat:@"%f", self.currentCoordinate.longitude]];
+
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        
+        self.tableView.state = WLKTViewStateNormal;
+        [self.tableView.mj_header endRefreshing];
+        self.data = [WLKTCDData modelWithJSON:request.responseJSONObject[@"result"]];
+        self.bottomBtns.data = self.data;
+        self.isMorePoint = self.data.point.count > 3;
+        if (self.data.commentlist.list.firstObject.thumb_picture.count) {
+            [self prepareForPhotoBroswerWithImageArray:self.data.commentlist.list.firstObject.picture];
+        }
+        self.tableView.tableFooterView = self.footerView;
+        [self.tableView reloadData];
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        [self.tableView.mj_header endRefreshing];
+        self.tableView.state = WLKTViewStateError;
+        WS(weakSelf);
+        self.tableView.emptyButtonClickBlock = ^{
+            [weakSelf loadData];
+        };
+    }];
+}
+
+
+#pragma mark - table view
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    if (self.data) {
+        return self.sectionArr.count;
+    }
+    return 0;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+//    @[@"", @"", @"上课地点", @"问答", @"评价", @"机构", @"相关课程"]
+    switch (section) {
+        case 1://teacher
+             return self.data.tlist.count ? 1 : 0;
+            
+        case 2://上课地点
+            if (self.data.point.count > 3) {
+                return self.isMorePoint ? 3 : self.data.point.count;
+            }
+            return self.data.point.count;
+
+        case 3://问答
+            return self.data.queslist.list.count > 2 ? 2 : self.data.queslist.list.count;
+            
+        case 4://评价
+            return self.data.commentlist.list.count ? 1 : 0;
+            
+        case 6:
+            return self.data.aboutlist.count ? 1 : 0;
+            
+        default:
+            return 1;
+    }
+    
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (indexPath.section == 0) {
+        int count = 0;
+        count += self.data.youhui.count > 2 ? 2 : self.data.youhui.count;
+        count += self.data.yhq.count ? 1 : 0;
+        count += self.data.license.count ? 1 : 0;
+        CGFloat pin = self.data.courseinfo.have_pg.intValue == 1 ? 120 *ScreenRatio_6 : 0;
+        return 396 *ScreenRatio_6 + count *35 *ScreenRatio_6 + pin;
+        
+    }
+    if (indexPath.section == 1) {//teacher
+        return self.data.tlist.count ? 130 *ScreenRatio_6 : 0;
+    }
+    if (indexPath.section == 2) {//上课地点
+        return 45 *ScreenRatio_6;
+    }
+    if (indexPath.section == 3) {//问答
+        if (self.data.queslist.list.count) {
+            return 30 *ScreenRatio_6;
+        }
+    }
+    if (indexPath.section == 4) {//评价
+        if (!self.data.commentlist.list.count) {
+            return 0;
+        }
+        int imgH = self.data.commentlist.list.firstObject.thumb_picture.count ? 60 *ScreenRatio_6 : 0;
+        return 120 *ScreenRatio_6 + imgH;
+    }
+    if (indexPath.section == 5) {//机构
+        return 90 *ScreenRatio_6;
+    }
+    if (indexPath.section == 6) {//相关课程
+        return (self.data.aboutlist.count + 1) /2 *200 *ScreenRatio_6 + 20;
+    }
+    
+    return 0;
+
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    if (section == 1) {
+        return 10 *ScreenRatio_6;
+    }
+    if (section > 1 && section != 6) {
+        return 50 *ScreenRatio_6;
+    }
+    if (section == 6) {
+        return 70 *ScreenRatio_6;
+    }
+    return 0.01;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    if (section == 2 && self.isMorePoint) {//上课地点
+        return 40 *ScreenRatio_6;
+    }
+    if (section == 3) {//问答
+        return 60 *ScreenRatio_6;
+    }
+    if (section == 4 && self.data.commentlist.list.count) {//评价
+        return 60 *ScreenRatio_6;
+    }
+    return 0.01;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    UITableViewCell *cell = [UITableViewCell new];
+    if (indexPath.section == 0) {//head
+        [self.headerCell setCellData:self.data];
+        cell = self.headerCell;
+    }
+    if (indexPath.section == 1) {//teacher
+        WLKTCDTeacherCell *c = [[WLKTCDTeacherCell alloc]init];
+        c.data = self.data;
+        c.delegate = self;
+        cell = c;
+    }
+    if (indexPath.section == 2) {//上课地点
+        WLKTCDLocationCell *c = [[WLKTCDLocationCell alloc]init];
+        c.data = self.data.point[indexPath.row];
+        cell = c;
+    }
+    if (indexPath.section == 3) {//问答
+        WLKTCD_Q_A_cell *c = [[WLKTCD_Q_A_cell alloc]init];
+        c.data = self.data.queslist.list[indexPath.row];
+        cell = c;
+    }
+    if (indexPath.section == 4) {//评价
+        WLKTCDEvaluationCell *c = [[WLKTCDEvaluationCell alloc]init];
+        c.delegate = self;
+        c.data = self.data.commentlist.list.firstObject;
+        cell = c;
+    }
+    if (indexPath.section == 5) {//机构
+        WLKTCDSchoolCell *c = [[WLKTCDSchoolCell alloc]initWithData:self.data.schinfo];
+        cell = c;
+    }
+    if (indexPath.section == 6) {//相关课程
+        WLKTCDOtherCourseCell *c = [[WLKTCDOtherCourseCell alloc]init];
+        c.data = self.data;
+        c.delegate = self;
+        cell = c;
+    }
+    
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    UIView *view = [UIView new];
+    view.backgroundColor = [UIColor whiteColor];
+    
+    if (section == 1) {
+        UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 10 *ScreenRatio_6)];
+        v.backgroundColor = kMainBackgroundColor;
+        return v;
+    }
+    if (section == 2) {//上课地点
+        WLKTCDTableSectionView *v = [WLKTCDTableSectionView TableSectionViewNormal:CGRectMake(0, 0, ScreenWidth, 50 *ScreenRatio_6) leftTitle:@"上课地点" right:nil callback:nil];
+        return v;
+    }
+    if (section == 3) {//问答
+        NSString *right = @"暂无问答";
+        if (self.data.queslist.list.count) {
+            right = [NSString stringWithFormat:@"共%@个提问", self.data.queslist.num];
+        }
+        WLKTCDTableSectionView *v = [WLKTCDTableSectionView TableSectionViewNormal:CGRectMake(0, 0, ScreenWidth, 50 *ScreenRatio_6) leftTitle:@"问答" right:right callback:^{
+            if ([self.parentViewController isKindOfClass:[WMPageController class]]) {
+                WMPageController *pvc = (WMPageController *)self.parentViewController;
+                pvc.selectIndex = 2;
+            }
+        }];
+        return v;
+    }
+    if (section == 4) {//评价
+        NSString *title = @"评价";
+        NSString *right = @"暂无评价";
+        if (self.data.commentlist.list.count) {
+            title = [NSString stringWithFormat:@"评价(%@)", self.data.commentlist.num];
+            right = [NSString stringWithFormat:@"好评度%@", self.data.commentlist.hpd];
+        }
+        WLKTCDTableSectionView *v = [WLKTCDTableSectionView TableSectionViewNormal:CGRectMake(0, 0, ScreenWidth, 50 *ScreenRatio_6) leftTitle:title right:right callback:^{
+            if ([self.parentViewController isKindOfClass:[WMPageController class]]) {
+                WMPageController *pvc = (WMPageController *)self.parentViewController;
+                pvc.selectIndex = 3;
+            }
+        }];
+        return v;
+    }
+    if (section == 5) {//机构
+        WLKTCDTableSectionView *v = [WLKTCDTableSectionView TableSectionViewSchool:CGRectMake(0, 0, ScreenWidth, 50 *ScreenRatio_6) leftTitle:self.data.schinfo.schoolname callback:^{
+            WLKTSchoolVC *vc = [[WLKTSchoolVC alloc]initWithSchoolId:self.data.schinfo.suid];
+            [self.navigationController pushViewController:vc animated:YES];
+        }];
+        return v;
+    }
+    if (section == 6) {//相关课程
+        UIView *v = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 60 *ScreenRatio_6)];
+        v.backgroundColor = [UIColor whiteColor];
+        
+        UIView *sep = [[UIView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 10 *ScreenRatio_6)];
+        sep.backgroundColor = kMainBackgroundColor;
+        [v addSubview:sep];
+        
+        UILabel *l = [UILabel new];
+        l.font = [UIFont systemFontOfSize:16 *ScreenRatio_6];
+        l.textColor = KMainTextColor_3;
+        l.text = @"相关课程";
+        [v addSubview:l];
+        [l mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.centerX.mas_equalTo(v);
+            make.top.mas_equalTo(v).offset(30 *ScreenRatio_6);
+        }];
+        
+        UIView *separator = [[UIView alloc]initWithFrame:CGRectMake(0, 59 *ScreenRatio_6, ScreenWidth, 0.5)];
+        separator.backgroundColor = kMainBackgroundColor;
+        [v addSubview:separator];
+        
+        return v;
+    }
+    
+    return view;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section{
+    UIView *view = [UIView new];
+    
+    if (section == 2) {//上课地点
+        self.isMorePoint = self.data.point.count > 3;
+        WLKTCDTableSectionView *v = [WLKTCDTableSectionView TableSectionViewFoot:CGRectMake(0, 0, ScreenWidth, 50 *ScreenRatio_6) title:nil callback:^{
+            self.isMorePoint = false;
+            [self.tableView reloadSection:2 withRowAnimation:UITableViewRowAnimationNone];
+        }];
+        if (!self.isMorePoint) {
+            return view;
+        }
+        return v;
+    }
+    if (section == 3) {//问答
+        WLKTCDTableSectionView *v = [WLKTCDTableSectionView TableSectionViewFoot:CGRectMake(0, 0, ScreenWidth, 50 *ScreenRatio_6) title:@"我来问问" callback:^{
+            WLKTCDMoreQuestionVC *vc = [[WLKTCDMoreQuestionVC alloc]initWithData:self.data.courseinfo];
+            [self.navigationController pushViewController:vc animated:YES];
+        }];
+        
+        return v;
+    }
+    if (section == 4 && self.data.commentlist.list.count) {//评价
+        WLKTCDTableSectionView *v = [WLKTCDTableSectionView TableSectionViewFoot:CGRectMake(0, 0, ScreenWidth, 50 *ScreenRatio_6) title:@"全部评价" callback:^{
+            if ([self.parentViewController isKindOfClass:[WMPageController class]]) {
+                WMPageController *pvc = (WMPageController *)self.parentViewController;
+                pvc.selectIndex = 3;
+            }
+        }];
+        
+        return v;
+    }
+    
+    return view;
+    
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+
+    if (indexPath.section == 2) {//上课地点
+        WLKTCDMapViewController *vc = [[WLKTCDMapViewController alloc]init];
+        vc.data = self.data;
+        vc.currentPoint = self.data.point[indexPath.row];
+        [self presentViewController:vc animated:YES completion:nil];
+    }
+    if (indexPath.section == 3) {//问答
+        WLKTCDMore_QA_detailVC *vc = [[WLKTCDMore_QA_detailVC alloc]initWithQuestionId:self.data.queslist.list[indexPath.row].qid];
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+}
+
+#pragma mark - scroll view
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView{
+    
+    if (!self.isShowIntro) {
+        [self.contentScroll setContentOffset:CGPointMake(0, 0)];
+    }
+
+    if (scrollView == self.tableView) {
+        self.backButton.alpha = self.currentAlpha > 0.1 ? 0: 1;
+        self.popoverButton.alpha = self.currentAlpha > 0.1 ? 0: 1;
+        
+        if (self.currentAlpha > 0.1) {
+            [self.navigationController setNavigationBarHidden:NO animated:NO];
+        }
+        else{
+            [self.navigationController setNavigationBarHidden:YES animated:NO];
+        }
+        self.navigationController.navigationBar.titleTextAttributes = @{NSForegroundColorAttributeName: [UIColor colorWithWhite:0.2 alpha:self.currentAlpha]};
+        [self.navigationController.navigationBar setBackgroundImage:[UIImage imageWithColor:[UIColor colorWithWhite:1.0 alpha:self.currentAlpha >= 1 ? 0.99 : self.currentAlpha]] forBarMetrics:UIBarMetricsDefault];
+        [self.navigationController.navigationBar setShadowImage:[UIImage imageWithColor:[UIColor colorWithWhite:15/16.0 alpha:self.currentAlpha >= 1 ? 0.99 : self.currentAlpha]]];
+        self.currentAlpha = scrollView.contentOffset.y / 200.0 >= 1.0 ? 1 : scrollView.contentOffset.y / 200.0;
+        
+        if (self.data) {
+            [[NSNotificationCenter defaultCenter]postNotificationName:@"kCourseDetailScrollNoti"
+                                                               object:nil
+                                                             userInfo:@{@"isShowBarItem": @(self.currentAlpha >= 0.1),
+                                                                        @"data": self.data,
+                                                                        @"alpha": @(self.currentAlpha)
+                                                                        }];
+        }
+        
+    }
+    
+}
+
+#pragma mark - action
+- (void)introTableViewScrollNoti{
+    [self.contentScroll setContentOffset:CGPointMake(0, ScreenHeight - 50 - NavigationBarAndStatusHeight)];
+}
+
+- (void)courseIntroBackToDetailNoti{
+    [self.introVC.tableView.mj_header endRefreshing];
+    [UIView animateWithDuration:0.7 animations:^{
+        [self.contentScroll setContentOffset:CGPointMake(0, 0)];
+    }];
+    self.isShowIntro = false;
+}
+
+- (void)backButtonAct{
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (void)shareButtonAct:(id)sender{//分享
+    if (self.data.courseinfo.shareappurl) {
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"isSNSPush"];
+        for (UIView *v in self.view.subviews) {
+            if ([v isKindOfClass:[WLKTCustomShare class]]) {
+                [v removeFromSuperview];
+            }
+        }
+        WLKTCustomShare *v = [[WLKTCustomShare alloc]initWithTitle:self.data.courseinfo.coursename detail:nil urlImage:self.data.courseinfo.img url:self.data.courseinfo.shareappurl taget:self height:ScreenHeight];
+        [self.view addSubview:v];
+    }
+}
+
+- (void)tableViewPanAct:(UIPanGestureRecognizer *)sender{
+    if (sender.state == UIGestureRecognizerStateEnded) {
+        UIScrollView *scrollView = (UIScrollView *)(sender.view);
+        CGPoint offset = scrollView.contentOffset;
+        CGSize size = scrollView.contentSize;
+        if (offset.y + ScreenHeight - 50 - 50 >= size.height) {
+        
+            [self.introVC.view setOrigin:CGPointMake(0, ScreenHeight - 50 - NavigationBarAndStatusHeight)];
+            self.introVC.bottomBtns.hidden = YES;
+            self.isShowIntro = YES;
+            [self.contentScroll addSubview:self.introVC.view];
+            
+            [UIView animateWithDuration:0.7 animations:^{
+                [self.contentScroll setContentOffset:CGPointMake(0, ScreenHeight - 50 - NavigationBarAndStatusHeight)];
+            }];
+            
+        }
+    }
+}
+/*
+- (void)popoverButtonAct:(id)sender{
+    WLKTCourseDetailPopoverVC *vc = [[WLKTCourseDetailPopoverVC alloc]init];
+    vc.delegate = self;
+    vc.preferredContentSize = CGSizeMake(110, 240);
+    vc.modalPresentationStyle = UIModalPresentationPopover;
+    UIPopoverPresentationController *pop = [vc popoverPresentationController];
+    pop.delegate = self;
+    pop.backgroundColor = [UIColor whiteColor];
+    pop.permittedArrowDirections = UIPopoverArrowDirectionUp;
+    if ([sender isKindOfClass:[UIButton class]]) {
+        pop.sourceView = sender;
+        pop.sourceRect = ((UIButton *)sender).bounds;
+    }
+    else{
+        pop.barButtonItem = sender;
+    }
+    [self presentViewController:vc animated:NO completion:nil];
+}
+*/
+
+//截屏响应
+- (void)userDidTakeScreenshot:(NSNotification *)notification{
+    //人为截屏, 模拟用户截屏行为, 获取所截图片
+    UIImage *image_ = [WLKTQRShare imageWithScreenshot];
+    UIWindow *keyWindow = [[UIApplication sharedApplication]keyWindow];
+    if (_isHidden) {
+        WLKTScreenshotsPopView *popView = [WLKTScreenshotsPopView initWithScreenShots:image_ selectSheetBlock:^(SelectSheetType type) {
+            if (type == WeiXinSelectSheetType){
+                [WLKTQRShare shareImageAndTextToPlatformType:UMSocialPlatformType_WechatSession image:[WLKTQRShare combineScreenshotsImage:image_ URLString:self.data.courseinfo.shareappurl]];
+            }
+            if (type == WeiXinCircleSelectSheetType){
+                [WLKTQRShare shareImageAndTextToPlatformType:UMSocialPlatformType_WechatTimeLine image:[WLKTQRShare combineScreenshotsImage:image_ URLString:self.data.courseinfo.shareappurl]];
+            }
+            if (type == QQSelectSheetType) {
+                [WLKTQRShare shareImageAndTextToPlatformType:UMSocialPlatformType_QQ image:[WLKTQRShare combineScreenshotsImage:image_ URLString:self.data.courseinfo.shareappurl]];
+            }
+            if (type == SinaSelectSheetType) {
+                [WLKTQRShare shareImageAndTextToPlatformType:UMSocialPlatformType_Sina image:[WLKTQRShare combineScreenshotsImage:image_ URLString:self.data.courseinfo.shareappurl]];
+            }
+        }];
+        [popView show];
+        
+        [keyWindow addSubview:popView];
+        _isHidden = NO;
+        popView.hiddenBlock = ^{
+            self.isHidden = YES;
+        };
+    }else{
+        
+    }
+}
+
+#pragma mark - head cell delegate
+- (void)didSelectedBannerViewItem:(NSInteger)index{
+//    if (self.data.topimage.count > index) {
+//        CDDataTopImage *top = self.data.topimage[index];
+//        if ([top.type isEqualToString:@"video"]) {
+//
+//        }
+//    }
+}
+
+- (void)didClickAttentionButton:(UIButton *)sender{
+    if (!TheCurUser) {
+        [SVProgressHUD showInfoWithStatus:@"请先登录"];
+        return;
+    }
+    [SVProgressHUD show];
+    if ([sender.titleLabel.text isEqualToString:@"关注"]) {
+        WLKTCourseCollectApi *api = [[WLKTCourseCollectApi alloc]initWithCourseId:self.data.courseinfo.cid];
+        [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [SVProgressHUD dismiss];
+                [sender setTitle:@"已关注" forState:UIControlStateNormal];
+                [sender setTitleColor:kMainTextColor_red forState:UIControlStateNormal];
+                [sender setImage:[UIImage imageNamed:@"已关注"] forState:UIControlStateNormal];
+            });
+        } failure:^(__kindof YTKBaseRequest *request) {
+            ShowApiError
+        }];
+    }
+    else{//取消关注
+        WLKTCourseCancelCollectApi *api = [[WLKTCourseCancelCollectApi alloc]initWithCourseId:self.data.courseinfo.cid];
+        [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [SVProgressHUD dismiss];
+                [sender setTitle:@"关注" forState:UIControlStateNormal];
+                [sender setTitleColor:KMainTextColor_9 forState:UIControlStateNormal];
+                [sender setImage:[UIImage imageNamed:@"关注"] forState:UIControlStateNormal];
+            });
+        } failure:^(__kindof YTKBaseRequest *request) {
+            ShowApiError
+        }];
+    }
+    
+}
+
+- (void)didSelectedYouhuiType:(CDHeaderCellYouhuiType)type{
+    if (type == CDHeaderCellYouhuiTypeZhe_jian) {
+        WLKTCDYouhuiAlert *v = [[WLKTCDYouhuiAlert alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+        v.data = self.data;
+        [[UIApplication sharedApplication].keyWindow addSubview:v];
+    }
+    if (type == CDHeaderCellYouhuiTypeCoupon) {
+        WLKTCDCouponAlert *v = [[WLKTCDCouponAlert alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+        v.data = self.data;
+        [[UIApplication sharedApplication].keyWindow addSubview:v];
+    }
+}
+
+- (void)didClickLicenseButton{
+    WLKTCDRenzhengAlert *v = [[WLKTCDRenzhengAlert alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+    v.data = self.data;
+    [[UIApplication sharedApplication].keyWindow addSubview:v];
+}
+
+- (void)didClickRuleAlertButton{
+    WLKTCDPinAlertView *v = [[WLKTCDPinAlertView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+    [[UIApplication sharedApplication].keyWindow addSubview:v];
+}
+
+#pragma mark - CDTeacherCellDelegate
+- (void)didClickTeacherItem{
+    WLKTCDTeacherAlert *alert = [[WLKTCDTeacherAlert alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+    alert.data = self.data;
+    [[UIApplication sharedApplication].keyWindow addSubview:alert];
+}
+
+#pragma mark - CDEvaluationDelegate
+- (void)didSelectedImage:(NSInteger)index{
+    [self pushPhotoBroswerWithStyle:LGShowImageTypeImageBroswer seletedIndex:[NSIndexPath indexPathForItem:index inSection:0]];
+}
+
+#pragma mark - LGPhotoPickerBrowserViewControllerDataSource
+//给照片浏览器传image的时候先包装成LGPhotoPickerBrowserPhoto对象
+- (void)prepareForPhotoBroswerWithImageArray:(NSArray *)imageArray {
+    self.LGPhotoPickerBrowserPhotoArray = [[NSMutableArray alloc] init];
+    for (int i = 0; i < imageArray.count; i++) {
+        LGPhotoPickerBrowserPhoto *photo = [[LGPhotoPickerBrowserPhoto alloc] init];
+        photo.photoURL = [NSURL URLWithString:imageArray[i]];
+        [self.LGPhotoPickerBrowserPhotoArray addObject:photo];
+    }
+}
+//初始化图片浏览器
+- (void)pushPhotoBroswerWithStyle:(LGShowImageType)style seletedIndex:(NSIndexPath *)indexPath{
+    LGPhotoPickerBrowserViewController *BroswerVC = [[LGPhotoPickerBrowserViewController alloc] init];
+    BroswerVC.delegate = self;
+    BroswerVC.dataSource = self;
+    BroswerVC.showType = style;
+    BroswerVC.currentIndexPath = indexPath;
+    BroswerVC.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
+    self.showType = style;
+    [self presentViewController:BroswerVC animated:YES completion:nil];
+}
+
+- (NSInteger)photoBrowser:(LGPhotoPickerBrowserViewController *)photoBrowser numberOfItemsInSection:(NSUInteger)section{
+    if (self.showType == LGShowImageTypeImageBroswer) {
+        return self.LGPhotoPickerBrowserPhotoArray.count;
+    } else {
+        NSLog(@"非法数据源");
+        return 0;
+    }
+}
+
+- (id<LGPhotoPickerBrowserPhoto>)photoBrowser:(LGPhotoPickerBrowserViewController *)pickerBrowser photoAtIndexPath:(NSIndexPath *)indexPath{
+    if (self.showType == LGShowImageTypeImageBroswer) {
+        return [self.LGPhotoPickerBrowserPhotoArray objectAtIndex:indexPath.item];
+    } else{
+        NSLog(@"非法数据源");
+        return nil;
+    }
+}
+
+#pragma mark - CDOtherCourseDelegate
+- (void)didSelectedCourseItem:(NSInteger)index{
+    WLKTCDPageController *vc = [[WLKTCDPageController alloc]initWithCourseId:self.data.aboutlist[index].cid];
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+#pragma mark - CDBottomButtonDelegate
+- (void)CourseDetailBottomButtonDidSelectedButton:(UIButton *)button{
+    
+    if (button.tag == 0) {//隐私电话
+        WLKTCDPhoneAlert *v = [[WLKTCDPhoneAlert alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+        v.delegate = self;
+        [[UIApplication sharedApplication].keyWindow addSubview:v];
+    }
+    if (button.tag == 1) {//在线客服
+        WLKTOnlineServiceVC *vc = [[WLKTOnlineServiceVC alloc]init];
+        vc.url = self.data.courseinfo.kftokenjs;
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+    if (button.tag == 2) {//预约试听
+
+        if (self.data.courseinfo.have_pg.intValue == 1) {//有拼购
+            [self addPayCourseInfoViewWithArray:self.data.price_system isPingou:false];
+        }
+        else{
+            if (!TheCurUser) {
+                @weakify(self)
+                [self loginWithComepletion:^ {
+                    @strongify(self)
+                    [SVProgressHUD showProgress:-1 status:@"正在预约..."];
+                    WLKTCourseDetailListenApi *api = [[WLKTCourseDetailListenApi alloc]initWithSchoolId:self.data.schinfo.suid phone:@"" content:@"" courseId:self.data.courseinfo.cid];
+                    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+                        [SVProgressHUD dismiss];
+                        NSString *code = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"errorCode"]];
+                        if ([code isEqualToString:@"0"]) {
+                            WLKTCDAppointmentStateAlert *alert = [[WLKTCDAppointmentStateAlert alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+                            [self.view.window addSubview:alert];
+                            alert.state = CDAppointmentStateSuccess;
+                        }
+                        else{
+                            [SVProgressHUD showErrorWithStatus:[NSString stringWithFormat:@"%@", request.responseJSONObject[@"message"]]];
+                        }
+                        
+                    } failure:^(__kindof YTKBaseRequest *request) {
+                        [SVProgressHUD dismiss];
+                        WLKTCDAppointmentStateAlert *alert = [[WLKTCDAppointmentStateAlert alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+                        [self.view.window addSubview:alert];
+                        alert.state = CDAppointmentStatefail;
+                        
+                    }];
+                }];
+                
+            } else {
+                [SVProgressHUD showProgress:-1 status:@"正在预约..."];
+                WLKTCourseDetailListenApi *api = [[WLKTCourseDetailListenApi alloc]initWithSchoolId:self.data.schinfo.suid phone:@"" content:@"" courseId:self.data.courseinfo.cid];
+                [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+                    [SVProgressHUD dismiss];
+                    NSString *code = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"errorCode"]];
+                    if ([code isEqualToString:@"0"]) {
+                        WLKTCDAppointmentStateAlert *alert = [[WLKTCDAppointmentStateAlert alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+                        alert.state = CDAppointmentStateSuccess;
+                        [self.view.window addSubview:alert];
+                    }
+                    else{
+                        [SVProgressHUD showErrorWithStatus:[NSString stringWithFormat:@"%@", request.responseJSONObject[@"message"]]];
+                    }
+                    
+                } failure:^(__kindof YTKBaseRequest *request) {
+                    [SVProgressHUD dismiss];
+                    WLKTCDAppointmentStateAlert *alert = [[WLKTCDAppointmentStateAlert alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight)];
+                    alert.state = CDAppointmentStatefail;
+                    [self.view.window addSubview:alert];
+                }];
+            }
+
+        }
+       
+    }
+    if (button.tag == 3) {//立即购买
+
+        if (!TheCurUser) {
+            @weakify(self)
+            [self loginWithComepletion:^ {
+                @strongify(self)
+                [self.navigationController dismissViewControllerAnimated:YES completion:nil];
+                if (self.data.courseinfo.have_pg.intValue == 1) {//有拼购
+                    [self addPayCourseInfoViewWithArray:self.data.pg_price_system isPingou:YES];
+                
+                }
+                else{
+                    [self addPayCourseInfoViewWithArray:self.data.price_system isPingou:false];
+                }
+            }];
+            
+        } else {
+            if (self.data.courseinfo.have_pg.intValue == 1) {//有拼购
+                [self addPayCourseInfoViewWithArray:self.data.pg_price_system isPingou:YES];
+            }
+            else{
+                [self addPayCourseInfoViewWithArray:self.data.price_system isPingou:false];
+            }
+        }
+    }
+}
+
+- (void)addPayCourseInfoViewWithArray:(NSArray *)array isPingou:(BOOL)isPingou{
+    WLKTCDPayAlertView *v = [[WLKTCDPayAlertView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight) target:self isPingou:isPingou];
+    v.courseData = self.data;
+    v.data = array;
+    v.currentCoordinate = self.currentCoordinate;
+    [[UIApplication sharedApplication].keyWindow addSubview:v];
+    
+}
+
+#pragma mark - 隐私电话 Delegate
+- (void)didClickCall:(NSString *)number{
+    WLKTPolicyPhoneApi *api = [[WLKTPolicyPhoneApi alloc]initWithType:WLKTPolicyPhoneTypeCourse typeId:self.data.courseinfo.cid phone:number];
+    [api startWithCompletionBlockWithSuccess:^(__kindof YTKBaseRequest *request) {
+        NSString *code = [NSString stringWithFormat:@"%@", request.responseJSONObject[@"errorCode"]];
+        if ([code isEqualToString:@"0"]) {
+            NSString* str = [NSString stringWithFormat:@"telprompt://%@", request.responseJSONObject[@"result"][@"phone"]];
+            [[UIApplication sharedApplication] openURL:[NSURL URLWithString:str]];
+        }
+        else{
+            [SVProgressHUD showInfoWithStatus:request.responseJSONObject[@"message"]];
+        }
+        
+    } failure:^(__kindof YTKBaseRequest *request) {
+        
+    }];
+}
+
+#pragma mark - LSGLoginCoordinatorDelegate
+- (void)loginCoordinatorDidFinishLogin:(WLKTLoginCoordinator *)loginCoordinator {
+    if (_loginBlock) {
+        _loginBlock();
+    }
+    
+    [_childCoordinator removeObject:loginCoordinator];
+}
+
+- (void)loginCoordinatorDidFinishLogin:(WLKTLoginCoordinator *)coordinator handler:(void (^)(UIViewController *))handler{
+    if (_loginBlock) {
+        _loginBlock();
+        handler(self);
+    }
+    
+    [_childCoordinator removeObject:coordinator];
+}
+
+- (void)loginCoordinatorDidRequestDismissal:(WLKTLoginCoordinator *)loginCoordinator {
+    [self.navigationController dismissViewControllerAnimated:YES completion:^{
+        [self.childCoordinator removeObject:loginCoordinator];
+    }];
+}
+
+- (void)loginWithComepletion:(void (^)(void))completion {
+    WLKTLoginCoordinator *cr = [WLKTLoginCoordinator new];
+    cr.delegate = self;
+    [self.childCoordinator addObject:cr];
+    self.loginBlock = completion;
+    [self.navigationController presentViewController:cr.navigationController animated:YES completion:nil];
+}
+
+#pragma mark - CoreLocation 代理
+-(void)locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray *)locations{
+    CLLocation *location = [locations firstObject];//取出第一个位置
+    NSDictionary* testdic = BMKConvertBaiduCoorFrom(location.coordinate,BMK_COORDTYPE_GPS);
+    self.currentCoordinate = BMKCoorDictionaryDecode(testdic);
+    [self loadData];
+    //如果不需要实时定位，使用完即关闭定位服务
+    [_locationManager stopUpdatingLocation];
+}
+
+- (void)setCLLocation{
+    if(![CLLocationManager locationServicesEnabled]){
+        UIAlertController *al = [UIAlertController alertControllerWithTitle:@"打开[定位服务]来允许[未来课堂]确定您的位置" message:@"请在系统设置中开启定位服务(设置>隐私>定位服务>开启)" preferredStyle:UIAlertControllerStyleAlert];
+        UIAlertAction *cancel = [UIAlertAction actionWithTitle:@"否" style:UIAlertActionStyleCancel handler:nil];
+        [al addAction:cancel];
+        UIAlertAction *def = [UIAlertAction actionWithTitle:@"是" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            //跳转到定位权限页面
+            NSURL *url = [NSURL URLWithString:UIApplicationOpenSettingsURLString];
+            if( [[UIApplication sharedApplication]canOpenURL:url] ) {
+                [[UIApplication sharedApplication] openURL:url];
+            }
+        }];
+        [al addAction:def];
+        [self presentViewController:al animated:YES completion:nil];
+    }
+}
+
+#pragma mark - set
+- (void)setIsShowIntro:(BOOL)isShowIntro{
+    _isShowIntro = isShowIntro;
+    [[NSNotificationCenter defaultCenter]postNotificationName:@"kCourseShowIntroNoti" object:nil userInfo:@{@"isShowIntro": @(isShowIntro)}];
+}
+
+#pragma mark - get
+- (WLKTCDHeaderCell *)headerCell{
+    if (!_headerCell) {
+        _headerCell = [[WLKTCDHeaderCell alloc]init];
+        _headerCell.delegate = self;
+    }
+    return _headerCell;
+}
+- (UIButton *)backButton{
+    if (!_backButton) {
+        _backButton = [[UIButton alloc]initWithFrame:CGRectMake(10, 27 + IphoneXBottomInsetHeight, 30, 30)];
+        [_backButton setImage:[UIImage imageNamed:@"返回"] forState:UIControlStateNormal];
+        [_backButton addTarget:self action:@selector(backButtonAct) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _backButton;
+}
+- (UIButton *)popoverButton{
+    if (!_popoverButton) {
+        _popoverButton = [[UIButton alloc]initWithFrame:CGRectMake(ScreenWidth - 42, 27 + IphoneXBottomInsetHeight, 30, 30)];
+        [_popoverButton setImage:[UIImage imageNamed:@"更多"] forState:UIControlStateNormal];
+        [_popoverButton addTarget:self action:@selector(shareButtonAct:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _popoverButton;
+}
+- (CLLocationManager *)locationManager{
+    if (!_locationManager) {
+        _locationManager = [[CLLocationManager alloc] init];
+        // 版本适配
+        if ([[UIDevice currentDevice].systemVersion floatValue] >= 8.0) {
+            [_locationManager requestWhenInUseAuthorization];
+        }
+        //设置代理
+        _locationManager.delegate = self;
+        //设置定位精度
+        _locationManager.desiredAccuracy = kCLLocationAccuracyBest;
+        //定位频率,每隔多少米定位一次
+        _locationManager.distanceFilter = 10.0;//十米定位一次
+    }
+    return _locationManager;
+}
+- (UIScrollView *)contentScroll{
+    if (!_contentScroll) {
+        _contentScroll = [[UIScrollView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight - 50)];
+        _contentScroll.backgroundColor = [UIColor whiteColor];
+        _contentScroll.delegate = self;
+        _contentScroll.showsVerticalScrollIndicator = false;
+        _contentScroll.contentSize = CGSizeMake(0, (ScreenHeight - 50) *2);
+        _contentScroll.scrollEnabled = false;
+    }
+    return _contentScroll;
+}
+- (UITableView *)tableView{
+    if (!_tableView) {
+        _tableView = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, ScreenHeight - 50) style:UITableViewStyleGrouped];
+        _tableView.delegate = self;
+        _tableView.dataSource = self;
+        _tableView.backgroundColor = kMainBackgroundColor;
+        _tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+        [_tableView.panGestureRecognizer addTarget:self action:@selector(tableViewPanAct:)];
+    }
+    return _tableView;
+}
+- (WLKTCDBottomButtons *)bottomBtns{
+    if (!_bottomBtns) {
+        _bottomBtns = [[WLKTCDBottomButtons alloc]initWithFrame:CGRectMake(0, ScreenHeight - 50, ScreenWidth, 50)];
+        _bottomBtns.delegate = self;
+    }
+    return _bottomBtns;
+}
+- (UILabel *)footerView{
+    if (!_footerView) {
+        _footerView = [[UILabel alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 50 *ScreenRatio_6)];
+        _footerView.backgroundColor = kMainBackgroundColor;
+        _footerView.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        _footerView.text = @"上拉显示更多介绍";
+        _footerView.textColor = KMainTextColor_9;
+        _footerView.textAlignment = NSTextAlignmentCenter;
+    }
+    return _footerView;
+}
+- (NSMutableArray *)childCoordinator {
+    if (!_childCoordinator) {
+        _childCoordinator = [NSMutableArray array];
+    }
+    return _childCoordinator;
+}
+- (NSArray *)sectionArr{
+    if (!_sectionArr) {
+        _sectionArr = @[@"", @"", @"上课地点", @"问答", @"评价", @"机构", @"相关课程"];
+    }
+    return _sectionArr;
+}
+
+@end

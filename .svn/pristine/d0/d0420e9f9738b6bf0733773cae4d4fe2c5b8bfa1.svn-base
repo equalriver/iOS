@@ -1,0 +1,16 @@
+//
+//  WLKTCourseDetailEvaluation_2_cell.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/3.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourseDetailNewCourse_commentItem.h"
+#import "MIPhotoBrowser.h"
+
+@interface WLKTCourseDetailEvaluation_2_cell : UITableViewCell
+- (void)setCellData:(WLKTCourseDetailNewCourse_commentItem *)data;
+
+@end

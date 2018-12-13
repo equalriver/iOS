@@ -1,0 +1,15 @@
+//
+//  WLKTCourseDetail_Q_A_cell.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/1.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourseDetailNewCourse_ques.h"
+
+@interface WLKTCourseDetail_Q_A_cell : UITableViewCell
+- (void)setCellData:(WLKTCourseDetailNewCourse_ques *)data index:(NSInteger)index;
+
+@end

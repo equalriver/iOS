@@ -1,0 +1,240 @@
+//
+//  WLKTMyCouponVC.m
+//  wlkt
+//
+//  Created by 尹平江 on 2017/8/10.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTMyCouponVC.h"
+#import "WLKTCouponUnuseTVC.h"
+#import "WLKTCouponRecordTVC.h"
+#import "WLKTCouponOverdueTVC.h"
+#import "WLKTMyCouponBottomView.h"
+#import "WLKTMyCouponTools.h"
+#import "WLKTMyCouponDelApi.h"
+
+@interface WLKTMyCouponVC ()
+@property (strong, nonatomic) WLKTCouponUnuseTVC *unuseTVC;
+@property (strong, nonatomic) WLKTCouponRecordTVC *recordTVC;
+@property (strong, nonatomic) WLKTCouponOverdueTVC *overdueTVC;
+@property (strong, nonatomic) WLKTMyCouponBottomView *bottomView;
+@property (strong, nonatomic) UIBarButtonItem *rightItem;
+
+@property (assign, nonatomic) NSInteger currentIndex;
+@property (assign, nonatomic) BOOL isBottomViewShow;
+@property (assign, nonatomic) CGPoint bottomViewRawCenter;
+@property (strong, nonatomic) WLKTMyCouponData *data;
+
+@end
+
+@implementation WLKTMyCouponVC
+
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        self.title = @"我的优惠券";
+        self.titleColorNormal = [UIColor blackColor];
+        self.titleColorSelected = UIColorHex(33c4da);
+        self.menuViewStyle = WMMenuViewStyleLine;
+        self.menuView.height = 44;
+        self.titleSizeSelected = 14;
+        self.titleSizeNormal = 14;
+        self.menuItemWidth = 100;
+        self.progressWidth = 30;
+    }
+    return self;
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    self.rightItem = [[UIBarButtonItem alloc]initWithTitle:@"管理" style:UIBarButtonItemStylePlain target:self action:@selector(rightEditItemAct:)];
+    self.navigationItem.rightBarButtonItem = self.rightItem;
+    [self.view addSubview:self.bottomView];
+    self.bottomViewRawCenter = self.bottomView.center;
+    self.dataSource = self;
+    self.delegate = self;
+    
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(deleteCouponSuccess) name:@"deleteCouponSuccess" object:nil];
+    [self requestGetCouponWithStatus:self.currentIndex];
+}
+
+- (void)dealloc{
+    [[NSNotificationCenter defaultCenter]removeObserver:self];
+}
+
+#pragma mark - noti
+-(void)deleteCouponSuccess{
+    [self bottomViewCancelAct:self.bottomView.cancelBtn];
+    [self hiddenBottomView];
+    [self.rightItem setTitle:@"管理"];
+    [self requestGetCouponWithStatus:self.currentIndex];
+}
+
+#pragma mark - bottom view action
+- (void)setTableViewEditing:(BOOL)isEditing{
+    switch (self.currentIndex) {
+        case 0:
+            [self.unuseTVC.tableView setEditing:isEditing animated:YES];
+            break;
+        case 1:
+            [self.recordTVC.tableView setEditing:isEditing animated:YES];
+            break;
+        case 2:
+            [self.overdueTVC.tableView setEditing:isEditing animated:YES];
+            break;
+        default:
+            break;
+    }
+}
+
+- (void)rightEditItemAct:(UIBarButtonItem *)sender{
+    self.isBottomViewShow = !self.isBottomViewShow;
+    if (self.isBottomViewShow) {
+        [UIView animateWithDuration:0.25 animations:^{
+            CGPoint center = self.bottomView.center;
+            center.y -= 45;
+            [self.bottomView setCenter:center];
+        }];
+        [sender setTitle:@"取消"];
+        [self setTableViewEditing:YES];
+    }
+    else{
+        [UIView animateWithDuration:0.25 animations:^{
+            CGPoint center = self.bottomView.center;
+            center.y += 45;
+            [self.bottomView setCenter:center];
+        }];
+        [sender setTitle:@"管理"];
+        [self setTableViewEditing:NO];
+    }
+    
+}
+
+- (void)hiddenBottomView {
+    self.isBottomViewShow = NO;
+    if (self.bottomViewRawCenter.y != self.bottomView.center.y) {
+        [UIView animateWithDuration:0.25 animations:^{
+            CGPoint center = self.bottomView.center;
+            center.y += 45;
+            [self.bottomView setCenter:center];
+        }];
+    }
+    [self.rightItem setTitle:@"管理"];
+    [self setTableViewEditing:NO];
+}
+
+- (void)bottomViewSelectedAllAct:(UIButton *)sender{
+    self.bottomView.selectedAllIV.image = [UIImage imageNamed:@"7 勾选"];
+    //!self.myCouponSelectedAllBlock ? : self.myCouponSelectedAllBlock(YES);
+    [[NSNotificationCenter defaultCenter]postNotificationName:@"myCouponSelected" object:nil userInfo:@{@"index" : @(self.currentIndex), @"isSelected" : @(YES)}];
+}
+
+- (void)bottomViewCancelAct:(UIButton *)sender{
+    self.bottomView.selectedAllIV.image = [UIImage imageNamed:@"6 选择"];
+    //!self.myCouponSelectedAllBlock ? : self.myCouponSelectedAllBlock(NO);
+    [[NSNotificationCenter defaultCenter]postNotificationName:@"myCouponSelected" object:nil userInfo:@{@"index" : @(self.currentIndex), @"isSelected" : @(NO)}];
+}
+
+- (void)bottomViewDeleteAct:(UIButton *)sender{
+    [[NSNotificationCenter defaultCenter]postNotificationName:@"myCouponDelete" object:nil userInfo:@{@"index" : @(self.currentIndex)}];
+}
+
+#pragma mark - network
+- (void)requestGetCouponWithStatus:(NSInteger)status{
+    [WLKTMyCouponTools requestWithStatus:status success:^(WLKTMyCouponData *data) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.data = data;
+            NSArray *arr = @[[NSString stringWithFormat:@"未使用（%@）", self.data.weishiyong ? self.data.weishiyong : @"0"],
+                             [NSString stringWithFormat:@"使用记录（%@）", self.data.yishiyong ? self.data.yishiyong : @"0"],
+                             [NSString stringWithFormat:@"已过期（%@）", self.data.guoqi ? self.data.guoqi : @"0"]];
+            [arr enumerateObjectsUsingBlock:^(NSString *obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                [self updateTitle:obj atIndex:idx];
+            }];
+            
+        });
+    } fail:^(NSString *error) {
+        [SVProgressHUD showErrorWithStatus:error];
+    }];
+}
+
+#pragma mark - WMPageController data source & delegate
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView{
+    [super scrollViewDidScroll:scrollView];
+    if (scrollView == self.scrollView) {
+        if (self.isBottomViewShow && scrollView.contentOffset.x != 0) {
+            [self hiddenBottomView];
+        }
+    }
+}
+
+- (NSString *)pageController:(WMPageController *)pageController titleAtIndex:(NSInteger)index{
+    if (index == 0) {
+        return @"未使用";
+    }
+    if (index == 1) {
+        return @"使用记录";
+    }
+    return @"已过期";
+}
+
+- (NSInteger)numbersOfChildControllersInPageController:(WMPageController *)pageController{
+    return 3;
+}
+
+- (CGRect)pageController:(WMPageController *)pageController preferredFrameForMenuView:(WMMenuView *)menuView{
+    return CGRectMake(0, 0, kScreenWidth, 40);
+}
+
+- (CGRect)pageController:(WMPageController *)pageController preferredFrameForContentView:(WMScrollView *)contentView{
+    return CGRectMake(0, 40, kScreenWidth, kScreenHeight - NavigationBarAndStatusHeight - 40);
+}
+
+- (UIViewController *)pageController:(WMPageController *)pageController viewControllerAtIndex:(NSInteger)index{
+    if (index == 0) {
+        
+        return self.unuseTVC;
+    }
+    if (index == 1) {
+        return self.recordTVC;
+    }
+    return self.overdueTVC;
+    
+}
+
+- (void)pageController:(WMPageController *)pageController didEnterViewController:(__kindof UIViewController *)viewController withInfo:(NSDictionary *)info{
+    self.currentIndex = ((NSNumber *)(info[@"index"])).integerValue;
+
+}
+
+#pragma mark - get
+- (WLKTMyCouponBottomView *)bottomView{
+    if (!_bottomView) {
+        _bottomView = [[WLKTMyCouponBottomView alloc]initWithFrame:CGRectMake(0, ScreenHeight - 64, ScreenWidth, 45)];
+        [_bottomView.selectedAllBtn addTarget:self action:@selector(bottomViewSelectedAllAct:) forControlEvents:UIControlEventTouchUpInside];
+        [_bottomView.cancelBtn addTarget:self action:@selector(bottomViewCancelAct:) forControlEvents:UIControlEventTouchUpInside];
+        [_bottomView.deleteButton addTarget:self action:@selector(bottomViewDeleteAct:) forControlEvents:UIControlEventTouchUpInside];
+    }
+    return _bottomView;
+}
+- (WLKTCouponUnuseTVC *)unuseTVC{
+    if (!_unuseTVC) {
+        _unuseTVC = [[WLKTCouponUnuseTVC alloc]init];
+    }
+    return _unuseTVC;
+}
+- (WLKTCouponRecordTVC *)recordTVC{
+    if (!_recordTVC) {
+        _recordTVC = [[WLKTCouponRecordTVC alloc]init];
+    }
+    return _recordTVC;
+}
+- (WLKTCouponOverdueTVC *)overdueTVC{
+    if (!_overdueTVC) {
+        _overdueTVC = [[WLKTCouponOverdueTVC alloc]init];
+    }
+    return _overdueTVC;
+}
+
+@end

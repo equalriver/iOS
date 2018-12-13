@@ -1,0 +1,152 @@
+//
+//  WLKTPayWayCell.m
+//  wlkt
+//
+//  Created by 尹平江 on 2017/4/27.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTPayWayCell.h"
+
+@implementation WLKTPayWayCell
+
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [self.contentView addSubview:self.bankIconImageView];
+        [self.contentView addSubview:self.bankTitle];
+        [self.contentView addSubview:self.tuijianIV];
+        [self.tuijianIV addSubview:self.tuijianLabel];
+//        [self.contentView addSubview:self.tuijianDetailLabel];
+        [self.contentView addSubview:self.checkImageView];
+        [self.contentView addSubview:self.separatorView_1];
+        [self makeConstraints];
+    }
+
+    return self;
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    self.bankIconImageView.image = nil;
+    self.bankTitle.text = nil;
+    self.checkImageView.image = nil;
+    self.tuijianIV.image = nil;
+}
+
+- (void)setCellData:(NSArray<UIImage *> *)icons title:(NSArray<NSString *> *)titles indexPath:(NSIndexPath *)indexPath selectedItem:(NSInteger)item{
+    self.bankIconImageView.image = icons[indexPath.row];
+    self.bankTitle.text = titles[indexPath.row];
+    if (indexPath.row == 0) {
+        self.tuijianIV.hidden = NO;
+//        self.tuijianDetailLabel.hidden = NO;
+    }
+    else{
+        self.tuijianIV.hidden = YES;
+//        self.tuijianDetailLabel.hidden = YES;
+        
+    }
+    if (indexPath.row == item) {
+        self.checkImageView.image = [UIImage imageNamed:@"正确"];
+    }
+    else{
+        self.checkImageView.image = [UIImage imageNamed:@"圆圈"];
+    }
+}
+
+- (void)makeConstraints{
+    [self.bankIconImageView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(15 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.contentView);
+        make.size.mas_equalTo(CGSizeMake(18 *ScreenRatio_6, 18 *ScreenRatio_6));
+    }];
+    [self.bankTitle mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.bankIconImageView.mas_right).offset(10 *ScreenRatio_6);
+        make.centerY.mas_equalTo(self.contentView);
+    }];
+    [self.tuijianIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.bankTitle.mas_right);
+        make.top.mas_equalTo(self.contentView).offset(10);
+    }];
+    [self.tuijianLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(25, 13));
+        make.right.mas_equalTo(self.tuijianIV.mas_right).offset(-3);
+        make.top.mas_equalTo(self.tuijianIV).offset(2);
+    }];
+    [self.checkImageView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(20 * ScreenRatio_6, 20 * ScreenRatio_6));
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-20 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.contentView);
+    }];
+//    [self.tuijianDetailLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+//        make.right.mas_equalTo(self.checkImageView.mas_left).offset(-6);
+//        make.centerY.mas_equalTo(self.contentView);
+//    }];
+    [self.separatorView_1 mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(ScreenWidth, 1));
+        make.top.mas_equalTo(self.contentView);
+    }];
+}
+
+#pragma mark - get
+
+- (UIImageView *)bankIconImageView{
+    if (!_bankIconImageView) {
+        _bankIconImageView = [[UIImageView alloc]init];
+        
+    }
+    return _bankIconImageView;
+}
+- (UILabel *)bankTitle{
+    if (!_bankTitle) {
+        _bankTitle = [[UILabel alloc]init];
+        _bankTitle.textColor = KMainTextColor_3;
+        _bankTitle.font = [UIFont systemFontOfSize:14];
+    }
+    return _bankTitle;
+}
+- (UIImageView *)tuijianIV{
+    if (!_tuijianIV) {
+        _tuijianIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"课程详情推荐"]];
+    }
+    return _tuijianIV;
+}
+- (UILabel *)tuijianLabel{
+    if (!_tuijianLabel) {
+        _tuijianLabel = [UILabel new];
+        _tuijianLabel.font = [UIFont systemFontOfSize:9];
+        _tuijianLabel.textColor = UIColorHex(ffffff);
+        _tuijianLabel.textAlignment = NSTextAlignmentCenter;
+        _tuijianLabel.text = @"推荐";
+    }
+    return _tuijianLabel;
+}
+//- (UILabel *)tuijianDetailLabel{
+//    if (!_tuijianDetailLabel) {
+//        _tuijianDetailLabel = [UILabel new];
+//        _tuijianDetailLabel.font = [UIFont systemFontOfSize:9];
+//        _tuijianDetailLabel.textColor = UIColorHex(ff5a06);
+//        _tuijianDetailLabel.text = @"天府银行支付，立减5元";
+//        _tuijianDetailLabel.textAlignment = NSTextAlignmentRight;
+//    }
+//    return _tuijianDetailLabel;
+//}
+- (UIView *)separatorView_1{
+    if (!_separatorView_1) {
+        _separatorView_1 = [[UIView alloc]init];
+        _separatorView_1.backgroundColor = fillViewColor;
+    }
+    return _separatorView_1;
+}
+
+- (UIImageView *)checkImageView{
+    if (!_checkImageView) {
+        _checkImageView = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"圆圈"]];
+        
+    }
+    return _checkImageView;
+}
+
+
+@end

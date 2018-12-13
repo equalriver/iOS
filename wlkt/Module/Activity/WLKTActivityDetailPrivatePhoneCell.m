@@ -1,0 +1,57 @@
+//
+//  WLKTActivityDetailPrivatePhoneCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/12/13.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import "WLKTActivityDetailPrivatePhoneCell.h"
+
+@interface WLKTActivityDetailPrivatePhoneCell ()
+@property (strong, nonatomic) UILabel *titleLabel;
+@property (strong, nonatomic) UIImageView *phoneIV;
+
+@end
+
+@implementation WLKTActivityDetailPrivatePhoneCell
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        [self.contentView addSubview:self.titleLabel];
+        [self.contentView addSubview:self.phoneIV];
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void)makeConstraints{
+    [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.contentView).offset(10 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.contentView);
+    }];
+    [self.phoneIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.right.mas_equalTo(self.contentView.mas_right).offset(-10 * ScreenRatio_6);
+        make.centerY.mas_equalTo(self.contentView);
+    }];
+}
+
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [UILabel new];
+        _titleLabel.font = [UIFont systemFontOfSize:14 * ScreenRatio_6];
+        _titleLabel.textColor = KMainTextColor_3;
+        _titleLabel.text = @"咨询电话";
+    }
+    return _titleLabel;
+}
+- (UIImageView *)phoneIV{
+    if (!_phoneIV) {
+        _phoneIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"ysdh"]];
+    }
+    return _phoneIV;
+}
+
+@end
+

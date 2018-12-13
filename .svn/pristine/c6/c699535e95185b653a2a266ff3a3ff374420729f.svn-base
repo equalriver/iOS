@@ -1,0 +1,17 @@
+//
+//  WLKTCourseDetailGoQuestionVC.h
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2017/11/3.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourse.h"
+
+typedef void(^questionSuccessBlock)(void);
+
+@interface WLKTCourseDetailGoQuestionVC : UIViewController
+- (instancetype)initWithCourse:(WLKTCourse *)course;
+@property (copy, nonatomic) questionSuccessBlock successBlock;
+@end

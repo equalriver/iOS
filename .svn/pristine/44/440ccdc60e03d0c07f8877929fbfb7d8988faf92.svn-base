@@ -1,0 +1,58 @@
+//
+//  WLKTOrderView.h
+//  wlkt
+//
+//  Created by 尹平江 on 17/4/8.
+//  Copyright © 2017年 neimbo. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import "WLKTCourse.h"
+
+@interface WLKTOrderView : UIView
+
+- (instancetype)initWithCourseData:(WLKTCourse *)data
+                            target:(__kindof UIViewController *)vc;
+/**
+ *  学校名称
+ */
+@property (copy, nonatomic) NSString *schoolName;
+/**
+ *  学校图片url
+ */
+@property (copy, nonatomic) NSString *schoolImage;
+/**
+ *  课程名称
+ */
+@property (copy, nonatomic) NSString *courseName;
+/**
+ *  单价
+ */
+@property (copy, nonatomic) NSArray *price;
+/**
+ *  授课点
+ */
+@property (copy, nonatomic) NSArray *teachLocationArr;
+/**
+ *  学校id
+ */
+@property (copy, nonatomic) NSString *suid;
+/**
+ *  课程的id
+ */
+@property (copy, nonatomic) NSString *courseId;
+/**
+ *  班课单价
+ */
+@property (copy, nonatomic) NSString *bkprice;
+/**
+ *  一对一单价
+ */
+@property (copy, nonatomic) NSString *oneByOnePrice;
+
+@property (strong, nonatomic) UIView *separatorView_1;
+@property (strong, nonatomic) UIView *separatorView_2;
+@property (strong, nonatomic) UIView *separatorView_3;
+@property (strong, nonatomic) UIView *separatorView_4;
+
+@end

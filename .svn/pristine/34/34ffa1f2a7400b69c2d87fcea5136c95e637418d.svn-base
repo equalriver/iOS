@@ -1,0 +1,288 @@
+//
+//  WLKTHPRecommendNewCourseCell.m
+//  wlkt
+//
+//  Created by nanbojiaoyu on 2018/1/24.
+//  Copyright © 2018年 neimbo. All rights reserved.
+//
+
+#import "WLKTHPRecommendNewCourseCell.h"
+
+@interface RecommendNewCourseCollectionCell: UICollectionViewCell
+@property (strong, nonatomic) UIView *imageView;
+@property (strong, nonatomic) UILabel *titleLabel;
+@property (strong, nonatomic) UILabel *priceLabel;
+@property (strong, nonatomic) UILabel *rawPriceLabel;
+@property (strong, nonatomic) UILabel *courseTypeLabel;
+@property (strong, nonatomic) UIView *tagBgView;
+@property (strong, nonatomic) UIView *rawPriceLine;
+@property (strong, nonatomic) UIImageView *viewsIV;
+@property (strong, nonatomic) UILabel *viewsLabel;
+@property (strong, nonatomic) WLKTCourse *course;
+@end
+
+@implementation RecommendNewCourseCollectionCell
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self.contentView addSubview:self.imageView];
+        [self.contentView addSubview:self.priceLabel];
+        [self.contentView addSubview:self.rawPriceLabel];
+        [self.rawPriceLabel addSubview:self.rawPriceLine];
+        [self.contentView addSubview:self.courseTypeLabel];
+        [self.contentView addSubview:self.tagBgView];
+        [self.contentView addSubview:self.titleLabel];
+        [self.imageView addSubview:self.viewsIV];
+        [self.imageView addSubview:self.viewsLabel];
+        [self makeContraints];
+    }
+    return self;
+}
+
+- (void)prepareForReuse{
+    [super prepareForReuse];
+    [self setNeedsUpdateConstraints];
+    [self updateConstraintsIfNeeded];
+}
+
+- (void)updateConstraints{
+    if (self.course.youhui.count > 0) {
+        [self.tagBgView removeAllSubviews];
+        [self.course.youhui enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            UILabel *l = [UILabel itemLabelWithText:[NSString stringWithFormat:@"%@", obj]];
+            [self.tagBgView addSubview:l];
+            [l mas_makeConstraints:^(MASConstraintMaker *make) {
+                make.size.mas_equalTo(CGSizeMake(12, 12));
+                make.left.mas_equalTo(self.tagBgView).offset(idx * 13);
+                make.centerY.mas_equalTo(self.tagBgView);
+            }];
+            [self.titleLabel mas_remakeConstraints:^(MASConstraintMaker *make) {
+                make.left.mas_equalTo(self.imageView).offset((idx + 1) * 13 + 4);
+                make.size.mas_equalTo(CGSizeMake(168 * ScreenRatio_6 - (idx + 1) * 12, 15));
+                make.top.mas_equalTo(self.imageView.mas_bottom).offset(7);
+            }];
+        }];
+    }
+    
+    [super updateConstraints];
+}
+
+- (void)setCourse:(WLKTCourse *)course {
+    WS(weakSelf);
+    _course = course;
+    [self.imageView.layer setImageWithURL:[NSURL URLWithString:course.img] placeholder:kPlaceholderNormalDefault options:YYWebImageOptionSetImageWithFadeAnimation completion:^(UIImage * _Nullable image, NSURL * _Nonnull url, YYWebImageFromType from, YYWebImageStage stage, NSError * _Nullable error) {
+        if (error) {
+            weakSelf.imageView.layer.contents = (__bridge id)kPlaceholderNormalFailed.CGImage;
+        }
+    }];
+    self.titleLabel.text = course.coursename;
+    self.priceLabel.text = course.showprice;
+    self.courseTypeLabel.text = course.target;
+    self.viewsLabel.text = [NSString stringWithFormat:@"%ld", course.hits];
+    
+    if (course.oldprice && ![course.oldprice containsString:@"null"] && course.oldprice.length > 0) {
+        self.rawPriceLabel.text = course.oldprice;
+        [self.rawPriceLine mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.size.mas_equalTo(CGSizeMake([UILabel getSizeWithStr:course.oldprice Height:15 Font:11].width - 5, 1));
+            make.centerY.mas_equalTo(self.rawPriceLabel);
+            make.left.mas_equalTo(self.rawPriceLabel).offset(2);
+        }];
+    }
+    [self setNeedsUpdateConstraints];
+    [self updateConstraintsIfNeeded];
+
+}
+
+#pragma mark - make contraints
+- (void)makeContraints{
+    [self.imageView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(170 * ScreenRatio_6, 100 * ScreenRatio_6));
+        make.centerX.top.mas_equalTo(self.contentView);
+    }];
+    [self.priceLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(self.titleLabel.mas_bottom).offset(7 * ScreenRatio_6);
+        make.left.mas_equalTo(self.imageView);
+    }];
+    [self.rawPriceLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(self.priceLabel.mas_right).offset(2);
+        make.centerY.mas_equalTo(self.priceLabel);
+    }];
+    [self.courseTypeLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(60, 15));
+        make.top.left.mas_equalTo(self.imageView);
+    }];
+    [self.tagBgView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(168 * ScreenRatio_6, 15));
+        make.top.mas_equalTo(self.imageView.mas_bottom).offset(7 *ScreenRatio_6);
+        make.left.mas_equalTo(self.imageView);
+    }];
+    [self.titleLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(168 * ScreenRatio_6, 15));
+        make.left.mas_equalTo(self.imageView);
+        make.top.mas_equalTo(self.imageView.mas_bottom).offset(7 *ScreenRatio_6);
+    }];
+    [self.viewsLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.bottom.right.mas_equalTo(self.imageView).offset(-10 *ScreenRatio_6);
+    }];
+    [self.viewsIV mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.size.mas_equalTo(CGSizeMake(15, 9));
+        make.right.mas_equalTo(self.viewsLabel.mas_left).offset(-5);
+        make.centerY.mas_equalTo(self.viewsLabel);
+    }];
+}
+
+#pragma mark - get
+- (UIView *)imageView{
+    if (!_imageView) {
+        _imageView = [[UIView alloc]init];
+        _imageView.userInteractionEnabled = YES;
+        _imageView.backgroundColor = [UIColor whiteColor];
+        _imageView.layer.masksToBounds = YES;
+        _imageView.layer.cornerRadius = 6 *ScreenRatio_6;
+    }
+    return _imageView;
+}
+- (UILabel *)titleLabel{
+    if (!_titleLabel) {
+        _titleLabel = [[UILabel alloc]init];
+        _titleLabel.font = [UIFont systemFontOfSize:12];
+        _titleLabel.textColor = [UIColor colorWithHexString:@"#4d4d4d"];
+    }
+    return _titleLabel;
+}
+- (UILabel *)priceLabel{
+    if (!_priceLabel) {
+        _priceLabel = [[UILabel alloc]init];
+        _priceLabel.font = [UIFont systemFontOfSize:12 *ScreenRatio_6];
+        _priceLabel.textColor = UIColorHex(ee402d);
+    }
+    return _priceLabel;
+}
+- (UILabel *)rawPriceLabel{
+    if (!_rawPriceLabel) {
+        _rawPriceLabel = [[UILabel alloc]init];
+        _rawPriceLabel.font = [UIFont systemFontOfSize:10 *ScreenRatio_6];
+        _rawPriceLabel.textColor = UIColorHex(999999);
+    }
+    return _rawPriceLabel;
+}
+- (UIView *)rawPriceLine{
+    if (!_rawPriceLine) {
+        _rawPriceLine = [UIView new];
+        _rawPriceLine.backgroundColor = UIColorHex(999999);
+    }
+    return _rawPriceLine;
+}
+- (UILabel *)courseTypeLabel{
+    if (!_courseTypeLabel) {
+        _courseTypeLabel = [[UILabel alloc]init];
+        _courseTypeLabel.font = [UIFont systemFontOfSize:10 *ScreenRatio_6];
+        _courseTypeLabel.textColor = UIColorHex(ffffff);
+        _courseTypeLabel.backgroundColor = UIColorHex(f6c447);
+        _courseTypeLabel.textAlignment = NSTextAlignmentCenter;
+    }
+    return _courseTypeLabel;
+}
+- (UIView *)tagBgView{
+    if (!_tagBgView) {
+        _tagBgView = [UIView new];
+        _tagBgView.backgroundColor = [UIColor whiteColor];
+    }
+    return _tagBgView;
+}
+- (UIImageView *)viewsIV{
+    if (!_viewsIV) {
+        _viewsIV = [[UIImageView alloc]initWithImage:[UIImage imageNamed:@"预览b"]];
+    }
+    return _viewsIV;
+}
+- (UILabel *)viewsLabel{
+    if (!_viewsLabel) {
+        _viewsLabel = [UILabel new];
+        _viewsLabel.font = [UIFont systemFontOfSize:10 *ScreenRatio_6];
+        _viewsLabel.textColor = UIColorHex(ffffff);
+        _viewsLabel.textAlignment = NSTextAlignmentRight;
+    }
+    return _viewsLabel;
+}
+@end
+
+//////////////////////////////////////////////////////////////////////////////
+@interface WLKTHPRecommendNewCourseCell ()<UICollectionViewDelegate, UICollectionViewDataSource>
+@property (strong, nonatomic) UICollectionView *collection;
+@property (strong, nonatomic) UIPageControl *pageControl;
+@property (strong, nonatomic) NSArray<WLKTCourse *> *dataArr;
+@end
+
+@implementation WLKTHPRecommendNewCourseCell
+- (instancetype)initWithCourseArray:(NSArray *)array
+{
+    self = [super init];
+    if (self) {
+        _dataArr = [NSArray arrayWithArray:array];
+        [self.contentView addSubview:self.collection];
+        [self.contentView addSubview:self.pageControl];
+        [self.pageControl mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.left.bottom.mas_equalTo(self.contentView);
+            make.size.mas_equalTo(CGSizeMake(ScreenWidth, 20 *ScreenRatio_6));
+        }];
+        [self.contentView bringSubviewToFront:self.pageControl];
+        self.pageControl.numberOfPages = array.count /4;
+
+    }
+    return self;
+}
+
+#pragma mark - collection view
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    return self.dataArr.count;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
+    RecommendNewCourseCollectionCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"RecommendNewCourseCollectionCell" forIndexPath:indexPath];
+    cell.course = self.dataArr[indexPath.item];
+    return cell;
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    if ([self.delegate respondsToSelector:@selector(didSelectedRecommendNewCourseItem:)]) {
+        [self.delegate didSelectedRecommendNewCourseItem:indexPath.item];
+    }
+}
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView{
+    int page = scrollView.contentOffset.x / scrollView.frame.size.width;
+    // 设置页码
+    self.pageControl.currentPage = page;
+}
+
+#pragma mark -
+- (UIPageControl *)pageControl{
+    if (!_pageControl) {
+        _pageControl = [[UIPageControl alloc]init];
+        _pageControl.pageIndicatorTintColor = UIColorHex(aaaaaa);// 设置非选中页的圆点颜色
+        _pageControl.currentPageIndicatorTintColor = UIColorHex(666666); // 设置选中页的圆点颜色
+    }
+    return _pageControl;
+}
+- (UICollectionView *)collection{
+    if (!_collection) {
+        UICollectionViewFlowLayout *l = [UICollectionViewFlowLayout new];
+        l.itemSize = CGSizeMake(ScreenWidth /2, 150 *ScreenRatio_6);
+        l.minimumLineSpacing = 0;
+        l.minimumInteritemSpacing = 0;
+        l.sectionInset = UIEdgeInsetsMake(0, 0, 10 *ScreenRatio_6, 0);
+        l.scrollDirection = UICollectionViewScrollDirectionHorizontal;
+        _collection = [[UICollectionView alloc]initWithFrame:CGRectMake(0, 0, ScreenWidth, 330 *ScreenRatio_6) collectionViewLayout:l];
+        _collection.backgroundColor = [UIColor whiteColor];
+        _collection.delegate = self;
+        _collection.dataSource = self;
+        _collection.pagingEnabled = YES;
+        _collection.showsHorizontalScrollIndicator = false;
+        [_collection registerClass:[RecommendNewCourseCollectionCell class] forCellWithReuseIdentifier:@"RecommendNewCourseCollectionCell"];
+    }
+    return _collection;
+}
+
+@end
